@@ -1,6 +1,6 @@
 # FangEvo Wawi Pro – Entwicklungsplan
 
-**Stand:** 2026-11-09 · **Status:** Phase 0–5 abgeschlossen · nächster Schritt: Phase 6 (Automatisierung)
+**Stand:** 2026-11-09 · **Status:** Phase 0–6 abgeschlossen · nächster Schritt: Phase 7 (Kommerzialisierung)
 Grundlage: [Master Playbook v1.0](docs/product/MASTER_PLAYBOOK_v1.0.md) · Technik: [ADR-001](docs/decisions/ADR-001_TECHNOLOGIE_EMPFEHLUNG.md)
 
 ---
@@ -250,18 +250,20 @@ Ergebnis Phase 4: alle Arbeitspakete umgesetzt und getestet (phase4.test, E2E `p
 
 Ergebnis Phase 5: alle Arbeitspakete umgesetzt und getestet (phase5.test, E2E `phase5-flow.mjs`). Offen: Anbindungen von Amazon, eBay, Shopify & Co. (brauchen Zugangsdaten und Sandbox-Test), ausgehende Bestandsübertragung (mit Webhooks in Phase 6), geplante/automatische Importe (Phase 6), FTP/SFTP-Quellen, Finanz-Export.
 
-### Phase 6 – Automatisierung (gestartet 2026-11-09)
+### Phase 6 – Automatisierung (gestartet 2026-11-09) · Status: abgeschlossen
 
-| AP                      | Inhalt |
-| ----------------------- | ------ |
-| 6.1 Ereignisse je Firma | Fachliche Ereignisse tragen die Firma; Grundlage für Webhooks und Regeln |
-| 6.2 Webhooks            | Abonnements je Firma (URL, Ereignisse), signiert (HMAC-SHA256), Zustellung im Hintergrund mit Wiederholungen, Zustellprotokoll, Test-Ping, automatisches Abschalten nach Dauerfehlern, Schutz gegen Aufrufe ins interne Netz |
+| AP                      | Inhalt                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 6.1 Ereignisse je Firma | Fachliche Ereignisse tragen die Firma; Grundlage für Webhooks und Regeln                                                                                                                                                                                                                                                                                                                                    |
+| 6.2 Webhooks            | Abonnements je Firma (URL, Ereignisse), signiert (HMAC-SHA256), Zustellung im Hintergrund mit Wiederholungen, Zustellprotokoll, Test-Ping, automatisches Abschalten nach Dauerfehlern, Schutz gegen Aufrufe ins interne Netz                                                                                                                                                                                |
 | 6.3 Regeln (Workflows)  | „Wenn – und – dann“: Auslöser (neue Bestellung, Statuswechsel, Versand, Retoure eingegangen, Bestand unter Mindestbestand, zeitgesteuert), Bedingungen (Warenwert, Land, Zahlungs-/Versandart, Kanal, Kundengruppe …), Aktionen (Status setzen, Versandart setzen, Mitarbeiter benachrichtigen, E-Mail, Webhook). Versionierung, Ausführungsprotokoll, Testlauf ohne Ausführung, Schutz vor Endlosschleifen |
-| 6.4 Zeitgesteuert       | Stündlich/täglich: Aufträge warten zu lange, Lieferantenbestellungen überfällig, Artikel unter Mindestbestand |
+| 6.4 Zeitgesteuert       | Stündlich/täglich: Aufträge warten zu lange, Lieferantenbestellungen überfällig, Artikel unter Mindestbestand                                                                                                                                                                                                                                                                                               |
 
 Der grafische Editor folgt später (Playbook 16); die Regeln werden zunächst in einem klaren Formular erstellt.
 
-### Phase 6–8
+Ergebnis Phase 6: alle Arbeitspakete umgesetzt und getestet (phase6.test, E2E `phase6-flow.mjs`). Offen: grafischer Editor mit Verzweigungen und Verzögerungen, weitere Aktionen nach Bedarf, CRM und Analytics.
+
+### Phase 7–8
 
 Wie im Playbook. Sie werden vor Beginn jeweils in Arbeitspakete wie in Phase 1 zerlegt und zur Freigabe vorgelegt.
 

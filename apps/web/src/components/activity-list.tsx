@@ -114,6 +114,13 @@ export const ACTION_LABELS: Record<string, string> = {
   'api_key.revoked': 'hat einen API-Schlüssel gesperrt',
   'channel.created': 'hat einen Verkaufskanal angelegt',
   'channel.updated': 'hat einen Verkaufskanal geändert',
+  'webhook.created': 'hat einen Webhook angelegt',
+  'webhook.updated': 'hat einen Webhook geändert',
+  'webhook.archived': 'hat einen Webhook entfernt',
+  'webhook.secret_rotated': 'hat einen Webhook-Schlüssel erneuert',
+  'workflow.created': 'hat eine Regel angelegt',
+  'workflow.updated': 'hat eine Regel geändert',
+  'workflow.archived': 'hat eine Regel archiviert',
 };
 
 const FIELD_LABELS: Record<string, string> = {

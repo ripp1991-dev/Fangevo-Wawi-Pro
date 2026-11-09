@@ -150,7 +150,13 @@ export const workflowDefinitionSchema = z
           check: z.enum(Object.keys(SCHEDULE_CHECKS) as [ScheduleCheck, ...ScheduleCheck[]]),
           /** orders_waiting: Status und Stunden */
           status: z.string().max(40).optional().nullable(),
-          hours: z.number().int().min(1).max(24 * 60).optional().nullable(),
+          hours: z
+            .number()
+            .int()
+            .min(1)
+            .max(24 * 60)
+            .optional()
+            .nullable(),
         })
         .optional()
         .nullable(),
@@ -177,9 +183,7 @@ export const workflowTestSchema = z.object({
 });
 
 /** Kontextart eines Auslösers (für Bedingungsfelder). */
-export function triggerContext(
-  t: WorkflowDefinition['trigger'],
-): keyof typeof CONDITION_FIELDS {
+export function triggerContext(t: WorkflowDefinition['trigger']): keyof typeof CONDITION_FIELDS {
   if (t.type === 'stock.low') return 'article';
   if (t.type === 'schedule')
     return t.schedule?.check === 'low_stock'

@@ -50,6 +50,10 @@ Picklisten und die mobile Scan-Seite gehören zum Modul **Lager** (alle Pakete).
 
 **FangEvo Import** ist ab Paket Business enthalten, **Öffentliche API** und **Multichannel** ab Professional. API-Schlüssel funktionieren nur, solange das Modul „Öffentliche API“ gebucht ist.
 
+## Hinweis Phase 6
+
+**Automatisierung** (Regeln) ist ab Paket Professional enthalten. **Webhooks** gehören zum Modul „Öffentliche API“ (ebenfalls ab Professional).
+
 ## Status und Zugriff
 
 | Status                  | Zugriff                                                                                                             |

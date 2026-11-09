@@ -148,3 +148,14 @@ Migrationen `…_phase5_import_api_channels` und `…_phase5_api_key_company`.
 | `api_key_index` (global)                                              | Hash → Schlüssel/Account/Firma für die Anmeldung                                                            |
 | `sales_channels`, `channel_logs`, `channel_listings`, `external_refs` | Verkaufskanäle, Protokoll, Artikel je Kanal, Zuordnung externer IDs                                         |
 | `sales_orders.channel_id`                                             | Herkunftskanal eines Auftrags                                                                               |
+
+## Tabellen (Phase 6)
+
+Migration `…_phase6_automation`.
+
+| Tabelle                                                                     | Inhalt                                                                                                         |
+| --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `outbox_events.company_id`                                                  | Firma des Ereignisses                                                                                          |
+| `webhooks`, `webhook_deliveries`                                            | Abonnements (verschlüsselter Schlüssel, Ereignisse, Fehlerzähler) und Zustellungen (Status, Versuche, Antwort) |
+| `workflow_rules`, `workflow_versions` (**unveränderlich**), `workflow_runs` | Regeln, Fassungen, Läufe mit Kontext und Schritten                                                             |
+| `workflow_schedule` (global)                                                | Fälligkeiten zeitgesteuerter Regeln (nur IDs)                                                                  |

@@ -5,6 +5,7 @@ import {
   Building2,
   FileUp,
   KeyRound,
+  Workflow,
   Store,
   ListChecks,
   PackageCheck,
@@ -157,6 +158,15 @@ export const NAV_ITEMS: NavItem[] = [
     permission: 'channels.read',
     module: 'multichannel',
     keywords: 'shop marktplatz amazon ebay schnittstelle',
+  },
+  {
+    to: '/automation',
+    label: 'Automatisierung',
+    group: 'wawi',
+    icon: Workflow,
+    permission: 'workflows.read',
+    module: 'automation',
+    keywords: 'regeln workflows webhooks wenn dann',
   },
   {
     to: '/inventory',
