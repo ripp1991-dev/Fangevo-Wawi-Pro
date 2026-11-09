@@ -12,7 +12,7 @@ export interface ParsedTable {
 
 /** Zeichensatz erkennen: gültiges UTF-8 bevorzugen, sonst Windows-1252 (z. B. ältere Excel-/JTL-Exporte). */
 function decodeText(buf: Buffer): string {
-  const text = new TextDecoder('utf-8', { fatal: false }).decode(buf).replace(/^﻿/, '');
+  const text = new TextDecoder('utf-8', { fatal: false }).decode(buf).replace(/^\uFEFF/, '');
   if (!text.includes('�')) return text;
   return new TextDecoder('windows-1252').decode(buf);
 }
@@ -128,5 +128,5 @@ export function toCsv(headers: string[], rows: (string | number | null | undefin
     if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
     return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
-  return '﻿' + [headers, ...rows].map((r) => r.map(esc).join(';')).join('\r\n') + '\r\n';
+  return '\uFEFF' + [headers, ...rows].map((r) => r.map(esc).join(';')).join('\r\n') + '\r\n';
 }

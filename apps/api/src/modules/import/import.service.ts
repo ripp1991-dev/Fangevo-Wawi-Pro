@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { type z } from 'zod';
-import { Prisma, uuidv7, type ImportJob, type Tx } from '@fangevo/database';
+import { type Prisma, uuidv7, type ImportJob, type Tx } from '@fangevo/database';
 import {
   articleInputSchema,
   customerInputSchema,
