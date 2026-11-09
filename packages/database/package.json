@@ -1,0 +1,31 @@
+{
+  "name": "@fangevo/database",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "generate": "prisma generate",
+    "migrate:dev": "dotenv -e ../../.env -- prisma migrate dev",
+    "migrate:deploy": "dotenv -e ../../.env -- prisma migrate deploy",
+    "test:migrate": "tsx scripts/migrate-test-db.ts",
+    "license:set": "dotenv -e ../../.env -- tsx scripts/license-set.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "prisma": {
+    "schema": "prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.3",
+    "@fangevo/licensing": "workspace:*"
+  },
+  "devDependencies": {
+    "dotenv-cli": "8.0.0",
+    "prisma": "6.19.3",
+    "tsx": "4.23.15",
+    "vitest": "3.2.7"
+  }
+}

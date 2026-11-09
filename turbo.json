@@ -1,0 +1,11 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalEnv": ["NODE_ENV", "DATABASE_URL", "DATABASE_MIGRATE_URL"],
+  "tasks": {
+    "build": { "dependsOn": ["^build"], "outputs": ["dist/**"] },
+    "typecheck": { "dependsOn": ["^generate"] },
+    "generate": { "cache": false },
+    "test": { "dependsOn": ["^generate"], "cache": false },
+    "dev": { "cache": false, "persistent": true }
+  }
+}
