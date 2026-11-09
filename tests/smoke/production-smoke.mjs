@@ -17,9 +17,21 @@ const fail = (m) => {
 };
 
 // 1. API und Header
-const health = await fetch(`${BASE}/health`);
-if (!health.ok) fail(`/health antwortet mit ${health.status}`);
-const h = await health.json();
+// Direkt nach dem Start kann der Proxy noch kurz unvollständig antworten: bis zu 60 s wiederholen
+let h;
+for (let i = 0; ; i++) {
+  try {
+    const r = await fetch(`${BASE}/health`);
+    if (r.ok) {
+      h = await r.json();
+      break;
+    }
+    if (i >= 30) fail(`/health antwortet mit ${r.status}`);
+  } catch (e) {
+    if (i >= 30) throw e;
+  }
+  await new Promise((r) => setTimeout(r, 2000));
+}
 if (!h.checks?.database || !h.checks?.redis) fail('Datenbank oder Redis nicht erreichbar');
 const page0 = await fetch(`${BASE}/login`);
 for (const name of ['content-security-policy', 'x-content-type-options', 'x-frame-options'])

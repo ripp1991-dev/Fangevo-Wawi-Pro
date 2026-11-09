@@ -145,8 +145,8 @@ jobs:
       - name: Rauchtest im Browser
         run: node tests/smoke/production-smoke.mjs
         env:
-          SMOKE_BASE: http://localhost:8080
-          SMOKE_MAILPIT: http://localhost:8025
+          SMOKE_BASE: http://127.0.0.1:8080
+          SMOKE_MAILPIT: http://127.0.0.1:8025
       - name: Sicherung und Wiederherstellung im Container
         run: |
           set -a; . /tmp/env.smoke; set +a
