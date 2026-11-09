@@ -158,4 +158,7 @@ jobs:
             -e PG_ADMIN_URL="postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/postgres" \
             postgres:16.10 bash -c 'bash /scripts/db-restore-check.sh /backups/*.dump'
       - if: failure()
-        run: docker compose -p fangevo -f infrastructure/production/docker-compose.yml --env-file /tmp/env.smoke logs --tail 200
+        run: |
+          curl -sS -D - -o /tmp/login.html http://127.0.0.1:8080/login || true
+          wc -c /tmp/login.html || true
+          docker compose -p fangevo -f infrastructure/production/docker-compose.yml --env-file /tmp/env.smoke logs --tail 200
