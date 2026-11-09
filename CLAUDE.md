@@ -5,7 +5,7 @@ Verbindliche Grundlage: `docs/product/MASTER_PLAYBOOK_v1.0.md`. Aktueller Plan: 
 
 ## Aktueller Stand
 
-Phase 0 und Phase 1 (technisches Fundament) sind abgeschlossen, siehe Status in `DEVELOPMENT_ROADMAP.md`. **Phase 2 startet erst nach Freigabe durch den Product Owner.** Entscheidungen: `DECISIONS.md` (ADR-003 Vite ist noch vorläufig).
+Phase 0 und Phase 1 (technisches Fundament) sind abgeschlossen, siehe Status in `DEVELOPMENT_ROADMAP.md`. **Phase 2 startet erst nach Freigabe durch den Product Owner.** Entscheidungen: `DECISIONS.md` (Frontend mit Vite ist bestätigt, ADR-003).
 
 Wichtige Einstiegspunkte: zentrale Zugriffskontrolle `apps/api/src/core/access/access.guard.ts`, Mandantenzugriff nur über `Database.tenant()` (`apps/api/src/core/database/database.service.ts`), Rechtekatalog `packages/shared/src/permissions.ts`, Modul-/Lizenzkatalog `packages/licensing/src/catalog.ts`.
 

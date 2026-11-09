@@ -149,7 +149,7 @@ Regel: Kein Merge auf `main` ohne grüne Pipeline.
 | 1.11 Frontend         | ✅                                             | E2E-Ablauf Login → Administration, mobil und Dunkelmodus                                                                                                                                                   |
 | 1.12 Doku             | ✅                                             | README, ARCHITECTURE, DATABASE, API, SECURITY, LICENSING, MODULES, TESTING, CHANGELOG, DECISIONS                                                                                                           |
 
-Abweichungen vom Plan: eigene Sitzungs-Authentifizierung statt Better Auth ([ADR-002](docs/decisions/ADR-002_AUTHENTIFIZIERUNG.md)); Vite vorläufig gesetzt ([ADR-003](docs/decisions/ADR-003_FRONTEND_VITE.md)); Prisma 6 statt 7 ([ADR-005](docs/decisions/ADR-005_ABHAENGIGKEITSVERSIONEN.md)).
+Abweichungen vom Plan: eigene Sitzungs-Authentifizierung statt Better Auth ([ADR-002](docs/decisions/ADR-002_AUTHENTIFIZIERUNG.md)); Vite statt Next.js, von FangEvo bestätigt ([ADR-003](docs/decisions/ADR-003_FRONTEND_VITE.md)); Prisma 6 statt 7 ([ADR-005](docs/decisions/ADR-005_ABHAENGIGKEITSVERSIONEN.md)).
 
 ### Phase 2 – Dashboard und Core (grob)
 
@@ -165,7 +165,7 @@ Wie im Playbook. Sie werden vor Beginn jeweils in Arbeitspakete wie in Phase 1 z
 
 ## 6. Offene Fragen an FangEvo
 
-1. **Frontend:** Vite (Empfehlung) oder Next.js?
+1. ~~**Frontend:** Vite (Empfehlung) oder Next.js?~~ Entschieden am 2026-11-09: **Vite** (ADR-003).
 2. **Hosting:** Hetzner (günstig, mehr Eigenbetrieb) oder AWS Frankfurt (teurer, mehr verwaltete Dienste)?
 3. **Zahlungsanbieter** für Abos später: Stripe oder Mollie?
 4. **JTL:** Welche Version läuft, gibt es eine Freigabe für eine anonymisierte Datenbankkopie (siehe [Checkliste](docs/research/02_JTL_CHECKLISTE.md))?

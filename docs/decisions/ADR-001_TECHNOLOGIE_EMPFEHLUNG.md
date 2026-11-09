@@ -1,6 +1,6 @@
 # ADR-001 – Architektur- und Technologieempfehlung
 
-**Stand:** 2026-11-09 · **Status:** angenommen mit der Freigabe von Phase 1. Präzisiert durch ADR-002 (Authentifizierung), ADR-003 (Vite, vorläufig) und ADR-005 (Versionen).
+**Stand:** 2026-11-09 · **Status:** angenommen mit der Freigabe von Phase 1. Präzisiert durch ADR-002 (Authentifizierung), ADR-003 (Vite, bestätigt) und ADR-005 (Versionen).
 
 Bewertet wird der Vorschlag aus Playbook Abschnitt 4.2. Wo ich davon abweiche, steht es ausdrücklich dabei, mit Begründung.
 

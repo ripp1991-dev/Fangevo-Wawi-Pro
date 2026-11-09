@@ -1,6 +1,6 @@
 # ADR-003 – Frontend mit Vite statt Next.js
 
-**Stand:** 2026-11-09 · **Status:** vorläufig – Bestätigung durch FangEvo offen
+**Stand:** 2026-11-09 · **Status:** angenommen – am 2026-11-09 durch FangEvo bestätigt
 
 ## Kontext
 
