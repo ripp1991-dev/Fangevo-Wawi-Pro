@@ -96,6 +96,7 @@ Danach löscht es nur diese temporäre Datenbank. CI macht diese Probe bei jeder
 | -------------------- | ------------------------------------------------------------------------ | ----------------------------- |
 | Erreichbarkeit       | `GET /health` (prüft Datenbank und Redis), Container-Healthcheck der API | nicht 200 für 2 min           |
 | Fehler               | strukturierte JSON-Logs (pino) von API und Worker, Feld `level` ≥ 50     | Häufung von Fehlern           |
+| Worker hängt         | Lebenszeichen-Datei (alle 30 s), Container-Healthcheck des Workers       | „unhealthy“                   |
 | Unerwartete Abstürze | „Unbehandelte Ausnahme“ im Log, Container-Neustarts                      | jeder Neustart                |
 | Hintergrundaufgaben  | Tabellen `job_queue` / `outbox_pending` (Anzahl offener Einträge)        | wachsender Rückstand > 15 min |
 | Abrechnung           | Log `Abrechnungslauf`, Plattform-Verwaltung                              | Fehler im Abrechnungslauf     |
