@@ -102,7 +102,10 @@ export class AccessGuard implements CanActivate {
     if (companyId) {
       if (!UUID_RE.test(companyId))
         throw new AppError(400, 'VALIDATION_FAILED', 'Ungültige Firmen-ID');
-      if (!account.companyIds.includes(companyId)) {
+      const allowed = account.allCompanies
+        ? await this.access.companyExists(auth.user.id, account.id, companyId)
+        : account.companyIds.includes(companyId);
+      if (!allowed) {
         throw new AppError(403, 'COMPANY_ACCESS_DENIED', 'Kein Zugriff auf diese Firma');
       }
       auth.companyId = companyId;

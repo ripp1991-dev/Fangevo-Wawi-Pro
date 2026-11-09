@@ -5,9 +5,11 @@ Verbindliche Grundlage: `docs/product/MASTER_PLAYBOOK_v1.0.md`. Aktueller Plan: 
 
 ## Aktueller Stand
 
-Phase 0 und Phase 1 (technisches Fundament) sind abgeschlossen, siehe Status in `DEVELOPMENT_ROADMAP.md`. **Phase 2 startet erst nach Freigabe durch den Product Owner.** Entscheidungen: `DECISIONS.md` (Frontend mit Vite ist bestätigt, ADR-003).
+Phase 0, 1 (technisches Fundament) und 2 (Dashboard und Core-Werkzeuge) sind abgeschlossen, siehe Status in `DEVELOPMENT_ROADMAP.md`. **Phase 3 startet erst nach Freigabe eines detaillierten Plans durch den Product Owner.** Entscheidungen: `DECISIONS.md` (Frontend mit Vite ist bestätigt, ADR-003).
 
 Wichtige Einstiegspunkte: zentrale Zugriffskontrolle `apps/api/src/core/access/access.guard.ts`, Mandantenzugriff nur über `Database.tenant()` (`apps/api/src/core/database/database.service.ts`), Rechtekatalog `packages/shared/src/permissions.ts`, Modul-/Lizenzkatalog `packages/licensing/src/catalog.ts`.
+
+Werkzeuge für neue Fachmodule: Listen über `buildListArgs` (`core/lists`), eigene Felder über `CustomFieldsService.validate`, Suchindex über `SearchService.upsert`, Ereignisse entstehen automatisch über `AuditService.record` (Outbox), Menüeinträge in `apps/web/src/lib/navigation.ts`, Tabellen mit `DataTable`, Widgets in `packages/shared/src/widgets.ts`.
 
 Tests brauchen PostgreSQL + Redis (siehe `TESTING.md`). Niemals `prisma migrate reset` oder andere destruktive Befehle ohne ausdrückliche Freigabe ausführen.
 

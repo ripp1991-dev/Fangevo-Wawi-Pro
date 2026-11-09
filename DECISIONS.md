@@ -7,3 +7,4 @@
 | [ADR-003](docs/decisions/ADR-003_FRONTEND_VITE.md)           | Frontend mit Vite statt Next.js                                              | angenommen (bestätigt durch FangEvo am 2026-11-09) |
 | [ADR-004](docs/decisions/ADR-004_MANDANTENTRENNUNG_RLS.md)   | Mandantentrennung: gemeinsames Schema + Row-Level Security                   | angenommen                                         |
 | [ADR-005](docs/decisions/ADR-005_ABHAENGIGKEITSVERSIONEN.md) | Abhängigkeitsversionen: stabil, gepinnt, mindestens 2 Wochen alt             | angenommen                                         |
+| [ADR-006](docs/decisions/ADR-006_EREIGNISSE_OUTBOX.md)       | Fachliche Ereignisse über eine Outbox in PostgreSQL, eigener Worker-Prozess  | angenommen                                         |

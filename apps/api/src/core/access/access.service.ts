@@ -77,14 +77,13 @@ export class AccessService {
       if (!ent) return null;
       const allCompanies = m.isOwner || m.allCompanies;
       // Zugängliche, nicht archivierte Firmen (bei "alle Firmen" alle des Accounts)
-      const companies = await tx.company.findMany({
-        where: {
-          accountId,
-          archivedAt: null,
-          ...(allCompanies ? {} : { id: { in: m.companies.map((c) => c.companyId) } }),
-        },
-        select: { id: true },
-      });
+      // Bei "alle Firmen" wird nicht aufgezählt (kann sehr viele sein); geprüft wird je Anfrage.
+      const companies = allCompanies
+        ? []
+        : await tx.company.findMany({
+            where: { accountId, archivedAt: null, id: { in: m.companies.map((c) => c.companyId) } },
+            select: { id: true },
+          });
       const entitlement = toSnapshot(ent);
       return {
         id: accountId,
@@ -103,6 +102,14 @@ export class AccessService {
         companyIds: companies.map((c) => c.id),
       };
     });
+  }
+
+  /** Prüft, ob eine aktive Firma im Account existiert (für Personen mit Zugriff auf alle Firmen). */
+  async companyExists(userId: string, accountId: string, companyId: string): Promise<boolean> {
+    return this.db.tenant(
+      { accountId, userId },
+      async (tx) => (await tx.company.count({ where: { id: companyId, archivedAt: null } })) > 0,
+    );
   }
 
   /** Accounts, in denen der Benutzer aktives Mitglied ist. */

@@ -177,9 +177,10 @@ export class AuthController {
     if (acc) {
       companies = await this.db.tenant({ accountId: acc.id, userId: a.user.id }, (tx) =>
         tx.company.findMany({
-          where: { id: { in: acc.companyIds } },
+          where: acc.allCompanies ? { archivedAt: null } : { id: { in: acc.companyIds } },
           select: { id: true, name: true },
           orderBy: { name: 'asc' },
+          take: 500,
         }),
       );
     }

@@ -1,6 +1,6 @@
 # FangEvo Wawi Pro – Entwicklungsplan
 
-**Stand:** 2026-11-09 · **Status:** Phase 0 und Phase 1 abgeschlossen · Phase 2 geplant, wartet auf Freigabe
+**Stand:** 2026-11-09 · **Status:** Phase 0, 1 und 2 abgeschlossen · nächster Schritt: Plan Phase 3 (Warenwirtschaft) zur Freigabe
 Grundlage: [Master Playbook v1.0](docs/product/MASTER_PLAYBOOK_v1.0.md) · Technik: [ADR-001](docs/decisions/ADR-001_TECHNOLOGIE_EMPFEHLUNG.md)
 
 ---
@@ -151,7 +151,7 @@ Regel: Kein Merge auf `main` ohne grüne Pipeline.
 
 Abweichungen vom Plan: eigene Sitzungs-Authentifizierung statt Better Auth ([ADR-002](docs/decisions/ADR-002_AUTHENTIFIZIERUNG.md)); Vite statt Next.js, von FangEvo bestätigt ([ADR-003](docs/decisions/ADR-003_FRONTEND_VITE.md)); Prisma 6 statt 7 ([ADR-005](docs/decisions/ADR-005_ABHAENGIGKEITSVERSIONEN.md)).
 
-### Phase 2 – Dashboard und Core (detailliert) · Status: PLAN – wartet auf Freigabe
+### Phase 2 – Dashboard und Core (detailliert) · Status: abgeschlossen (2026-11-09)
 
 **Wichtige Rahmenbedingung:** Fachdaten (Artikel, Aufträge, Umsätze) gibt es erst ab Phase 3. Phase 2 baut deshalb die **Werkzeuge** (Dashboard-Baukasten, Tabellen, eigene Felder, Suche, Benachrichtigungen) und erprobt sie an den vorhandenen Daten (Firmen, Benutzer, Audit-Log). Umsatz- und Lager-Widgets werden **nicht vorgetäuscht**, sondern kommen mit den Fachmodulen in Phase 3. Jedes neue Modul kann die Werkzeuge dann ohne Zusatzaufwand nutzen.
 
@@ -171,11 +171,27 @@ Abweichungen vom Plan: eigene Sitzungs-Authentifizierung statt Better Auth ([ADR
 
 **Neue Tabellen (alle mit `account_id` + RLS):** `outbox_events`, `notifications`, `notification_preferences`, `saved_views`, `custom_field_definitions`, `user_preferences` (Menü, Favoriten), `dashboards`, `dashboard_widgets`, `search_documents`. Bestehende Tabellen bekommen nur neue Spalten (`custom_fields`), es wird nichts gelöscht.
 
-**Vorgeschlagene Festlegungen (bitte bestätigen):**
+**Festlegungen (von FangEvo bestätigt am 2026-11-09):**
 
 1. Dashboard und Menü: Administratoren legen den Standard fest, jeder Benutzer darf ihn für sich anpassen.
 2. Gespeicherte Tabellenansichten: persönlich, mit Option „für alle im Account freigeben“.
 3. Benachrichtigungen: zunächst nur in der Software; per E-Mail nur sicherheitsrelevante (z. B. Anmeldung von neuem Gerät).
+
+#### Status Phase 2 (2026-11-09): abgeschlossen
+
+| AP                        | Status | Nachweis                                                                                                            |
+| ------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------- |
+| 2.1 Ereignis-System       | ✅     | Outbox + Verteiler + Worker; Tests: Zustellung, Idempotenz ([ADR-006](docs/decisions/ADR-006_EREIGNISSE_OUTBOX.md)) |
+| 2.2 Hauptnavigation       | ✅     | Menü-Registrierung, ausblenden/sortieren/Favoriten, Account-Standard, Strg+K                                        |
+| 2.3 Tabellen-Baukasten    | ✅     | Firmen (in der API), Benutzer und Audit-Log (im Browser, kleine Listen); E2E: Filter, Ansicht, Export               |
+| 2.4 Eigene Felder         | ✅     | an Firmen erprobt; Prüfung, Filter, Spalten, Formular; Tests inkl. Verweise und Mandantentrennung                   |
+| 2.5 Globale Suche         | ✅     | Firmen, Benutzer, Rollen, Menüpunkte; Rechte- und Mandantentests                                                    |
+| 2.6 Benachrichtigungen    | ✅     | Glocke (Aktualisierung alle 30 s), Einstellungen, E-Mail bei neuem Gerät                                            |
+| 2.7 Aktivitätsprotokoll   | ✅     | Verlauf je Firma, Gesamtverlauf, Dashboard-Widget                                                                   |
+| 2.8 Dashboard-Baukasten   | ✅     | 7 Widgets mit echten Daten, mehrere Seiten, Vorlage für alle, mobil gestapelt                                       |
+| 2.9 Tests, Doku, Lasttest | ✅     | 77 API-Tests, 2 E2E-Abläufe, Lasttest 100.000 Firmen: Listen 70–120 ms, Suche ~180 ms                               |
+
+Abweichungen vom Plan: BullMQ noch nicht eingesetzt, der Verteiler läuft über PostgreSQL (ADR-006). Dashboard-Widgets werden als JSON an der Dashboard-Seite gespeichert statt in einer eigenen Tabelle `dashboard_widgets`. Benutzer- und Audit-Listen filtern im Browser (kleine Datenmengen), Firmen in der API. Filter „leer/nicht leer“ für eigene Felder folgt später.
 
 ### Phase 3 – Warenwirtschaft (grob)
 

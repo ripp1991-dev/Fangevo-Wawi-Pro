@@ -58,3 +58,24 @@ Abgesichert durch die Testsuite `apps/api/test/tenant-isolation.test.ts` (API- u
 - Testdatenbank: `pnpm db:test:migrate` (nur Datenbanken mit Endung `_test`).
 - Jede Migration ist eine SQL-Datei im Repository. RLS-Policies, Trigger und Rechte stehen direkt in der Migration.
 - **Destruktive Änderungen** (Spalten/Tabellen löschen, `migrate reset`) nur mit ausdrücklicher Freigabe (Playbook-Regel 13).
+
+## Tabellen (Phase 2)
+
+| Tabelle                    | Inhalt                                                               | RLS                  |
+| -------------------------- | -------------------------------------------------------------------- | -------------------- |
+| `outbox_events`            | Fachliche Ereignisse (unveränderlich)                                | ✅                   |
+| `outbox_pending`           | Zustellwarteschlange, nur IDs, Sperre und Wiederholungen             | global (ohne Inhalt) |
+| `notifications`            | Benachrichtigungen je Benutzer, `dedupe_key` gegen Doppelte          | ✅ + nur eigene      |
+| `notification_preferences` | An/Aus je Benachrichtigungsart                                       | ✅ + nur eigene      |
+| `saved_views`              | Gespeicherte Tabellenansichten (persönlich/freigegeben)              | ✅                   |
+| `custom_field_definitions` | Eigene Felder je Datensatztyp                                        | ✅                   |
+| `preferences`              | Einstellungen (persönlich oder Account-Standard bei `user_id` leer)  | ✅                   |
+| `dashboards`               | Dashboard-Seiten mit Widgets (JSON), persönlich oder Account-Vorlage | ✅                   |
+| `search_documents`         | Suchindex                                                            | ✅                   |
+| `companies.custom_fields`  | Werte der eigenen Felder (JSONB)                                     | –                    |
+
+**Benachrichtigungen:** Die Policy erlaubt nur Zeilen des angemeldeten Benutzers. Ohne Benutzerkontext (Worker) sind alle Zeilen des Accounts sichtbar, damit Benachrichtigungen für andere angelegt werden können.
+
+**Von Hand gepflegte Indizes** (Prisma kennt sie nicht; bei neuen Migrationen mit `--create-only` prüfen, dass sie bleiben): `search_documents_fts` (Volltext deutsch), `search_documents_title_trgm` (Trigramm), `preferences_scope_key` (eindeutig je Account/Benutzer/Schlüssel). Die Erweiterung `pg_trgm` wird von der Migration angelegt.
+
+**Befüllung des Suchindex:** Die Migration `phase2_tools` übernimmt vorhandene Firmen, Mitglieder und Rollen. Dafür wird RLS für den Eigentümer innerhalb der Migration kurz gelockert (`NO FORCE`) und sofort wieder aktiviert.

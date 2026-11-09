@@ -13,16 +13,20 @@ const BASE = process.env.E2E_BASE ?? 'http://localhost:5173';
 const API_LOG = process.env.E2E_API_LOG ?? '/tmp/fangevo-api.log';
 const shots = process.env.E2E_SCREENSHOTS ?? new URL('./screenshots', import.meta.url).pathname;
 mkdirSync(shots, { recursive: true });
-const tokenFor = (email, path) => {
-  const log = readFileSync(API_LOG, 'utf8');
-  const re = new RegExp(
-    `E-Mail an ${email.replace(/[.]/g, '\\.')}[^\\n]*?${path}\\?token=([^\\s\\\\"]+)`,
-    'g',
-  );
-  let m, last;
-  while ((m = re.exec(log))) last = m[1];
-  if (!last) throw new Error('kein token ' + email + ' ' + path);
-  return decodeURIComponent(last);
+/** Token aus der (ins Log geschriebenen) E-Mail lesen; wartet bis zu 5 Sekunden. */
+const tokenFor = async (email, path) => {
+  for (let i = 0; i < 50; i++) {
+    const log = readFileSync(API_LOG, 'utf8');
+    const re = new RegExp(
+      `E-Mail an ${email.replace(/[.]/g, '\\.')}[^\\n]*?${path}\\?token=([^\\s\\\\"]+)`,
+      'g',
+    );
+    let m, last;
+    while ((m = re.exec(log))) last = m[1];
+    if (last) return decodeURIComponent(last);
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  throw new Error(`kein Token für ${email} ${path}`);
 };
 const id = Date.now().toString(36);
 const owner = `inhaber-${id}@example.test`,
@@ -57,7 +61,7 @@ await page.getByRole('button', { name: 'Account erstellen' }).click();
 await page.getByText('E-Mail versendet').waitFor();
 await page.waitForTimeout(500);
 await page.goto(
-  `${BASE}/verify-email?token=${encodeURIComponent(tokenFor(owner, '/verify-email'))}`,
+  `${BASE}/verify-email?token=${encodeURIComponent(await tokenFor(owner, '/verify-email'))}`,
 );
 await page.getByText('Ihre E-Mail-Adresse ist bestätigt').waitFor();
 await page.getByRole('button', { name: 'Zur Anmeldung' }).click();
@@ -71,8 +75,8 @@ await page.screenshot({ path: `${shots}/03-dashboard.png` });
 await page.getByRole('link', { name: 'Firmen', exact: true }).click();
 await page.getByRole('button', { name: 'Firma anlegen' }).click();
 await page.getByLabel('Anzeigename').fill('FangEvo Outlet');
-await page.getByLabel('Ort').fill('Husum');
-await page.getByLabel('PLZ').fill('25813');
+await page.getByLabel('Ort', { exact: true }).fill('Husum');
+await page.getByLabel('PLZ', { exact: true }).fill('25813');
 await page.getByRole('button', { name: 'Speichern' }).click();
 await page.locator('td', { hasText: 'FangEvo Outlet' }).waitFor();
 await page.screenshot({ path: `${shots}/04-companies.png` });
@@ -108,7 +112,7 @@ const ctx2 = await browser.newContext({ viewport: { width: 390, height: 844 }, l
 const p2 = await ctx2.newPage();
 p2.on('pageerror', (e) => errors.push('p2 ' + e.message));
 await p2.goto(
-  `${BASE}/accept-invitation?token=${encodeURIComponent(tokenFor(staff, '/accept-invitation'))}`,
+  `${BASE}/accept-invitation?token=${encodeURIComponent(await tokenFor(staff, '/accept-invitation'))}`,
 );
 await p2.getByText('Einladung zu FangEvo Demo GmbH').waitFor();
 await p2.getByLabel('Ihr Name').fill('Lea Lager');

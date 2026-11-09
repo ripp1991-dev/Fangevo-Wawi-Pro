@@ -38,3 +38,16 @@ Stand: Phase 1. Sicherheit ist Teil der Architektur (Playbook Abschnitt 21).
 ## Schwachstellen melden
 
 Bitte nicht öffentlich als Issue melden, sondern direkt an das FangEvo-Team.
+
+## Ergänzungen Phase 2
+
+| Bereich                 | Maßnahme                                                                                                                                   |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Hintergrundverarbeitung | Worker verarbeitet jedes Ereignis mit Mandantenkontext (RLS); die globale Warteschlange enthält nur IDs                                    |
+| Benachrichtigungen      | RLS beschränkt zusätzlich auf den eigenen Benutzer                                                                                         |
+| Neue Geräte             | Anmeldung mit unbekanntem Browser → E-Mail und Benachrichtigung                                                                            |
+| Listen                  | Filter und Sortierung nur auf freigegebenen Feldern; keine beliebigen Spaltennamen aus dem Browser                                         |
+| Suche                   | Eingaben werden auf Buchstaben/Ziffern reduziert, bevor sie in eine Volltextabfrage gehen; parametrisierte SQL-Abfrage; Rate-Limit 120/min |
+| Eigene Felder           | Serverseitige Typprüfung; Verweise nur auf Datensätze im eigenen Mandanten                                                                 |
+| CSV-Export              | Zellen, die mit `=`, `+`, `-`, `@` beginnen, werden entschärft (Schutz gegen Formel-Einschleusung in Excel)                                |
+| Dashboards              | Widgets ohne passendes Recht werden serverseitig entfernt; Vorlagen übernehmen keine persönlichen Notizen                                  |

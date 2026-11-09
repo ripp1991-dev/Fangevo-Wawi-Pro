@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Mail, ShieldCheck, UserPlus, Users, X } from 'lucide-react';
+import { Mail, ShieldCheck, UserPlus, X } from 'lucide-react';
 import { useState } from 'react';
 import {
   Alert,
@@ -8,15 +8,11 @@ import {
   Card,
   CardHeader,
   Dialog,
-  EmptyState,
   Field,
   Input,
   PageHeader,
-  Spinner,
   TBody,
   TD,
-  TH,
-  THead,
   TR,
   Table,
 } from '@fangevo/ui';
@@ -31,6 +27,8 @@ import {
   type Role,
 } from '../../lib/types';
 import { useCan, useSession } from '../../lib/session';
+import { DataTable } from '../../components/table/data-table';
+import { type Column } from '../../components/table/types';
 import { AccessEditor, type AccessValue } from './access-editor';
 
 export function MembersPage() {
@@ -51,11 +49,11 @@ export function MembersPage() {
     queryFn: () => http.get<Role[]>('/admin/roles'),
     enabled: can('roles.read'),
   });
-  const companies = useQuery({
-    queryKey: ['companies', false],
-    queryFn: () => http.get<Company[]>('/admin/companies'),
-    enabled: can('companies.read'),
-  });
+  // Nur Firmen, auf die man selbst Zugriff hat, können weitergegeben werden.
+  const companies = {
+    data: (s.account?.companies ?? []) as Pick<Company, 'id' | 'name'>[],
+    isPending: false,
+  };
   const [inviteOpen, setInviteOpen] = useState(false);
   const [editing, setEditing] = useState<Member | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -70,6 +68,126 @@ export function MembersPage() {
       setActionError(errorMessage(e));
     }
   };
+
+  const memberColumns: Column<Member>[] = [
+    {
+      id: 'name',
+      header: 'Person',
+      kind: 'string',
+      sortable: true,
+      width: 260,
+      value: (m) => m.user.name,
+      text: (m) => `${m.user.name} <${m.user.email}>`,
+      cell: (m) => (
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="truncate font-medium">{m.user.name}</p>
+            {m.isOwner && <Badge tone="primary">Inhaber</Badge>}
+            {m.user.mfaEnabled && (
+              <ShieldCheck
+                className="size-4 shrink-0 text-success"
+                aria-label="Zwei-Faktor aktiv"
+              />
+            )}
+          </div>
+          <p className="truncate text-xs text-muted">{m.user.email}</p>
+        </div>
+      ),
+    },
+    {
+      id: 'roles',
+      header: 'Rollen',
+      kind: 'string',
+      width: 200,
+      value: (m) => (m.isOwner ? 'Alle Rechte' : m.roleIds.map(roleName).join(', ')),
+      text: (m) =>
+        m.isOwner
+          ? 'Alle Rechte'
+          : m.roleIds.map(roleName).join(', ') +
+            (m.permissions.length ? ` +${m.permissions.length}` : ''),
+    },
+    {
+      id: 'companies',
+      header: 'Firmen',
+      kind: 'string',
+      width: 110,
+      value: (m) => (m.isOwner || m.allCompanies ? 'Alle' : String(m.companyIds.length)),
+    },
+    {
+      id: 'mfa',
+      header: 'Zwei-Faktor',
+      kind: 'boolean',
+      groupable: true,
+      defaultHidden: true,
+      width: 120,
+      value: (m) => m.user.mfaEnabled,
+    },
+    {
+      id: 'status',
+      header: 'Status',
+      kind: 'enum',
+      groupable: true,
+      width: 120,
+      options: [
+        { value: 'ACTIVE', label: 'Aktiv' },
+        { value: 'DISABLED', label: 'Gesperrt' },
+      ],
+      value: (m) => m.status,
+      cell: (m) =>
+        m.status === 'ACTIVE' ? (
+          <Badge tone="success">Aktiv</Badge>
+        ) : (
+          <Badge tone="danger">Gesperrt</Badge>
+        ),
+    },
+    {
+      id: 'createdAt',
+      header: 'Mitglied seit',
+      kind: 'date',
+      sortable: true,
+      defaultHidden: true,
+      value: (m) => m.createdAt,
+    },
+    ...(manage
+      ? [
+          {
+            id: 'actions',
+            header: 'Aktionen',
+            kind: 'string' as const,
+            filterable: false,
+            width: 180,
+            value: () => '',
+            cell: (m: Member) => (
+              <div className="flex justify-end gap-1">
+                {!m.isOwner && (
+                  <Button variant="ghost" size="sm" onClick={() => setEditing(m)}>
+                    Rechte
+                  </Button>
+                )}
+                {m.user.id !== s.user.id &&
+                  (m.status === 'ACTIVE' ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => act(() => http.post(`/admin/members/${m.id}/disable`))}
+                    >
+                      Sperren
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => act(() => http.post(`/admin/members/${m.id}/enable`))}
+                    >
+                      Entsperren
+                    </Button>
+                  ))}
+              </div>
+            ),
+          },
+        ]
+      : []),
+  ];
 
   return (
     <>
@@ -92,95 +210,41 @@ export function MembersPage() {
           <Alert tone="danger">{actionError}</Alert>
         </div>
       )}
-      <Card>
-        {members.isPending ? (
-          <Spinner />
-        ) : members.isError ? (
-          <div className="p-4">
-            <Alert tone="danger">{errorMessage(members.error)}</Alert>
-          </div>
-        ) : !members.data.length ? (
-          <EmptyState icon={<Users />} title="Noch keine Benutzer" />
-        ) : (
-          <Table>
-            <THead>
-              <tr>
-                <TH>Person</TH>
-                <TH>Rollen</TH>
-                <TH>Firmen</TH>
-                <TH>Status</TH>
-                {manage && <TH className="text-right">Aktionen</TH>}
-              </tr>
-            </THead>
-            <TBody>
-              {members.data.map((m) => (
-                <TR key={m.id}>
-                  <TD>
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium">{m.user.name}</p>
-                      {m.isOwner && <Badge tone="primary">Inhaber</Badge>}
-                      {m.user.mfaEnabled && (
-                        <ShieldCheck
-                          className="size-4 text-success"
-                          aria-label="Zwei-Faktor aktiv"
-                        />
-                      )}
-                    </div>
-                    <p className="text-xs text-muted">{m.user.email}</p>
-                  </TD>
-                  <TD>
-                    {m.isOwner ? (
-                      <span className="text-muted">Alle Rechte</span>
-                    ) : (
-                      m.roleIds.map(roleName).join(', ') || '–'
-                    )}
-                    {m.permissions.length > 0 && (
-                      <span className="text-muted"> +{m.permissions.length}</span>
-                    )}
-                  </TD>
-                  <TD>{m.isOwner || m.allCompanies ? 'Alle' : `${m.companyIds.length}`}</TD>
-                  <TD>
-                    {m.status === 'ACTIVE' ? (
-                      <Badge tone="success">Aktiv</Badge>
-                    ) : (
-                      <Badge tone="danger">Gesperrt</Badge>
-                    )}
-                  </TD>
-                  {manage && (
-                    <TD className="text-right">
-                      <div className="flex justify-end gap-1">
-                        {!m.isOwner && (
-                          <Button variant="ghost" size="sm" onClick={() => setEditing(m)}>
-                            Rechte
-                          </Button>
-                        )}
-                        {m.user.id !== s.user.id &&
-                          (m.status === 'ACTIVE' ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => act(() => http.post(`/admin/members/${m.id}/disable`))}
-                            >
-                              Sperren
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => act(() => http.post(`/admin/members/${m.id}/enable`))}
-                            >
-                              Entsperren
-                            </Button>
-                          ))}
-                      </div>
-                    </TD>
-                  )}
-                </TR>
-              ))}
-            </TBody>
-          </Table>
-        )}
-      </Card>
+      <DataTable<Member>
+        tableKey="members"
+        mode="client"
+        rows={members.data}
+        loading={members.isPending}
+        error={members.error}
+        columns={memberColumns}
+        rowId={(m) => m.id}
+        exportName="benutzer"
+        initial={{ sort: 'name:asc' }}
+        bulkActions={
+          manage
+            ? [
+                {
+                  label: 'Sperren',
+                  run: (rows) =>
+                    act(async () => {
+                      for (const m of rows.filter(
+                        (x) => x.user.id !== s.user.id && !x.isOwner && x.status === 'ACTIVE',
+                      ))
+                        await http.post(`/admin/members/${m.id}/disable`);
+                    }),
+                },
+                {
+                  label: 'Entsperren',
+                  run: (rows) =>
+                    act(async () => {
+                      for (const m of rows.filter((x) => x.status !== 'ACTIVE'))
+                        await http.post(`/admin/members/${m.id}/enable`);
+                    }),
+                },
+              ]
+            : undefined
+        }
+      />
 
       {!!invitations.data?.length && (
         <Card className="mt-6">
@@ -237,7 +301,7 @@ function InviteDialog({
   onClose,
 }: {
   roles: Role[];
-  companies: Company[];
+  companies: Pick<Company, 'id' | 'name'>[];
   onClose: () => void;
 }) {
   const qc = useQueryClient();
@@ -305,7 +369,7 @@ function EditAccessDialog({
 }: {
   member: Member;
   roles: Role[];
-  companies: Company[];
+  companies: Pick<Company, 'id' | 'name'>[];
   onClose: () => void;
 }) {
   const qc = useQueryClient();

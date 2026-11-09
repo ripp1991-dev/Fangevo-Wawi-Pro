@@ -131,7 +131,7 @@ export class SearchService {
         FROM search_documents
         WHERE NOT archived
           AND permission = ANY(${perms}::text[])
-          AND (company_id IS NULL OR company_id = ANY(${companies}::uuid[]))
+          AND (${t.account.allCompanies} OR company_id IS NULL OR company_id = ANY(${companies}::uuid[]))
           AND (
             to_tsvector('german', coalesce(title, '') || ' ' || coalesce(subtitle, '') || ' ' || coalesce(body, '')) @@ to_tsquery('german', ${prefix})
             OR to_tsvector('simple', coalesce(title, '') || ' ' || coalesce(subtitle, '') || ' ' || coalesce(body, '')) @@ to_tsquery('simple', ${prefix})

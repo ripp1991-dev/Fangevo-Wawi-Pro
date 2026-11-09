@@ -8,6 +8,7 @@ import {
   Card,
   CardBody,
   CardHeader,
+  Checkbox,
   Field,
   Input,
   PageHeader,
@@ -28,6 +29,7 @@ export function SecurityPage() {
         <PasswordCard />
         <MfaCard />
         <SessionsCard />
+        <NotificationSettingsCard />
       </div>
     </>
   );
@@ -296,6 +298,46 @@ function SessionsCard() {
                     Abmelden
                   </Button>
                 )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+
+function NotificationSettingsCard() {
+  const qc = useQueryClient();
+  const q = useQuery({
+    queryKey: ['notification-preferences'],
+    queryFn: () =>
+      http.get<{ type: string; label: string; description: string; inApp: boolean }[]>(
+        '/notifications/preferences',
+      ),
+  });
+  return (
+    <Card id="benachrichtigungen" className="lg:col-span-2">
+      <CardHeader
+        title="Benachrichtigungen"
+        description="Welche Hinweise möchten Sie in der Software erhalten? Sicherheitshinweise kommen zusätzlich immer per E-Mail."
+      />
+      <CardBody>
+        {q.isPending ? (
+          <Spinner />
+        ) : (
+          <ul className="grid gap-3 sm:grid-cols-2">
+            {q.data?.map((p) => (
+              <li key={p.type}>
+                <Checkbox
+                  label={p.label}
+                  description={p.description}
+                  checked={p.inApp}
+                  onChange={async (e) => {
+                    await http.put('/notifications/preferences', { [p.type]: e.target.checked });
+                    await qc.invalidateQueries({ queryKey: ['notification-preferences'] });
+                  }}
+                />
               </li>
             ))}
           </ul>
