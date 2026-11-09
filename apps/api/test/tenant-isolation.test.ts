@@ -28,7 +28,15 @@ describe('API-Ebene', () => {
 
   it('fremde Firma ist nicht lesbar, änderbar oder archivierbar', async () => {
     expect((await a.client.get(`/admin/companies/${b.companyId}`)).status).toBe(404);
-    expect((await a.client.put(`/admin/companies/${b.companyId}`, { name: 'gekapert', country: 'DE', version: 1 })).status).toBe(404);
+    expect(
+      (
+        await a.client.put(`/admin/companies/${b.companyId}`, {
+          name: 'gekapert',
+          country: 'DE',
+          version: 1,
+        })
+      ).status,
+    ).toBe(404);
     expect((await a.client.post(`/admin/companies/${b.companyId}/archive`)).status).toBe(404);
     const still = await b.client.get(`/admin/companies/${b.companyId}`);
     expect(still.body.name).toBe('Firma B');
@@ -36,10 +44,14 @@ describe('API-Ebene', () => {
   });
 
   it('fremde Firma kann nicht als Firmenkontext gesetzt werden', async () => {
-    const r = await a.client.req('GET', '/context/company', undefined, { headers: { 'x-company-id': b.companyId } });
+    const r = await a.client.req('GET', '/context/company', undefined, {
+      headers: { 'x-company-id': b.companyId },
+    });
     expect(r.status).toBe(403);
     expect(r.body.code).toBe('COMPANY_ACCESS_DENIED');
-    const ok = await a.client.req('GET', '/context/company', undefined, { headers: { 'x-company-id': a.companyId } });
+    const ok = await a.client.req('GET', '/context/company', undefined, {
+      headers: { 'x-company-id': a.companyId },
+    });
     expect(ok.status).toBe(200);
   });
 
@@ -50,17 +62,40 @@ describe('API-Ebene', () => {
     const bRoleId = bRoles.body[0].id;
 
     const aMembers = await a.client.get('/admin/members');
-    expect(aMembers.body.every((m: { user: { email: string } }) => m.user.email !== b.email)).toBe(true);
+    expect(aMembers.body.every((m: { user: { email: string } }) => m.user.email !== b.email)).toBe(
+      true,
+    );
 
-    expect((await a.client.put(`/admin/members/${bMemberId}/access`, { roleIds: [], permissions: [], allCompanies: false, companyIds: [] })).status).toBe(404);
+    expect(
+      (
+        await a.client.put(`/admin/members/${bMemberId}/access`, {
+          roleIds: [],
+          permissions: [],
+          allCompanies: false,
+          companyIds: [],
+        })
+      ).status,
+    ).toBe(404);
     expect((await a.client.post(`/admin/members/${bMemberId}/disable`)).status).toBe(404);
-    expect((await a.client.put(`/admin/roles/${bRoleId}`, { name: 'x', permissions: [] })).status).toBe(404);
+    expect(
+      (await a.client.put(`/admin/roles/${bRoleId}`, { name: 'x', permissions: [] })).status,
+    ).toBe(404);
     expect((await a.client.del(`/admin/roles/${bRoleId}`)).status).toBe(404);
 
     // Fremde Rolle oder Firma kann auch nicht in eine eigene Einladung "eingeschmuggelt" werden
-    const inv = await a.client.post('/admin/members/invitations', { email: 'x@example.test', roleIds: [bRoleId], allCompanies: false, companyIds: [] });
+    const inv = await a.client.post('/admin/members/invitations', {
+      email: 'x@example.test',
+      roleIds: [bRoleId],
+      allCompanies: false,
+      companyIds: [],
+    });
     expect(inv.status).toBe(422);
-    const inv2 = await a.client.post('/admin/members/invitations', { email: 'y@example.test', roleIds: [], allCompanies: false, companyIds: [b.companyId] });
+    const inv2 = await a.client.post('/admin/members/invitations', {
+      email: 'y@example.test',
+      roleIds: [],
+      allCompanies: false,
+      companyIds: [b.companyId],
+    });
     expect([403, 422]).toContain(inv2.status);
 
     const audit = await a.client.get('/admin/audit');
@@ -89,9 +124,13 @@ describe('Datenbank-Ebene (Row-Level Security)', () => {
 
   it('mit Kontext A sind nur Daten von A sichtbar', async () => {
     const db = app_();
-    const rows = await withTenant(db, { accountId: a.accountId, userId: null }, (tx) => tx.company.findMany());
+    const rows = await withTenant(db, { accountId: a.accountId, userId: null }, (tx) =>
+      tx.company.findMany(),
+    );
     expect(rows.map((r) => r.accountId)).toEqual([a.accountId]);
-    const byId = await withTenant(db, { accountId: a.accountId, userId: null }, (tx) => tx.company.findUnique({ where: { id: b.companyId } }));
+    const byId = await withTenant(db, { accountId: a.accountId, userId: null }, (tx) =>
+      tx.company.findUnique({ where: { id: b.companyId } }),
+    );
     expect(byId).toBeNull();
     await db.$disconnect();
   });
@@ -119,22 +158,30 @@ describe('Datenbank-Ebene (Row-Level Security)', () => {
 
   it('ungültiger Kontext wird abgelehnt', async () => {
     const db = app_();
-    await expect(withTenant(db, { accountId: "x' OR 1=1 --", userId: null }, (tx) => tx.company.count())).rejects.toThrow('Ungültiger Mandantenkontext');
+    await expect(
+      withTenant(db, { accountId: "x' OR 1=1 --", userId: null }, (tx) => tx.company.count()),
+    ).rejects.toThrow('Ungültiger Mandantenkontext');
     await db.$disconnect();
   });
 
   it('Audit-Log ist unveränderlich', async () => {
     const db = app_();
     await expect(
-      withTenant(db, { accountId: a.accountId, userId: null }, (tx) => tx.auditLog.updateMany({ data: { action: 'gefälscht' } })),
+      withTenant(db, { accountId: a.accountId, userId: null }, (tx) =>
+        tx.auditLog.updateMany({ data: { action: 'gefälscht' } }),
+      ),
     ).rejects.toThrow();
-    await expect(withTenant(db, { accountId: a.accountId, userId: null }, (tx) => tx.auditLog.deleteMany())).rejects.toThrow();
+    await expect(
+      withTenant(db, { accountId: a.accountId, userId: null }, (tx) => tx.auditLog.deleteMany()),
+    ).rejects.toThrow();
     await db.$disconnect();
   });
 
   it('die Laufzeit-Rolle hat kein BYPASSRLS', async () => {
     const db = app_();
-    const r = await db.$queryRaw<{ rolbypassrls: boolean; rolsuper: boolean }[]>`SELECT rolbypassrls, rolsuper FROM pg_roles WHERE rolname = current_user`;
+    const r = await db.$queryRaw<
+      { rolbypassrls: boolean; rolsuper: boolean }[]
+    >`SELECT rolbypassrls, rolsuper FROM pg_roles WHERE rolname = current_user`;
     expect(r[0]).toEqual({ rolbypassrls: false, rolsuper: false });
     await db.$disconnect();
   });

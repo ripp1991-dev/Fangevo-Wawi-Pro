@@ -22,7 +22,11 @@ export class MembersController {
   @HttpCode(204)
   @RequirePermission('users.manage')
   @ApiZodBody(updateMemberAccessSchema)
-  async updateAccess(@Tenant() t: TenantContext, @Param('id', uuidParam) id: string, @Body(zodPipe(updateMemberAccessSchema)) body: z.infer<typeof updateMemberAccessSchema>) {
+  async updateAccess(
+    @Tenant() t: TenantContext,
+    @Param('id', uuidParam) id: string,
+    @Body(zodPipe(updateMemberAccessSchema)) body: z.infer<typeof updateMemberAccessSchema>,
+  ) {
     await this.members.updateAccess(t, id, body);
   }
 
@@ -49,7 +53,10 @@ export class MembersController {
   @Post('invitations')
   @RequirePermission('users.manage')
   @ApiZodBody(inviteUserSchema)
-  invite(@Tenant() t: TenantContext, @Body(zodPipe(inviteUserSchema)) body: z.infer<typeof inviteUserSchema>) {
+  invite(
+    @Tenant() t: TenantContext,
+    @Body(zodPipe(inviteUserSchema)) body: z.infer<typeof inviteUserSchema>,
+  ) {
     return this.members.invite(t, body);
   }
 

@@ -6,7 +6,9 @@ import { loadConfig } from '../src/config';
 import { createApp } from '../src/bootstrap';
 import { MailService } from '../src/core/mail/mail.service';
 
-export async function startApp(overrides: Record<string, string> = {}): Promise<NestFastifyApplication> {
+export async function startApp(
+  overrides: Record<string, string> = {},
+): Promise<NestFastifyApplication> {
   const app = await createApp(loadConfig({ ...process.env, ...overrides }));
   await app.init();
   await app.getHttpAdapter().getInstance().ready();
@@ -24,12 +26,25 @@ export class Client {
   companyId: string | undefined;
   constructor(private readonly app: NestFastifyApplication) {}
 
-  async req<T = any>(method: string, url: string, body?: unknown, opts: { csrf?: boolean; headers?: Record<string, string> } = {}): Promise<Res<T>> {
+  async req<T = any>(
+    method: string,
+    url: string,
+    body?: unknown,
+    opts: { csrf?: boolean; headers?: Record<string, string> } = {},
+  ): Promise<Res<T>> {
     const headers: Record<string, string> = { ...(opts.headers ?? {}) };
     if (this.cookie) headers.cookie = this.cookie;
     if (opts.csrf !== false && method !== 'GET') headers['x-fangevo-csrf'] = '1';
     if (this.companyId) headers['x-company-id'] = this.companyId;
-    const r = await this.app.getHttpAdapter().getInstance().inject({ method: method as 'GET', url: url.startsWith('/health') ? url : `/api/v1${url}`, payload: body as object, headers });
+    const r = await this.app
+      .getHttpAdapter()
+      .getInstance()
+      .inject({
+        method: method as 'GET',
+        url: url.startsWith('/health') ? url : `/api/v1${url}`,
+        payload: body as object,
+        headers,
+      });
     const set = r.headers['set-cookie'];
     const first = Array.isArray(set) ? set[0] : set;
     if (first?.startsWith('fe_session=')) {
@@ -81,10 +96,18 @@ export function uniqueEmail(prefix = 'user'): string {
 }
 
 /** Registriert einen Account, bestätigt die E-Mail und meldet an. */
-export async function signUp(app: NestFastifyApplication, accountName = 'Testfirma'): Promise<{ client: Client; email: string; accountId: string; companyId: string }> {
+export async function signUp(
+  app: NestFastifyApplication,
+  accountName = 'Testfirma',
+): Promise<{ client: Client; email: string; accountId: string; companyId: string }> {
   const client = new Client(app);
   const email = uniqueEmail('owner');
-  const r = await client.post('/auth/register', { name: 'Inhaber Test', email, password: PASSWORD, accountName });
+  const r = await client.post('/auth/register', {
+    name: 'Inhaber Test',
+    email,
+    password: PASSWORD,
+    accountName,
+  });
   if (r.status !== 202) throw new Error(`register ${r.status} ${JSON.stringify(r.body)}`);
   await client.post('/auth/verify-email', { token: lastTokenFor(app, email) });
   const l = await client.post('/auth/login', { email, password: PASSWORD });
@@ -100,10 +123,20 @@ export async function inviteNewMember(
   input: { roleIds?: string[]; allCompanies?: boolean; companyIds?: string[] } = {},
 ): Promise<{ client: Client; email: string; membershipId: string }> {
   const email = uniqueEmail('member');
-  const inv = await admin.post('/admin/members/invitations', { email, roleIds: [], allCompanies: false, companyIds: [], ...input });
+  const inv = await admin.post('/admin/members/invitations', {
+    email,
+    roleIds: [],
+    allCompanies: false,
+    companyIds: [],
+    ...input,
+  });
   if (inv.status !== 201) throw new Error(`invite ${inv.status} ${JSON.stringify(inv.body)}`);
   const client = new Client(app);
-  const acc = await client.post('/auth/invitations/accept', { token: lastTokenFor(app, email), name: 'Mitarbeiter Test', password: PASSWORD });
+  const acc = await client.post('/auth/invitations/accept', {
+    token: lastTokenFor(app, email),
+    name: 'Mitarbeiter Test',
+    password: PASSWORD,
+  });
   if (acc.status !== 200) throw new Error(`accept ${acc.status} ${JSON.stringify(acc.body)}`);
   const members = await admin.get('/admin/members');
   const m = members.body.find((x: { user: { email: string } }) => x.user.email === email);

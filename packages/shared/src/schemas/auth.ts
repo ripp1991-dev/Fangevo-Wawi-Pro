@@ -1,6 +1,11 @@
 import { z } from 'zod';
 
-export const emailSchema = z.string().trim().toLowerCase().max(254).pipe(z.email('Ungültige E-Mail-Adresse'));
+export const emailSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .max(254)
+  .pipe(z.email('Ungültige E-Mail-Adresse'));
 
 /** Mindestens 12 Zeichen (BSI-Empfehlung für Passwörter ohne Komplexitätsregeln). */
 export const passwordSchema = z
@@ -27,7 +32,10 @@ export const mfaVerifySchema = z.object({
 });
 
 export const mfaEnableSchema = z.object({
-  code: z.string().trim().regex(/^\d{6}$/, 'Bitte den 6-stelligen Code eingeben'),
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, 'Bitte den 6-stelligen Code eingeben'),
 });
 
 export const mfaDisableSchema = z.object({

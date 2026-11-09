@@ -39,12 +39,26 @@ export class AppModule {
         LoggerModule.forRoot({
           pinoHttp: {
             level: config.NODE_ENV === 'test' ? 'silent' : config.LOG_LEVEL,
-            transport: config.isProd || config.NODE_ENV === 'test' ? undefined : { target: 'pino/file', options: { destination: 1 } },
+            transport:
+              config.isProd || config.NODE_ENV === 'test'
+                ? undefined
+                : { target: 'pino/file', options: { destination: 1 } },
             redact: {
-              paths: ['req.headers.cookie', 'req.headers.authorization', 'res.headers["set-cookie"]', '*.password', '*.newPassword', '*.currentPassword', '*.token', '*.code'],
+              paths: [
+                'req.headers.cookie',
+                'req.headers.authorization',
+                'res.headers["set-cookie"]',
+                '*.password',
+                '*.newPassword',
+                '*.currentPassword',
+                '*.token',
+                '*.code',
+              ],
               censor: '[entfernt]',
             },
-            customProps: (req) => ({ userId: (req as { fangevo?: { user?: { id?: string } } }).fangevo?.user?.id }),
+            customProps: (req) => ({
+              userId: (req as { fangevo?: { user?: { id?: string } } }).fangevo?.user?.id,
+            }),
           },
         }),
       ],

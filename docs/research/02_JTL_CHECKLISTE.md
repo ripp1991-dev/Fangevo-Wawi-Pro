@@ -18,19 +18,19 @@
 
 ## B. Informationen, die FangEvo bereitstellen sollte
 
-| # | Information | Wo zu finden | Benötigt für |
-|---|---|---|---|
-| 1 | JTL-Wawi-Version (z. B. 1.9.x / 1.10.x) | In JTL-Wawi: *Hilfe → Info* | Einordnung, Doku-Abgleich |
-| 2 | Lizenz / Edition und gebuchte Zusatzmodule (WMS, Packtisch+, Workflows, POS …) | JTL-Kundencenter | Funktionsumfang |
-| 3 | Liste der aktiven Verkaufskanäle (JTL-Shop, eazyAuction, SCX-Marktplätze, Shopify, WooCommerce …) | JTL-Wawi → Verkaufskanäle | Multichannel-Matrix |
-| 4 | Genutzte Versanddienstleister (DHL, DPD, GLS …) | JTL-Shipping | Versandmodul |
-| 5 | Anzahl Mandanten, Lager, Benutzer, Arbeitsplätze | Admin-Bereich | Mengengerüst |
-| 6 | Mengengerüst: Artikel, Varianten, Aufträge/Monat, Kunden | Auswertungen | Performance-Ziele |
-| 7 | Screenshots der Hauptmenüs und der 10 meistgenutzten Masken | Oberfläche | Menüstruktur, UX-Vergleich |
-| 8 | Liste genutzter Workflows (Name, Auslöser, Zweck) – ohne Passwörter | *Admin → Workflows* | Automatisierungs-Matrix |
-| 9 | Genutzte Ameise-Importvorlagen (Name, Zweck, Beispiel-CSV mit Testdaten) | JTL-Ameise | Import-Modul |
-| 10 | Was nervt am meisten? Top-10-Schmerzpunkte der Mitarbeiter | Interviews | Produktdifferenzierung |
-| 11 | Afterbuy: im Einsatz? Wenn ja, welche Module und Marktplätze | Afterbuy-Konto | Afterbuy-Matrix |
+| #   | Information                                                                                       | Wo zu finden                | Benötigt für               |
+| --- | ------------------------------------------------------------------------------------------------- | --------------------------- | -------------------------- |
+| 1   | JTL-Wawi-Version (z. B. 1.9.x / 1.10.x)                                                           | In JTL-Wawi: _Hilfe → Info_ | Einordnung, Doku-Abgleich  |
+| 2   | Lizenz / Edition und gebuchte Zusatzmodule (WMS, Packtisch+, Workflows, POS …)                    | JTL-Kundencenter            | Funktionsumfang            |
+| 3   | Liste der aktiven Verkaufskanäle (JTL-Shop, eazyAuction, SCX-Marktplätze, Shopify, WooCommerce …) | JTL-Wawi → Verkaufskanäle   | Multichannel-Matrix        |
+| 4   | Genutzte Versanddienstleister (DHL, DPD, GLS …)                                                   | JTL-Shipping                | Versandmodul               |
+| 5   | Anzahl Mandanten, Lager, Benutzer, Arbeitsplätze                                                  | Admin-Bereich               | Mengengerüst               |
+| 6   | Mengengerüst: Artikel, Varianten, Aufträge/Monat, Kunden                                          | Auswertungen                | Performance-Ziele          |
+| 7   | Screenshots der Hauptmenüs und der 10 meistgenutzten Masken                                       | Oberfläche                  | Menüstruktur, UX-Vergleich |
+| 8   | Liste genutzter Workflows (Name, Auslöser, Zweck) – ohne Passwörter                               | _Admin → Workflows_         | Automatisierungs-Matrix    |
+| 9   | Genutzte Ameise-Importvorlagen (Name, Zweck, Beispiel-CSV mit Testdaten)                          | JTL-Ameise                  | Import-Modul               |
+| 10  | Was nervt am meisten? Top-10-Schmerzpunkte der Mitarbeiter                                        | Interviews                  | Produktdifferenzierung     |
+| 11  | Afterbuy: im Einsatz? Wenn ja, welche Module und Marktplätze                                      | Afterbuy-Konto              | Afterbuy-Matrix            |
 
 ## C. Technische Vorbereitung für eine Datenbank-Analyse (nur nach Freigabe in A)
 
@@ -54,12 +54,12 @@ Ohne eigenen Zugang erfolgt die Analyse anhand der **öffentlichen Dokumentation
 
 Wird in `docs/research/FUNKTIONSMATRIX.md` gepflegt:
 
-| Referenzsystem | Funktion | FangEvo-Modul | Priorität | Umsetzungsstatus |
-|---|---|---|---|---|
-| JTL | Artikel mit Varianten (Vater/Kind) | Artikel | P0 | ungeprüft |
-| JTL | Ameise CSV-Import | Import | P1 | ungeprüft |
-| Afterbuy | Marktplatz-Listing eBay | Multichannel | P2 | ungeprüft |
+| Referenzsystem | Funktion                           | FangEvo-Modul | Priorität | Umsetzungsstatus |
+| -------------- | ---------------------------------- | ------------- | --------- | ---------------- |
+| JTL            | Artikel mit Varianten (Vater/Kind) | Artikel       | P0        | ungeprüft        |
+| JTL            | Ameise CSV-Import                  | Import        | P1        | ungeprüft        |
+| Afterbuy       | Marktplatz-Listing eBay            | Multichannel  | P2        | ungeprüft        |
 
-*(Die Zeilen sind Beispiele und noch nicht geprüft.)*
+_(Die Zeilen sind Beispiele und noch nicht geprüft.)_
 
 Status-Werte: `ungeprüft` · `geprüft – vorhanden` · `geplant` · `in Arbeit` · `umgesetzt` · `getestet`.

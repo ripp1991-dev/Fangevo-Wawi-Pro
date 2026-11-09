@@ -16,14 +16,19 @@ const now = new Date('2026-11-09T12:00:00Z');
 
 describe('accessMode', () => {
   it('aktiv = voller Zugriff', () => expect(accessMode(base, now)).toBe('full'));
-  it('Zahlungsverzug sperrt nicht sofort', () => expect(accessMode({ ...base, status: 'PAST_DUE' }, now)).toBe('full'));
+  it('Zahlungsverzug sperrt nicht sofort', () =>
+    expect(accessMode({ ...base, status: 'PAST_DUE' }, now)).toBe('full'));
   it('gesperrt = nur lesen (Export bleibt möglich)', () => {
     expect(accessMode({ ...base, status: 'SUSPENDED' }, now)).toBe('read_only');
     expect(accessMode({ ...base, status: 'CANCELED' }, now)).toBe('read_only');
   });
   it('abgelaufener Test = nur lesen', () => {
-    expect(accessMode({ ...base, status: 'TRIAL', trialEndsAt: new Date('2026-11-01') }, now)).toBe('read_only');
-    expect(accessMode({ ...base, status: 'TRIAL', trialEndsAt: new Date('2026-12-01') }, now)).toBe('full');
+    expect(accessMode({ ...base, status: 'TRIAL', trialEndsAt: new Date('2026-11-01') }, now)).toBe(
+      'read_only',
+    );
+    expect(accessMode({ ...base, status: 'TRIAL', trialEndsAt: new Date('2026-12-01') }, now)).toBe(
+      'full',
+    );
   });
   it('abgelaufene Laufzeit = nur lesen', () => {
     expect(accessMode({ ...base, validUntil: new Date('2026-11-08') }, now)).toBe('read_only');
@@ -31,7 +36,8 @@ describe('accessMode', () => {
 });
 
 describe('Module und Limits', () => {
-  it('core ist immer enthalten', () => expect(hasModule({ ...base, modules: [] }, 'core')).toBe(true));
+  it('core ist immer enthalten', () =>
+    expect(hasModule({ ...base, modules: [] }, 'core')).toBe(true));
   it('nicht gebuchtes Modul fehlt', () => expect(hasModule(base, 'orders')).toBe(false));
   it('Firmenlimit greift bei 3', () => {
     expect(canAdd(base, 'companies', 2)).toBe(true);

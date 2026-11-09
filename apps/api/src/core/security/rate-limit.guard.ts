@@ -27,12 +27,26 @@ export class RateLimitGuard implements CanActivate {
       let id = clientIp(req) ?? 'unknown';
       if (r.byBodyField) {
         const v = (req.body as Record<string, unknown> | undefined)?.[r.byBodyField];
-        id += ':' + createHash('sha256').update(String(v ?? '').toLowerCase().trim()).digest('hex').slice(0, 16);
+        id +=
+          ':' +
+          createHash('sha256')
+            .update(
+              String(v ?? '')
+                .toLowerCase()
+                .trim(),
+            )
+            .digest('hex')
+            .slice(0, 16);
       }
       const key = `rl:${r.key}:${id}:${Math.floor(Date.now() / 1000 / r.windowSec)}`;
       const n = await this.redis.client.incr(key);
       if (n === 1) await this.redis.client.expire(key, r.windowSec);
-      if (n > r.limit) throw new AppError(429, 'RATE_LIMITED', 'Zu viele Versuche. Bitte später erneut versuchen.');
+      if (n > r.limit)
+        throw new AppError(
+          429,
+          'RATE_LIMITED',
+          'Zu viele Versuche. Bitte später erneut versuchen.',
+        );
     }
     return true;
   }

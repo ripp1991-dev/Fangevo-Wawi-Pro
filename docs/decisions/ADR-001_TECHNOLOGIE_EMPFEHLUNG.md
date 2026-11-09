@@ -1,6 +1,6 @@
 # ADR-001 – Architektur- und Technologieempfehlung
 
-**Stand:** 2026-11-09 · **Status:** VORSCHLAG – wartet auf Freigabe
+**Stand:** 2026-11-09 · **Status:** angenommen mit der Freigabe von Phase 1. Präzisiert durch ADR-002 (Authentifizierung), ADR-003 (Vite, vorläufig) und ADR-005 (Versionen).
 
 Bewertet wird der Vorschlag aus Playbook Abschnitt 4.2. Wo ich davon abweiche, steht es ausdrücklich dabei, mit Begründung.
 
@@ -10,20 +10,20 @@ Bewertet wird der Vorschlag aus Playbook Abschnitt 4.2. Wo ich davon abweiche, s
 
 **Empfehlung:** ein TypeScript-Monorepo (pnpm Workspaces + Turborepo) mit **einem** Backend-Prozess (API) und **einem** Worker-Prozess (Hintergrundjobs). Beide nutzen dieselben Module.
 
-| | |
-|---|---|
-| Vorteile | Eine Codebasis, ein Deployment, Transaktionen über Modulgrenzen ohne verteilte Systeme, schnelle Entwicklung, einfaches Debugging |
-| Nachteile | Module können „verkleben“, wenn die Grenzen nicht erzwungen werden |
+|               |                                                                                                                                                                                                                                                                                           |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Vorteile      | Eine Codebasis, ein Deployment, Transaktionen über Modulgrenzen ohne verteilte Systeme, schnelle Entwicklung, einfaches Debugging                                                                                                                                                         |
+| Nachteile     | Module können „verkleben“, wenn die Grenzen nicht erzwungen werden                                                                                                                                                                                                                        |
 | Gegenmaßnahme | Jedes Modul hat eine öffentliche Service-Schnittstelle. Zugriffe auf fremde Tabellen sind verboten und werden per Lint-Regel (Import-Grenzen) im CI geprüft. Module kommunizieren zusätzlich über **interne Domain-Events** (Outbox-Muster), sodass sie später ausgelagert werden können. |
 
 ## 2. Mandantentrennung – wichtigste Einzelentscheidung
 
 **Empfehlung:** eine gemeinsame PostgreSQL-Datenbank, gemeinsames Schema, jede Geschäftstabelle trägt `account_id` und `company_id`. Zusätzlich **PostgreSQL Row-Level Security (RLS)** als zweite Sicherheitsebene.
 
-| Variante | Bewertung |
-|---|---|
-| Eine Datenbank pro Kunde | sehr starke Trennung, aber bei Tausenden Kunden teuer und Migrationen werden zum Albtraum ❌ |
-| Ein Schema pro Kunde | ähnliche Probleme ab einigen Hundert Kunden ❌ |
+| Variante                                    | Bewertung                                                                                                       |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Eine Datenbank pro Kunde                    | sehr starke Trennung, aber bei Tausenden Kunden teuer und Migrationen werden zum Albtraum ❌                    |
+| Ein Schema pro Kunde                        | ähnliche Probleme ab einigen Hundert Kunden ❌                                                                  |
 | **Gemeinsames Schema + `account_id` + RLS** | skaliert auf Tausende Kunden, eine Migration für alle; RLS verhindert Datenlecks auch bei Programmierfehlern ✅ |
 
 Umsetzung: Jede Anfrage läuft in einer Transaktion, die `app.account_id` / `app.company_id` setzt. RLS-Policies lassen nur passende Zeilen zu. Automatisierte Tests versuchen gezielt, fremde Mandantendaten zu lesen, und müssen dabei scheitern.
@@ -31,19 +31,19 @@ Große Enterprise-Kunden können später auf eine eigene Datenbank verschoben we
 
 ## 3. Backend: NestJS ✅ (wie Playbook)
 
-| | |
-|---|---|
-| Vorteile | Modulsystem passt direkt zum modularen Monolithen; Dependency Injection, Guards (Rechte, Lizenzen) und Interceptors (Mandantenkontext) sind eingebaut; OpenAPI-Generierung; großer Talentpool |
-| Nachteile | Etwas schwergewichtig, Decorator-lastig |
-| Entscheidung | NestJS mit **Fastify**-Adapter (schneller als Express). Validierung mit **Zod**, gemeinsam genutzt von Frontend und Backend. |
+|              |                                                                                                                                                                                               |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Vorteile     | Modulsystem passt direkt zum modularen Monolithen; Dependency Injection, Guards (Rechte, Lizenzen) und Interceptors (Mandantenkontext) sind eingebaut; OpenAPI-Generierung; großer Talentpool |
+| Nachteile    | Etwas schwergewichtig, Decorator-lastig                                                                                                                                                       |
+| Entscheidung | NestJS mit **Fastify**-Adapter (schneller als Express). Validierung mit **Zod**, gemeinsam genutzt von Frontend und Backend.                                                                  |
 
 ## 4. Frontend: React + TypeScript + Tailwind ✅, aber **Vite statt Next.js** ⚠️ (Abweichung)
 
 Die Warenwirtschaft ist eine Anwendung hinter einem Login. Suchmaschinen-Optimierung und serverseitiges Rendering, die Hauptstärken von Next.js, bringen dort kaum Nutzen. Next.js würde stattdessen eine zweite Server-Schicht neben NestJS schaffen (doppelte Authentifizierung, doppelte Logik, mehr Betriebsaufwand).
 
-| Option | Bewertung |
-|---|---|
-| Next.js | gut für Marketing-Website und Kundenportal, für die App unnötige Server-Schicht |
+| Option                                               | Bewertung                                                                                   |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Next.js                                              | gut für Marketing-Website und Kundenportal, für die App unnötige Server-Schicht             |
 | **Vite + React (SPA)** + TanStack Router/Query/Table | schlank, sehr schnelle Entwicklung, klare Trennung: das Frontend spricht nur mit der API ✅ |
 
 **Empfehlung:** App (`apps/web`) mit Vite. Die spätere öffentliche Website bzw. der Marketplace-Katalog kann mit Next.js gebaut werden.
@@ -67,11 +67,11 @@ Für Importe, Shop-Synchronisation, PDF-Erzeugung, Workflows, E-Mails und Webhoo
 
 ## 7. Authentifizierung: eigene Bibliothek, kein Eigenbau der Kryptografie
 
-| Option | Bewertung |
-|---|---|
-| Vollständig selbst programmieren | hohes Sicherheitsrisiko ❌ |
-| Externer Dienst (Auth0, Clerk) | schnell, aber teuer pro Nutzer, Daten außerhalb, US-Anbieter (DSGVO) ⚠️ |
-| Keycloak (selbst betrieben) | sehr mächtig, aber eigener Java-Dienst mit hohem Betriebsaufwand ⚠️ |
+| Option                                                          | Bewertung                                                                                         |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Vollständig selbst programmieren                                | hohes Sicherheitsrisiko ❌                                                                        |
+| Externer Dienst (Auth0, Clerk)                                  | schnell, aber teuer pro Nutzer, Daten außerhalb, US-Anbieter (DSGVO) ⚠️                           |
+| Keycloak (selbst betrieben)                                     | sehr mächtig, aber eigener Java-Dienst mit hohem Betriebsaufwand ⚠️                               |
 | **Better Auth** (TypeScript-Bibliothek, in die API eingebettet) | E-Mail/Passwort, TOTP-MFA, Passkeys, Sessions, Einladungen; Daten bleiben in eigener Datenbank ✅ |
 
 Rollen, Rechte und Firmenzuordnung baut FangEvo selbst (fachliche Logik). Später ist SSO (SAML/OIDC) für Enterprise-Kunden nachrüstbar.
@@ -95,11 +95,11 @@ Das Playbook sieht das Lizenzsystem in Phase 7. **Empfehlung:** Den **Kern** (Ta
 
 ### Grobe Betriebskosten (Schätzung, ohne Personal)
 
-| Stufe | Annahme | Hetzner (ca.) | AWS Frankfurt managed (ca.) |
-|---|---|---|---|
-| Entwicklung / Staging | 1–2 Server, kleine DB | 30–80 €/Monat | 150–300 €/Monat |
-| Pilotbetrieb (bis ~20 Kunden) | App + Worker + DB + Redis + Speicher + Backups | 100–300 €/Monat | 400–900 €/Monat |
-| Wachstum (Hunderte Kunden) | mehrere App-Knoten, DB-Replikat | ab ~800 €/Monat | ab ~2.500 €/Monat |
+| Stufe                         | Annahme                                        | Hetzner (ca.)   | AWS Frankfurt managed (ca.) |
+| ----------------------------- | ---------------------------------------------- | --------------- | --------------------------- |
+| Entwicklung / Staging         | 1–2 Server, kleine DB                          | 30–80 €/Monat   | 150–300 €/Monat             |
+| Pilotbetrieb (bis ~20 Kunden) | App + Worker + DB + Redis + Speicher + Backups | 100–300 €/Monat | 400–900 €/Monat             |
+| Wachstum (Hunderte Kunden)    | mehrere App-Knoten, DB-Replikat                | ab ~800 €/Monat | ab ~2.500 €/Monat           |
 
 Die Zahlen sind grobe Richtwerte und müssen mit echten Lasttests überprüft werden. Bei Hetzner sind managed Datenbanken eingeschränkt, das bedeutet mehr eigenen Betriebsaufwand.
 
@@ -113,24 +113,24 @@ RLS-Mandantentrennung · MFA · Argon2-Passwort-Hashing · kurzlebige Sessions m
 
 ## 13. Technische Risiken
 
-| Risiko | Wirkung | Gegenmaßnahme |
-|---|---|---|
-| **Umfang** – JTL und Afterbuy sind über viele Jahre gewachsen | Projekt wird nie „fertig“ | Strikter Fokus auf die erste marktfähige Version (Playbook Abschnitt 27), Funktionsmatrix mit P0–P3 |
-| Mandanten-Datenleck | existenzbedrohend | RLS + automatisierte Tests + Code-Review |
-| Marktplatz-APIs (Amazon, eBay …) | Zulassungsprozesse, Rate-Limits, API-Änderungen | Connector-Architektur zuerst, Integrationen erst nach Sandbox-Tests als fertig melden |
-| E-Rechnung / GoBD / Steuern | Rechtsrisiko | Früh Steuerberater bzw. Fachanwalt einbinden |
-| Hardware-Anbindung Packtisch | viele Gerätetypen | Pilotkunden-Hardware standardisieren |
-| Performance bei großen Händlern | langsame Listen und Importe | Indizes, Paginierung, Hintergrundjobs, Lasttests ab Phase 3 |
+| Risiko                                                        | Wirkung                                         | Gegenmaßnahme                                                                                       |
+| ------------------------------------------------------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| **Umfang** – JTL und Afterbuy sind über viele Jahre gewachsen | Projekt wird nie „fertig“                       | Strikter Fokus auf die erste marktfähige Version (Playbook Abschnitt 27), Funktionsmatrix mit P0–P3 |
+| Mandanten-Datenleck                                           | existenzbedrohend                               | RLS + automatisierte Tests + Code-Review                                                            |
+| Marktplatz-APIs (Amazon, eBay …)                              | Zulassungsprozesse, Rate-Limits, API-Änderungen | Connector-Architektur zuerst, Integrationen erst nach Sandbox-Tests als fertig melden               |
+| E-Rechnung / GoBD / Steuern                                   | Rechtsrisiko                                    | Früh Steuerberater bzw. Fachanwalt einbinden                                                        |
+| Hardware-Anbindung Packtisch                                  | viele Gerätetypen                               | Pilotkunden-Hardware standardisieren                                                                |
+| Performance bei großen Händlern                               | langsame Listen und Importe                     | Indizes, Paginierung, Hintergrundjobs, Lasttests ab Phase 3                                         |
 
 ## 14. Zusammenfassung der Empfehlung
 
-| Bereich | Empfehlung | Abweichung vom Playbook |
-|---|---|---|
-| Architektur | Modularer Monolith, pnpm + Turborepo | – |
-| Backend | NestJS (Fastify), Zod, OpenAPI | – |
-| Frontend | React + **Vite** + Tailwind + shadcn/ui + TanStack | **Vite statt Next.js** (Entscheidung offen) |
-| Datenbank | PostgreSQL + Prisma + **RLS** | RLS zusätzlich |
-| Jobs | Redis + BullMQ | – |
-| Auth | Better Auth + eigenes Rechtesystem | konkretisiert |
-| Lizenz-Kern | ab Phase 1 | **früher** |
-| Hosting | EU (Hetzner oder AWS Frankfurt) | konkretisiert |
+| Bereich     | Empfehlung                                         | Abweichung vom Playbook                     |
+| ----------- | -------------------------------------------------- | ------------------------------------------- |
+| Architektur | Modularer Monolith, pnpm + Turborepo               | –                                           |
+| Backend     | NestJS (Fastify), Zod, OpenAPI                     | –                                           |
+| Frontend    | React + **Vite** + Tailwind + shadcn/ui + TanStack | **Vite statt Next.js** (Entscheidung offen) |
+| Datenbank   | PostgreSQL + Prisma + **RLS**                      | RLS zusätzlich                              |
+| Jobs        | Redis + BullMQ                                     | –                                           |
+| Auth        | Better Auth + eigenes Rechtesystem                 | konkretisiert                               |
+| Lizenz-Kern | ab Phase 1                                         | **früher**                                  |
+| Hosting     | EU (Hetzner oder AWS Frankfurt)                    | konkretisiert                               |

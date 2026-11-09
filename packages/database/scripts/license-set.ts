@@ -39,7 +39,12 @@ await withTenant(prisma, { accountId, userId: null }, async (tx) => {
   };
   await tx.entitlement.update({ where: { accountId }, data });
   await tx.entitlementEvent.create({
-    data: { id: uuidv7(), accountId, actor: 'platform-cli', change: { before: current, after: data } as object },
+    data: {
+      id: uuidv7(),
+      accountId,
+      actor: 'platform-cli',
+      change: { before: current, after: data } as object,
+    },
   });
   console.warn('Lizenz aktualisiert:', data);
 });

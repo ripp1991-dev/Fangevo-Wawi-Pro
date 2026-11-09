@@ -27,7 +27,12 @@ describe('Validierung', () => {
     expect(passwordSchema.safeParse('ein-langes-passwort').success).toBe(true);
   });
   it('normalisiert E-Mail-Adressen', () => {
-    const r = registerSchema.parse({ name: 'A', email: '  Max@Example.DE ', password: 'x'.repeat(12), accountName: 'F' });
+    const r = registerSchema.parse({
+      name: 'A',
+      email: '  Max@Example.DE ',
+      password: 'x'.repeat(12),
+      accountName: 'F',
+    });
     expect(r.email).toBe('max@example.de');
   });
   it('normalisiert Ländercodes', () => {

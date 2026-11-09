@@ -34,7 +34,10 @@ export class RolesController {
   @Post()
   @RequirePermission('roles.manage')
   @ApiZodBody(roleInputSchema)
-  create(@Tenant() t: TenantContext, @Body(zodPipe(roleInputSchema)) body: z.infer<typeof roleInputSchema>) {
+  create(
+    @Tenant() t: TenantContext,
+    @Body(zodPipe(roleInputSchema)) body: z.infer<typeof roleInputSchema>,
+  ) {
     return this.roles.create(t, body);
   }
 
@@ -42,7 +45,11 @@ export class RolesController {
   @HttpCode(204)
   @RequirePermission('roles.manage')
   @ApiZodBody(roleInputSchema)
-  async update(@Tenant() t: TenantContext, @Param('id', uuidParam) id: string, @Body(zodPipe(roleInputSchema)) body: z.infer<typeof roleInputSchema>) {
+  async update(
+    @Tenant() t: TenantContext,
+    @Param('id', uuidParam) id: string,
+    @Body(zodPipe(roleInputSchema)) body: z.infer<typeof roleInputSchema>,
+  ) {
     await this.roles.update(t, id, body);
   }
 

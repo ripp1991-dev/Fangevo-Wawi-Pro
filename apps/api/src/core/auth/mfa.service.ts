@@ -22,7 +22,10 @@ export class MfaService {
     this.box = new SecretBox(config.APP_ENCRYPTION_KEY);
   }
 
-  async startSetup(user: { id: string; email: string }): Promise<{ secret: string; otpauthUrl: string; qrDataUrl: string }> {
+  async startSetup(user: {
+    id: string;
+    email: string;
+  }): Promise<{ secret: string; otpauthUrl: string; qrDataUrl: string }> {
     const secret = authenticator.generateSecret(20);
     await this.db.global.authToken.deleteMany({ where: { userId: user.id, type: 'MFA_SETUP' } });
     await this.db.global.authToken.create({
@@ -48,12 +51,19 @@ export class MfaService {
     if (!pending?.payload) return null;
     const secret = this.box.decrypt(pending.payload);
     if (!authenticator.check(code, secret)) return null;
-    const codes = Array.from({ length: RECOVERY_CODES }, () => randomToken(8).replace(/[-_]/g, 'x').slice(0, 10).toUpperCase());
+    const codes = Array.from({ length: RECOVERY_CODES }, () =>
+      randomToken(8).replace(/[-_]/g, 'x').slice(0, 10).toUpperCase(),
+    );
     await this.db.global.$transaction([
-      this.db.global.user.update({ where: { id: userId }, data: { mfaEnabled: true, mfaSecretEnc: this.box.encrypt(secret) } }),
+      this.db.global.user.update({
+        where: { id: userId },
+        data: { mfaEnabled: true, mfaSecretEnc: this.box.encrypt(secret) },
+      }),
       this.db.global.authToken.update({ where: { id: pending.id }, data: { usedAt: new Date() } }),
       this.db.global.mfaRecoveryCode.deleteMany({ where: { userId } }),
-      this.db.global.mfaRecoveryCode.createMany({ data: codes.map((c) => ({ id: uuidv7(), userId, codeHash: hashToken(c) })) }),
+      this.db.global.mfaRecoveryCode.createMany({
+        data: codes.map((c) => ({ id: uuidv7(), userId, codeHash: hashToken(c) })),
+      }),
     ]);
     return codes;
   }
@@ -63,18 +73,27 @@ export class MfaService {
     const user = await this.db.global.user.findUnique({ where: { id: userId } });
     if (!user?.mfaEnabled || !user.mfaSecretEnc) return false;
     const clean = code.replace(/\s/g, '');
-    if (/^\d{6}$/.test(clean)) return authenticator.check(clean, this.box.decrypt(user.mfaSecretEnc));
-    const codes = await this.db.global.mfaRecoveryCode.findMany({ where: { userId, usedAt: null } });
+    if (/^\d{6}$/.test(clean))
+      return authenticator.check(clean, this.box.decrypt(user.mfaSecretEnc));
+    const codes = await this.db.global.mfaRecoveryCode.findMany({
+      where: { userId, usedAt: null },
+    });
     const h = hashToken(clean.toUpperCase());
     const match = codes.find((c) => safeEqual(c.codeHash, h));
     if (!match) return false;
-    const r = await this.db.global.mfaRecoveryCode.updateMany({ where: { id: match.id, usedAt: null }, data: { usedAt: new Date() } });
+    const r = await this.db.global.mfaRecoveryCode.updateMany({
+      where: { id: match.id, usedAt: null },
+      data: { usedAt: new Date() },
+    });
     return r.count === 1;
   }
 
   async disable(userId: string): Promise<void> {
     await this.db.global.$transaction([
-      this.db.global.user.update({ where: { id: userId }, data: { mfaEnabled: false, mfaSecretEnc: null } }),
+      this.db.global.user.update({
+        where: { id: userId },
+        data: { mfaEnabled: false, mfaSecretEnc: null },
+      }),
       this.db.global.mfaRecoveryCode.deleteMany({ where: { userId } }),
     ]);
   }

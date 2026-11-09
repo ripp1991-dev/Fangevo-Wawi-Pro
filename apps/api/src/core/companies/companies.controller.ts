@@ -29,14 +29,21 @@ export class CompaniesController {
   @Post()
   @RequirePermission('companies.manage')
   @ApiZodBody(companyInputSchema)
-  create(@Tenant() t: TenantContext, @Body(zodPipe(companyInputSchema)) body: z.infer<typeof companyInputSchema>) {
+  create(
+    @Tenant() t: TenantContext,
+    @Body(zodPipe(companyInputSchema)) body: z.infer<typeof companyInputSchema>,
+  ) {
     return this.companies.create(t, body);
   }
 
   @Put(':id')
   @RequirePermission('companies.manage')
   @ApiZodBody(updateSchema)
-  update(@Tenant() t: TenantContext, @Param('id', uuidParam) id: string, @Body(zodPipe(updateSchema)) body: z.infer<typeof updateSchema>) {
+  update(
+    @Tenant() t: TenantContext,
+    @Param('id', uuidParam) id: string,
+    @Body(zodPipe(updateSchema)) body: z.infer<typeof updateSchema>,
+  ) {
     const { version, ...input } = body;
     return this.companies.update(t, id, input, version);
   }

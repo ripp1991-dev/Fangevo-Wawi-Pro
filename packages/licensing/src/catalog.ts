@@ -35,14 +35,30 @@ export function isModuleKey(v: string): v is ModuleKey {
   return Object.prototype.hasOwnProperty.call(MODULES, v);
 }
 
-const BASE: ModuleKey[] = ['core', 'dashboard', 'articles', 'customers', 'suppliers', 'orders', 'inventory', 'documents'];
+const BASE: ModuleKey[] = [
+  'core',
+  'dashboard',
+  'articles',
+  'customers',
+  'suppliers',
+  'orders',
+  'inventory',
+  'documents',
+];
 
 /**
  * Pakete laut Playbook 6.1. Preise und Modulzuordnung sind VORLÄUFIG und müssen
  * kalkuliert werden. Benutzerlimits sind im Playbook nicht festgelegt (null = kein Limit).
  */
 export const PLANS = {
-  starter: { name: 'Starter', monthlyPriceEur: 199, modules: BASE, maxCompanies: 3, maxUsers: null, maxConnectors: null },
+  starter: {
+    name: 'Starter',
+    monthlyPriceEur: 199,
+    modules: BASE,
+    maxCompanies: 3,
+    maxUsers: null,
+    maxConnectors: null,
+  },
   business: {
     name: 'Business',
     monthlyPriceEur: 299,
@@ -54,15 +70,42 @@ export const PLANS = {
   professional: {
     name: 'Professional',
     monthlyPriceEur: 499,
-    modules: [...BASE, 'purchasing', 'packing', 'shipping', 'returns', 'import', 'multichannel', 'finance', 'api', 'automation', 'crm', 'analytics'] as ModuleKey[],
+    modules: [
+      ...BASE,
+      'purchasing',
+      'packing',
+      'shipping',
+      'returns',
+      'import',
+      'multichannel',
+      'finance',
+      'api',
+      'automation',
+      'crm',
+      'analytics',
+    ] as ModuleKey[],
     maxCompanies: 3,
     maxUsers: null,
     maxConnectors: null,
   },
-  enterprise: { name: 'Enterprise', monthlyPriceEur: null, modules: ALL_MODULES, maxCompanies: 3, maxUsers: null, maxConnectors: null },
+  enterprise: {
+    name: 'Enterprise',
+    monthlyPriceEur: null,
+    modules: ALL_MODULES,
+    maxCompanies: 3,
+    maxUsers: null,
+    maxConnectors: null,
+  },
 } as const satisfies Record<
   string,
-  { name: string; monthlyPriceEur: number | null; modules: readonly ModuleKey[]; maxCompanies: number; maxUsers: number | null; maxConnectors: number | null }
+  {
+    name: string;
+    monthlyPriceEur: number | null;
+    modules: readonly ModuleKey[];
+    maxCompanies: number;
+    maxUsers: number | null;
+    maxConnectors: number | null;
+  }
 >;
 
 export type PlanKey = keyof typeof PLANS;

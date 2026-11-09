@@ -89,7 +89,15 @@ export const Tenant = createParamDecorator((_: unknown, ctx: ExecutionContext): 
   const req = ctx.switchToHttp().getRequest<FastifyRequest>();
   const a = req.fangevo;
   if (!a?.account) throw Errors.forbidden('FORBIDDEN', 'Kein aktiver Account');
-  return { sessionId: a.sessionId, user: a.user, account: a.account, companyId: a.companyId, ip: clientIp(req) };
+  return {
+    sessionId: a.sessionId,
+    user: a.user,
+    account: a.account,
+    companyId: a.companyId,
+    ip: clientIp(req),
+  };
 });
 
-export const Req = createParamDecorator((_: unknown, ctx: ExecutionContext) => ctx.switchToHttp().getRequest<FastifyRequest>());
+export const Req = createParamDecorator((_: unknown, ctx: ExecutionContext) =>
+  ctx.switchToHttp().getRequest<FastifyRequest>(),
+);

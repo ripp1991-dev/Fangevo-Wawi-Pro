@@ -28,7 +28,8 @@ export class HealthController {
     } catch {
       /* gemeldet unten */
     }
-    if (!checks.database || !checks.redis) throw new AppError(503, 'INTERNAL_ERROR', JSON.stringify(checks));
+    if (!checks.database || !checks.redis)
+      throw new AppError(503, 'INTERNAL_ERROR', JSON.stringify(checks));
     return { status: 'ok', checks };
   }
 }

@@ -1,6 +1,15 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { type NestFastifyApplication } from '@nestjs/platform-fastify';
-import { Client, PASSWORD, lastTokenFor, mails, signUp, startApp, totp, uniqueEmail } from './helpers';
+import {
+  Client,
+  PASSWORD,
+  lastTokenFor,
+  mails,
+  signUp,
+  startApp,
+  totp,
+  uniqueEmail,
+} from './helpers';
 
 let app: NestFastifyApplication;
 beforeAll(async () => {
@@ -32,7 +41,12 @@ describe('Registrierung und E-Mail-Bestätigung', () => {
   it('doppelte Registrierung verrät nicht, dass die Adresse existiert', async () => {
     const { email } = await signUp(app);
     const c = new Client(app);
-    const r = await c.post('/auth/register', { name: 'Y', email, password: PASSWORD, accountName: 'Y' });
+    const r = await c.post('/auth/register', {
+      name: 'Y',
+      email,
+      password: PASSWORD,
+      accountName: 'Y',
+    });
     expect(r.status).toBe(202);
     expect(r.body).toEqual({ status: 'verification_sent' });
   });
@@ -49,10 +63,19 @@ describe('Registrierung und E-Mail-Bestätigung', () => {
   });
 
   it('validiert Eingaben mit verständlichen Fehlern', async () => {
-    const r = await new Client(app).post('/auth/register', { name: '', email: 'kaputt', password: 'kurz', accountName: 'A' });
+    const r = await new Client(app).post('/auth/register', {
+      name: '',
+      email: 'kaputt',
+      password: 'kurz',
+      accountName: 'A',
+    });
     expect(r.status).toBe(422);
     expect(r.body.code).toBe('VALIDATION_FAILED');
-    expect(r.body.errors.map((e: { path: string }) => e.path).sort()).toEqual(['email', 'name', 'password']);
+    expect(r.body.errors.map((e: { path: string }) => e.path).sort()).toEqual([
+      'email',
+      'name',
+      'password',
+    ]);
   });
 });
 
@@ -61,7 +84,10 @@ describe('Login und Sitzung', () => {
     const { email } = await signUp(app);
     const c = new Client(app);
     const wrong = await c.post('/auth/login', { email, password: 'falsches-passwort' });
-    const unknown = await c.post('/auth/login', { email: uniqueEmail(), password: 'falsches-passwort' });
+    const unknown = await c.post('/auth/login', {
+      email: uniqueEmail(),
+      password: 'falsches-passwort',
+    });
     expect(wrong.status).toBe(401);
     expect(unknown.status).toBe(401);
     expect(wrong.body).toEqual(unknown.body);
@@ -69,12 +95,15 @@ describe('Login und Sitzung', () => {
 
   it('Sitzungscookie ist HttpOnly und SameSite', async () => {
     const { email } = await signUp(app);
-    const r = await app.getHttpAdapter().getInstance().inject({
-      method: 'POST',
-      url: '/api/v1/auth/login',
-      headers: { 'x-fangevo-csrf': '1' },
-      payload: { email, password: PASSWORD },
-    });
+    const r = await app
+      .getHttpAdapter()
+      .getInstance()
+      .inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        headers: { 'x-fangevo-csrf': '1' },
+        payload: { email, password: PASSWORD },
+      });
     const cookie = String(r.headers['set-cookie']);
     expect(cookie).toMatch(/HttpOnly/);
     expect(cookie).toMatch(/SameSite=Lax/);
@@ -90,7 +119,12 @@ describe('Login und Sitzung', () => {
 
   it('schreibende Anfragen ohne CSRF-Header werden abgelehnt', async () => {
     const { client } = await signUp(app);
-    const r = await client.req('POST', '/admin/companies', { name: 'X', country: 'DE' }, { csrf: false });
+    const r = await client.req(
+      'POST',
+      '/admin/companies',
+      { name: 'X', country: 'DE' },
+      { csrf: false },
+    );
     expect(r.status).toBe(403);
     expect(r.body.code).toBe('CSRF_HEADER_MISSING');
   });
@@ -126,11 +160,18 @@ describe('Passwort', () => {
     const anon = new Client(app);
     expect((await anon.post('/auth/password/forgot', { email })).status).toBe(202);
     const token = lastTokenFor(app, email);
-    expect((await anon.post('/auth/password/reset', { token, password: 'ein-ganz-neues-passwort' })).status).toBe(200);
+    expect(
+      (await anon.post('/auth/password/reset', { token, password: 'ein-ganz-neues-passwort' }))
+        .status,
+    ).toBe(200);
     expect((await client.get('/auth/session')).status).toBe(401);
     expect((await anon.post('/auth/login', { email, password: PASSWORD })).status).toBe(401);
-    expect((await anon.post('/auth/login', { email, password: 'ein-ganz-neues-passwort' })).status).toBe(200);
-    expect((await anon.post('/auth/password/reset', { token, password: 'noch-ein-passwort-1' })).status).toBe(400);
+    expect(
+      (await anon.post('/auth/login', { email, password: 'ein-ganz-neues-passwort' })).status,
+    ).toBe(200);
+    expect(
+      (await anon.post('/auth/password/reset', { token, password: 'noch-ein-passwort-1' })).status,
+    ).toBe(400);
   });
 
   it('"Passwort vergessen" verrät nicht, ob es die Adresse gibt', async () => {
@@ -144,8 +185,22 @@ describe('Passwort', () => {
     const { client, email } = await signUp(app);
     const other = new Client(app);
     await other.post('/auth/login', { email, password: PASSWORD });
-    expect((await client.post('/auth/password/change', { currentPassword: 'falsch', newPassword: 'neues-passwort-123' })).status).toBe(400);
-    expect((await client.post('/auth/password/change', { currentPassword: PASSWORD, newPassword: 'neues-passwort-123' })).status).toBe(200);
+    expect(
+      (
+        await client.post('/auth/password/change', {
+          currentPassword: 'falsch',
+          newPassword: 'neues-passwort-123',
+        })
+      ).status,
+    ).toBe(400);
+    expect(
+      (
+        await client.post('/auth/password/change', {
+          currentPassword: PASSWORD,
+          newPassword: 'neues-passwort-123',
+        })
+      ).status,
+    ).toBe(200);
     expect((await client.get('/auth/session')).status).toBe(200);
     expect((await other.get('/auth/session')).status).toBe(401);
   });
@@ -186,6 +241,8 @@ describe('Zwei-Faktor-Authentifizierung', () => {
     expect((await client.post('/auth/mfa/disable', { password: 'falsch' })).status).toBe(400);
     expect((await client.post('/auth/mfa/disable', { password: PASSWORD })).status).toBe(200);
     const c4 = new Client(app);
-    expect((await c4.post('/auth/login', { email, password: PASSWORD })).body).toEqual({ mfaRequired: false });
+    expect((await c4.post('/auth/login', { email, password: PASSWORD })).body).toEqual({
+      mfaRequired: false,
+    });
   });
 });

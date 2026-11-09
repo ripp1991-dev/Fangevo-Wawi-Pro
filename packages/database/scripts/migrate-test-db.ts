@@ -5,7 +5,9 @@
  */
 import { execSync } from 'node:child_process';
 
-const url = process.env.TEST_DATABASE_MIGRATE_URL ?? 'postgresql://fangevo_owner:fangevo_owner_dev@localhost:5432/fangevo_test';
+const url =
+  process.env.TEST_DATABASE_MIGRATE_URL ??
+  'postgresql://fangevo_owner:fangevo_owner_dev@localhost:5432/fangevo_test';
 const dbName = new URL(url).pathname.slice(1);
 if (!dbName.endsWith('_test')) {
   console.error(`Abbruch: "${dbName}" ist keine Testdatenbank.`);

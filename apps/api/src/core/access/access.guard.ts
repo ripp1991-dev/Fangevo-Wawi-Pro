@@ -45,7 +45,12 @@ export class AccessGuard implements CanActivate {
 
     const auth: AuthContext = {
       sessionId: session.id,
-      user: { id: session.user.id, email: session.user.email, name: session.user.name, mfaEnabled: session.user.mfaEnabled },
+      user: {
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.name,
+        mfaEnabled: session.user.mfaEnabled,
+      },
       mfaPending: session.mfaPending,
       account: null,
       companyId: null,
@@ -70,8 +75,16 @@ export class AccessGuard implements CanActivate {
     }
     const account = auth.account;
 
-    if (account.accessMode === 'read_only' && !SAFE_METHODS.has(req.method) && !this.meta<boolean>(META.allowReadOnly, ctx)) {
-      throw new AppError(403, 'ACCOUNT_SUSPENDED', 'Der Account ist gesperrt oder abgelaufen. Daten können gelesen und exportiert, aber nicht geändert werden.');
+    if (
+      account.accessMode === 'read_only' &&
+      !SAFE_METHODS.has(req.method) &&
+      !this.meta<boolean>(META.allowReadOnly, ctx)
+    ) {
+      throw new AppError(
+        403,
+        'ACCOUNT_SUSPENDED',
+        'Der Account ist gesperrt oder abgelaufen. Daten können gelesen und exportiert, aber nicht geändert werden.',
+      );
     }
 
     const module = this.meta<ModuleKey>(META.module, ctx);
@@ -81,12 +94,14 @@ export class AccessGuard implements CanActivate {
 
     const required = this.meta<Permission[]>(META.permissions, ctx) ?? [];
     const missing = required.filter((p) => !account.permissions.has(p));
-    if (missing.length) throw new AppError(403, 'PERMISSION_DENIED', `Fehlende Berechtigung: ${missing.join(', ')}`);
+    if (missing.length)
+      throw new AppError(403, 'PERMISSION_DENIED', `Fehlende Berechtigung: ${missing.join(', ')}`);
 
     const header = req.headers['x-company-id'];
     const companyId = typeof header === 'string' && header ? header : null;
     if (companyId) {
-      if (!UUID_RE.test(companyId)) throw new AppError(400, 'VALIDATION_FAILED', 'Ungültige Firmen-ID');
+      if (!UUID_RE.test(companyId))
+        throw new AppError(400, 'VALIDATION_FAILED', 'Ungültige Firmen-ID');
       if (!account.companyIds.includes(companyId)) {
         throw new AppError(403, 'COMPANY_ACCESS_DENIED', 'Kein Zugriff auf diese Firma');
       }

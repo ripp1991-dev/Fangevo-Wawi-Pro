@@ -10,6 +10,10 @@ export function assertCanGrant(actor: AccountContext, permissions: Iterable<stri
   if (actor.isOwner) return;
   const missing = [...new Set(permissions)].filter((p) => !actor.permissions.has(p as Permission));
   if (missing.length) {
-    throw new AppError(403, 'PERMISSION_DENIED', `Sie können keine Rechte vergeben, die Sie selbst nicht haben: ${missing.join(', ')}`);
+    throw new AppError(
+      403,
+      'PERMISSION_DENIED',
+      `Sie können keine Rechte vergeben, die Sie selbst nicht haben: ${missing.join(', ')}`,
+    );
   }
 }

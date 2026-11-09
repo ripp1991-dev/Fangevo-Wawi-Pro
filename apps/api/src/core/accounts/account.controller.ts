@@ -20,11 +20,22 @@ export class AccountController {
   @HttpCode(204)
   @RequirePermission('account.manage')
   @ApiZodBody(accountSchema)
-  async update(@Tenant() t: TenantContext, @Body(zodPipe(accountSchema)) body: z.infer<typeof accountSchema>) {
+  async update(
+    @Tenant() t: TenantContext,
+    @Body(zodPipe(accountSchema)) body: z.infer<typeof accountSchema>,
+  ) {
     await this.db.tenant({ accountId: t.account.id, userId: t.user.id }, async (tx) => {
       const before = await tx.account.findUniqueOrThrow({ where: { id: t.account.id } });
       await tx.account.update({ where: { id: t.account.id }, data: { name: body.name } });
-      await this.audit.record(tx, { accountId: t.account.id, userId: t.user.id, action: 'account.updated', entityType: 'account', entityId: t.account.id, data: { name: { from: before.name, to: body.name } }, ip: t.ip });
+      await this.audit.record(tx, {
+        accountId: t.account.id,
+        userId: t.user.id,
+        action: 'account.updated',
+        entityType: 'account',
+        entityId: t.account.id,
+        data: { name: { from: before.name, to: body.name } },
+        ip: t.ip,
+      });
     });
   }
 
@@ -36,7 +47,10 @@ export class AccountController {
   @RequiresCompany()
   async company(@Tenant() t: TenantContext) {
     return this.db.tenant({ accountId: t.account.id, userId: t.user.id }, (tx) =>
-      tx.company.findUniqueOrThrow({ where: { id: t.companyId! }, select: { id: true, name: true, country: true } }),
+      tx.company.findUniqueOrThrow({
+        where: { id: t.companyId! },
+        select: { id: true, name: true, country: true },
+      }),
     );
   }
 }

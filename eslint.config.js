@@ -20,7 +20,10 @@ export default tseslint.config(
   {
     languageOptions: { globals: { ...globals.node } },
     rules: {
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
       '@typescript-eslint/consistent-type-imports': ['error', { fixStyle: 'inline-type-imports' }],
       'no-console': ['warn', { allow: ['warn', 'error'] }],
     },
@@ -36,7 +39,10 @@ export default tseslint.config(
         'error',
         {
           patterns: [
-            { group: ['@fangevo/database', '@fangevo/database/*', '@prisma/*'], message: 'Frontend darf nicht auf die Datenbank zugreifen.' },
+            {
+              group: ['@fangevo/database', '@fangevo/database/*', '@prisma/*'],
+              message: 'Frontend darf nicht auf die Datenbank zugreifen.',
+            },
             { group: ['**/apps/api/**'], message: 'Frontend darf keine API-Interna importieren.' },
           ],
         },
@@ -49,7 +55,9 @@ export default tseslint.config(
     rules: {
       'no-restricted-imports': [
         'error',
-        { patterns: [{ group: ['**/apps/**'], message: 'Pakete dürfen nicht von Apps abhängen.' }] },
+        {
+          patterns: [{ group: ['**/apps/**'], message: 'Pakete dürfen nicht von Apps abhängen.' }],
+        },
       ],
     },
   },
@@ -62,7 +70,10 @@ export default tseslint.config(
         'error',
         {
           patterns: [
-            { group: ['@prisma/client', '@prisma/client/*'], message: 'Datenbankzugriff nur über @fangevo/database bzw. core/database.' },
+            {
+              group: ['@prisma/client', '@prisma/client/*'],
+              message: 'Datenbankzugriff nur über @fangevo/database bzw. core/database.',
+            },
           ],
         },
       ],

@@ -48,7 +48,14 @@ export class AuditService {
 
   async security(e: SecurityEventEntry): Promise<void> {
     await this.db.global.securityEvent.create({
-      data: { id: uuidv7(), type: e.type, userId: e.userId ?? null, email: e.email ?? null, ip: e.ip ?? null, userAgent: e.userAgent?.slice(0, 300) ?? null },
+      data: {
+        id: uuidv7(),
+        type: e.type,
+        userId: e.userId ?? null,
+        email: e.email ?? null,
+        ip: e.ip ?? null,
+        userAgent: e.userAgent?.slice(0, 300) ?? null,
+      },
     });
   }
 }

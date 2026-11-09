@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, HttpCode, Inject, Param, Patch, Post, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  Res,
+} from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { type FastifyReply, type FastifyRequest } from 'fastify';
 import { type z } from 'zod';
@@ -22,7 +33,17 @@ import { AccessService } from '../access/access.service';
 import { AuditService } from '../audit/audit.service';
 import { Database } from '../database/database.service';
 import { AppError } from '../http/errors';
-import { AllowMfaPending, AllowReadOnly, Auth, NoAccount, Public, RateLimit, Req, type AuthContext, clientIp } from '../http/context';
+import {
+  AllowMfaPending,
+  AllowReadOnly,
+  Auth,
+  NoAccount,
+  Public,
+  RateLimit,
+  Req,
+  type AuthContext,
+  clientIp,
+} from '../http/context';
 import { ApiZodBody, uuidParam, zodPipe } from '../http/zod';
 import { MembersService } from '../members/members.service';
 import { AuthService, type ClientInfo } from './auth.service';
@@ -30,7 +51,10 @@ import { MfaService } from './mfa.service';
 import { SESSION_COOKIE, SessionService } from './session.service';
 
 function client(req: FastifyRequest): ClientInfo {
-  return { ip: clientIp(req), userAgent: (req.headers['user-agent'] as string | undefined) ?? null };
+  return {
+    ip: clientIp(req),
+    userAgent: (req.headers['user-agent'] as string | undefined) ?? null,
+  };
 }
 
 @ApiTags('Authentifizierung')
@@ -63,7 +87,10 @@ export class AuthController {
   @RateLimit({ key: 'register', limit: 10, windowSec: 3600 })
   @ApiOperation({ summary: 'Neuen Account registrieren (sendet Bestätigungs-E-Mail)' })
   @ApiZodBody(registerSchema)
-  async register(@Body(zodPipe(registerSchema)) body: z.infer<typeof registerSchema>, @Req() req: FastifyRequest) {
+  async register(
+    @Body(zodPipe(registerSchema)) body: z.infer<typeof registerSchema>,
+    @Req() req: FastifyRequest,
+  ) {
     await this.auth.register(body, client(req));
     return { status: 'verification_sent' };
   }
@@ -83,7 +110,9 @@ export class AuthController {
   @HttpCode(202)
   @RateLimit({ key: 'resend', limit: 5, windowSec: 3600, byBodyField: 'email' })
   @ApiZodBody(requestPasswordResetSchema)
-  async resend(@Body(zodPipe(requestPasswordResetSchema)) body: z.infer<typeof requestPasswordResetSchema>) {
+  async resend(
+    @Body(zodPipe(requestPasswordResetSchema)) body: z.infer<typeof requestPasswordResetSchema>,
+  ) {
     await this.auth.resendVerification(body.email);
     return { status: 'ok' };
   }
@@ -91,10 +120,17 @@ export class AuthController {
   @Post('login')
   @Public()
   @HttpCode(200)
-  @RateLimit({ key: 'login-ip', limit: 50, windowSec: 900 }, { key: 'login', limit: 10, windowSec: 900, byBodyField: 'email' })
+  @RateLimit(
+    { key: 'login-ip', limit: 50, windowSec: 900 },
+    { key: 'login', limit: 10, windowSec: 900, byBodyField: 'email' },
+  )
   @ApiOperation({ summary: 'Anmelden. Setzt ein HttpOnly-Sitzungscookie.' })
   @ApiZodBody(loginSchema)
-  async login(@Body(zodPipe(loginSchema)) body: z.infer<typeof loginSchema>, @Req() req: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply) {
+  async login(
+    @Body(zodPipe(loginSchema)) body: z.infer<typeof loginSchema>,
+    @Req() req: FastifyRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
     const r = await this.auth.login(body, client(req));
     this.setCookie(reply, r.token);
     return { mfaRequired: r.mfaRequired };
@@ -107,7 +143,11 @@ export class AuthController {
   @HttpCode(200)
   @RateLimit({ key: 'mfa', limit: 10, windowSec: 900 })
   @ApiZodBody(mfaVerifySchema)
-  async verifyMfa(@Auth() a: AuthContext, @Body(zodPipe(mfaVerifySchema)) body: z.infer<typeof mfaVerifySchema>, @Req() req: FastifyRequest) {
+  async verifyMfa(
+    @Auth() a: AuthContext,
+    @Body(zodPipe(mfaVerifySchema)) body: z.infer<typeof mfaVerifySchema>,
+    @Req() req: FastifyRequest,
+  ) {
     if (!a.mfaPending) return { status: 'ok' };
     await this.auth.completeMfa(a.sessionId, a.user.id, body.code, client(req));
     return { status: 'ok' };
@@ -134,7 +174,11 @@ export class AuthController {
     let companies: { id: string; name: string }[] = [];
     if (acc) {
       companies = await this.db.tenant({ accountId: acc.id, userId: a.user.id }, (tx) =>
-        tx.company.findMany({ where: { id: { in: acc.companyIds } }, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
+        tx.company.findMany({
+          where: { id: { in: acc.companyIds } },
+          select: { id: true, name: true },
+          orderBy: { name: 'asc' },
+        }),
       );
     }
     return {
@@ -151,7 +195,9 @@ export class AuthController {
           plan: acc.entitlement.plan,
           status: acc.entitlement.status,
           trialEndsAt: acc.entitlement.trialEndsAt,
-          modules: acc.entitlement.modules.filter(isModuleKey).map((k) => ({ key: k, name: MODULES[k].name, available: MODULES[k].available })),
+          modules: acc.entitlement.modules
+            .filter(isModuleKey)
+            .map((k) => ({ key: k, name: MODULES[k].name, available: MODULES[k].available })),
         },
         companies,
       },
@@ -162,7 +208,10 @@ export class AuthController {
   @NoAccount()
   @HttpCode(200)
   @ApiZodBody(switchAccountSchema)
-  async switchAccount(@Auth() a: AuthContext, @Body(zodPipe(switchAccountSchema)) body: z.infer<typeof switchAccountSchema>) {
+  async switchAccount(
+    @Auth() a: AuthContext,
+    @Body(zodPipe(switchAccountSchema)) body: z.infer<typeof switchAccountSchema>,
+  ) {
     await this.auth.switchAccount(a.sessionId, a.user.id, body.accountId);
     return { status: 'ok' };
   }
@@ -172,7 +221,10 @@ export class AuthController {
   @HttpCode(202)
   @RateLimit({ key: 'forgot', limit: 5, windowSec: 3600, byBodyField: 'email' })
   @ApiZodBody(requestPasswordResetSchema)
-  async forgot(@Body(zodPipe(requestPasswordResetSchema)) body: z.infer<typeof requestPasswordResetSchema>, @Req() req: FastifyRequest) {
+  async forgot(
+    @Body(zodPipe(requestPasswordResetSchema)) body: z.infer<typeof requestPasswordResetSchema>,
+    @Req() req: FastifyRequest,
+  ) {
     await this.auth.requestPasswordReset(body.email, client(req));
     return { status: 'ok' };
   }
@@ -182,7 +234,10 @@ export class AuthController {
   @HttpCode(200)
   @RateLimit({ key: 'reset', limit: 20, windowSec: 3600 })
   @ApiZodBody(resetPasswordSchema)
-  async reset(@Body(zodPipe(resetPasswordSchema)) body: z.infer<typeof resetPasswordSchema>, @Req() req: FastifyRequest) {
+  async reset(
+    @Body(zodPipe(resetPasswordSchema)) body: z.infer<typeof resetPasswordSchema>,
+    @Req() req: FastifyRequest,
+  ) {
     await this.auth.resetPassword(body.token, body.password, client(req));
     return { status: 'ok' };
   }
@@ -193,8 +248,18 @@ export class AuthController {
   @HttpCode(200)
   @RateLimit({ key: 'change-pw', limit: 10, windowSec: 900 })
   @ApiZodBody(changePasswordSchema)
-  async change(@Auth() a: AuthContext, @Body(zodPipe(changePasswordSchema)) body: z.infer<typeof changePasswordSchema>, @Req() req: FastifyRequest) {
-    await this.auth.changePassword(a.user.id, a.sessionId, body.currentPassword, body.newPassword, client(req));
+  async change(
+    @Auth() a: AuthContext,
+    @Body(zodPipe(changePasswordSchema)) body: z.infer<typeof changePasswordSchema>,
+    @Req() req: FastifyRequest,
+  ) {
+    await this.auth.changePassword(
+      a.user.id,
+      a.sessionId,
+      body.currentPassword,
+      body.newPassword,
+      client(req),
+    );
     return { status: 'ok' };
   }
 
@@ -202,7 +267,10 @@ export class AuthController {
   @NoAccount()
   @AllowReadOnly()
   @ApiZodBody(updateProfileSchema)
-  async profile(@Auth() a: AuthContext, @Body(zodPipe(updateProfileSchema)) body: z.infer<typeof updateProfileSchema>) {
+  async profile(
+    @Auth() a: AuthContext,
+    @Body(zodPipe(updateProfileSchema)) body: z.infer<typeof updateProfileSchema>,
+  ) {
     await this.db.global.user.update({ where: { id: a.user.id }, data: { name: body.name } });
     return { status: 'ok' };
   }
@@ -223,9 +291,18 @@ export class AuthController {
   @HttpCode(200)
   @RateLimit({ key: 'mfa-enable', limit: 10, windowSec: 900 })
   @ApiZodBody(mfaEnableSchema)
-  async mfaEnable(@Auth() a: AuthContext, @Body(zodPipe(mfaEnableSchema)) body: z.infer<typeof mfaEnableSchema>, @Req() req: FastifyRequest) {
+  async mfaEnable(
+    @Auth() a: AuthContext,
+    @Body(zodPipe(mfaEnableSchema)) body: z.infer<typeof mfaEnableSchema>,
+    @Req() req: FastifyRequest,
+  ) {
     const codes = await this.mfa.confirmSetup(a.user.id, body.code);
-    if (!codes) throw new AppError(400, 'MFA_INVALID', 'Der Code ist ungültig oder die Einrichtung ist abgelaufen');
+    if (!codes)
+      throw new AppError(
+        400,
+        'MFA_INVALID',
+        'Der Code ist ungültig oder die Einrichtung ist abgelaufen',
+      );
     await this.sessions.revokeAllForUser(a.user.id, a.sessionId);
     await this.auditSecurity('auth.mfa_enabled', a, req);
     return { recoveryCodes: codes };
@@ -237,8 +314,13 @@ export class AuthController {
   @HttpCode(200)
   @RateLimit({ key: 'mfa-disable', limit: 10, windowSec: 900 })
   @ApiZodBody(mfaDisableSchema)
-  async mfaDisable(@Auth() a: AuthContext, @Body(zodPipe(mfaDisableSchema)) body: z.infer<typeof mfaDisableSchema>, @Req() req: FastifyRequest) {
-    if (!(await this.auth.checkPassword(a.user.id, body.password))) throw new AppError(400, 'INVALID_CREDENTIALS', 'Passwort ist falsch');
+  async mfaDisable(
+    @Auth() a: AuthContext,
+    @Body(zodPipe(mfaDisableSchema)) body: z.infer<typeof mfaDisableSchema>,
+    @Req() req: FastifyRequest,
+  ) {
+    if (!(await this.auth.checkPassword(a.user.id, body.password)))
+      throw new AppError(400, 'INVALID_CREDENTIALS', 'Passwort ist falsch');
     await this.mfa.disable(a.user.id);
     await this.auditSecurity('auth.mfa_disabled', a, req);
     return { status: 'ok' };
@@ -248,7 +330,14 @@ export class AuthController {
   @NoAccount()
   async listSessions(@Auth() a: AuthContext) {
     const list = await this.sessions.listActive(a.user.id);
-    return list.map((s) => ({ id: s.id, ip: s.ip, userAgent: s.userAgent, createdAt: s.createdAt, lastSeenAt: s.lastSeenAt, current: s.id === a.sessionId }));
+    return list.map((s) => ({
+      id: s.id,
+      ip: s.ip,
+      userAgent: s.userAgent,
+      createdAt: s.createdAt,
+      lastSeenAt: s.lastSeenAt,
+      current: s.id === a.sessionId,
+    }));
   }
 
   @Delete('sessions/:id')
@@ -272,11 +361,28 @@ export class AuthController {
   @HttpCode(200)
   @RateLimit({ key: 'invite-accept', limit: 20, windowSec: 900 })
   @ApiZodBody(acceptInvitationSchema)
-  async acceptInvitation(@Body(zodPipe(acceptInvitationSchema)) body: z.infer<typeof acceptInvitationSchema>, @Req() req: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply) {
-    const current = req.fangevo && !req.fangevo.mfaPending ? { userId: req.fangevo.user.id, email: req.fangevo.user.email } : null;
-    const r = await this.members.acceptInvitation(body.token, { name: body.name, password: body.password }, current, clientIp(req));
+  async acceptInvitation(
+    @Body(zodPipe(acceptInvitationSchema)) body: z.infer<typeof acceptInvitationSchema>,
+    @Req() req: FastifyRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
+    const current =
+      req.fangevo && !req.fangevo.mfaPending
+        ? { userId: req.fangevo.user.id, email: req.fangevo.user.email }
+        : null;
+    const r = await this.members.acceptInvitation(
+      body.token,
+      { name: body.name, password: body.password },
+      current,
+      clientIp(req),
+    );
     if (r.newUser) {
-      const { token } = await this.sessions.create({ userId: r.userId, accountId: r.accountId, mfaPending: false, ...client(req) });
+      const { token } = await this.sessions.create({
+        userId: r.userId,
+        accountId: r.accountId,
+        mfaPending: false,
+        ...client(req),
+      });
       this.setCookie(reply, token);
     } else if (req.fangevo) {
       await this.auth.switchAccount(req.fangevo.sessionId, r.userId, r.accountId);

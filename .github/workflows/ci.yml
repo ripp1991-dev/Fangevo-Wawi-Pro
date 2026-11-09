@@ -1,0 +1,103 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint, Typen, Tests, Build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16.10
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7.4
+        ports: ['6379:6379']
+    env:
+      TEST_DATABASE_URL: postgresql://fangevo_app:fangevo_app_dev@localhost:5432/fangevo_test
+      TEST_DATABASE_MIGRATE_URL: postgresql://fangevo_owner:fangevo_owner_dev@localhost:5432/fangevo_test
+      TEST_REDIS_URL: redis://localhost:6379/15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Datenbank-Rollen anlegen
+        run: PGPASSWORD=postgres psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f infrastructure/docker/postgres-init.sql
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:generate
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - name: Abhängigkeiten auf bekannte Sicherheitslücken prüfen
+        run: pnpm audit --prod --audit-level high
+
+  e2e:
+    name: End-to-End (Browser)
+    runs-on: ubuntu-24.04
+    needs: check
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16.10
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7.4
+        ports: ['6379:6379']
+    env:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://fangevo_app:fangevo_app_dev@localhost:5432/fangevo_dev
+      DATABASE_MIGRATE_URL: postgresql://fangevo_owner:fangevo_owner_dev@localhost:5432/fangevo_dev
+      REDIS_URL: redis://localhost:6379
+      WEB_ORIGIN: http://localhost:5173
+      MAIL_TRANSPORT: log
+      APP_ENCRYPTION_KEY: Y2ktb25seS1rZXktbm90LWZvci1wcm9kdWN0aW9uISE=
+      E2E_API_LOG: /tmp/fangevo-api.log
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: PGPASSWORD=postgres psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f infrastructure/docker/postgres-init.sql
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm db:generate
+      - run: pnpm --filter @fangevo/database exec prisma migrate deploy
+      - name: API und Web starten
+        run: |
+          (cd apps/api && npx tsx src/main.ts > /tmp/fangevo-api.log 2>&1 &)
+          (cd apps/web && npx vite --port 5173 > /tmp/fangevo-web.log 2>&1 &)
+          npx --yes wait-on@8.0.4 -t 60000 http://localhost:3000/health http://localhost:5173/login
+      - run: pnpm test:e2e
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screenshots
+          path: tests/e2e/screenshots

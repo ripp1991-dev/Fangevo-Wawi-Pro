@@ -1,5 +1,11 @@
 import { Inject, Injectable, type OnModuleDestroy } from '@nestjs/common';
-import { createPrismaClient, withTenant, type DbContext, type PrismaClient, type Tx } from '@fangevo/database';
+import {
+  createPrismaClient,
+  withTenant,
+  type DbContext,
+  type PrismaClient,
+  type Tx,
+} from '@fangevo/database';
 import { APP_CONFIG, type AppConfig } from '../../config';
 
 /**

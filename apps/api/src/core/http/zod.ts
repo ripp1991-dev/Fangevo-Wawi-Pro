@@ -30,6 +30,7 @@ function jsonSchema(s: ZodType): Record<string, unknown> {
 /** OpenAPI-Dokumentation des Request-Bodys aus dem Zod-Schema. */
 export const ApiZodBody = (s: ZodType) => applyDecorators(ApiBody({ schema: jsonSchema(s) }));
 
-export const ApiZodQuery = (name: string, required = false) => applyDecorators(ApiQuery({ name, required }));
+export const ApiZodQuery = (name: string, required = false) =>
+  applyDecorators(ApiQuery({ name, required }));
 
 export const uuidParam = zodPipe(z.uuid());

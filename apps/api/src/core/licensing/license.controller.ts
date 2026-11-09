@@ -14,11 +14,16 @@ export class LicenseController {
   @RequirePermission('license.read')
   async get(@Tenant() t: TenantContext) {
     const e = t.account.entitlement;
-    const usage = await this.db.tenant({ accountId: t.account.id, userId: t.user.id }, async (tx) => ({
-      companies: await tx.company.count({ where: { archivedAt: null } }),
-      users: await tx.membership.count({ where: { status: 'ACTIVE' } }),
-      openInvitations: await tx.invitation.count({ where: { acceptedAt: null, revokedAt: null, expiresAt: { gt: new Date() } } }),
-    }));
+    const usage = await this.db.tenant(
+      { accountId: t.account.id, userId: t.user.id },
+      async (tx) => ({
+        companies: await tx.company.count({ where: { archivedAt: null } }),
+        users: await tx.membership.count({ where: { status: 'ACTIVE' } }),
+        openInvitations: await tx.invitation.count({
+          where: { acceptedAt: null, revokedAt: null, expiresAt: { gt: new Date() } },
+        }),
+      }),
+    );
     const plan = e.plan in PLANS ? PLANS[e.plan as keyof typeof PLANS] : null;
     return {
       plan: e.plan,

@@ -3,14 +3,35 @@ import { type EntitlementSnapshot } from '@fangevo/licensing';
 import { ALL_PERMISSIONS } from '@fangevo/shared';
 import { effectivePermissions } from './access.service';
 
-const ent: EntitlementSnapshot = { status: 'ACTIVE', plan: 'starter', modules: ['core'], maxCompanies: 3, maxUsers: null, maxConnectors: null, trialEndsAt: null, validUntil: null };
+const ent: EntitlementSnapshot = {
+  status: 'ACTIVE',
+  plan: 'starter',
+  modules: ['core'],
+  maxCompanies: 3,
+  maxUsers: null,
+  maxConnectors: null,
+  trialEndsAt: null,
+  validUntil: null,
+};
 
 describe('effectivePermissions', () => {
   it('Inhaber hat alle Rechte lizenzierter Module', () => {
-    expect(effectivePermissions({ isOwner: true, rolePermissions: [], directPermissions: [], entitlement: ent }).size).toBe(ALL_PERMISSIONS.length);
+    expect(
+      effectivePermissions({
+        isOwner: true,
+        rolePermissions: [],
+        directPermissions: [],
+        entitlement: ent,
+      }).size,
+    ).toBe(ALL_PERMISSIONS.length);
   });
   it('vereinigt Rollen- und Einzelrechte und verwirft Unbekanntes', () => {
-    const p = effectivePermissions({ isOwner: false, rolePermissions: ['users.read', 'gibt.es.nicht'], directPermissions: ['audit.read'], entitlement: ent });
+    const p = effectivePermissions({
+      isOwner: false,
+      rolePermissions: ['users.read', 'gibt.es.nicht'],
+      directPermissions: ['audit.read'],
+      entitlement: ent,
+    });
     expect([...p].sort()).toEqual(['audit.read', 'users.read']);
   });
 });

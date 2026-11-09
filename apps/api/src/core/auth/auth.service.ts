@@ -7,7 +7,13 @@ import { AuditService } from '../audit/audit.service';
 import { Database } from '../database/database.service';
 import { AppError, Errors } from '../http/errors';
 import { MailService } from '../mail/mail.service';
-import { burnPasswordCheck, hashPassword, hashToken, randomToken, verifyPassword } from '../security/crypto';
+import {
+  burnPasswordCheck,
+  hashPassword,
+  hashToken,
+  randomToken,
+  verifyPassword,
+} from '../security/crypto';
 import { MfaService } from './mfa.service';
 import { SessionService } from './session.service';
 
@@ -47,9 +53,18 @@ export class AuthService {
     }
     const userId = uuidv7();
     await this.db.global.user.create({
-      data: { id: userId, email: input.email, name: input.name, passwordHash: await hashPassword(input.password) },
+      data: {
+        id: userId,
+        email: input.email,
+        name: input.name,
+        passwordHash: await hashPassword(input.password),
+      },
     });
-    const { accountId } = await this.provisioning.createAccount({ ownerUserId: userId, accountName: input.accountName, ip: client.ip });
+    const { accountId } = await this.provisioning.createAccount({
+      ownerUserId: userId,
+      accountName: input.accountName,
+      ip: client.ip,
+    });
     await this.db.global.user.update({ where: { id: userId }, data: { lastAccountId: accountId } });
     await this.sendVerification(userId, input.email);
     await this.audit.security({ type: 'user.registered', userId, email: input.email, ...client });
@@ -71,11 +86,17 @@ export class AuthService {
 
   async verifyEmail(token: string): Promise<void> {
     const t = await this.consumeToken(token, 'EMAIL_VERIFY');
-    await this.db.global.user.update({ where: { id: t.userId }, data: { emailVerifiedAt: new Date() } });
+    await this.db.global.user.update({
+      where: { id: t.userId },
+      data: { emailVerifiedAt: new Date() },
+    });
     await this.audit.security({ type: 'user.email_verified', userId: t.userId });
   }
 
-  async login(input: LoginInput, client: ClientInfo): Promise<{ token: string; mfaRequired: boolean }> {
+  async login(
+    input: LoginInput,
+    client: ClientInfo,
+  ): Promise<{ token: string; mfaRequired: boolean }> {
     const user = await this.db.global.user.findUnique({ where: { email: input.email } });
     if (!user) {
       await burnPasswordCheck(input.password);
@@ -83,19 +104,44 @@ export class AuthService {
       throw new AppError(401, 'INVALID_CREDENTIALS', 'E-Mail oder Passwort ist falsch');
     }
     if (!(await verifyPassword(user.passwordHash, input.password))) {
-      await this.audit.security({ type: 'auth.login_failed', userId: user.id, email: input.email, ...client });
+      await this.audit.security({
+        type: 'auth.login_failed',
+        userId: user.id,
+        email: input.email,
+        ...client,
+      });
       throw new AppError(401, 'INVALID_CREDENTIALS', 'E-Mail oder Passwort ist falsch');
     }
-    if (!user.emailVerifiedAt) throw new AppError(403, 'EMAIL_NOT_VERIFIED', 'Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse');
+    if (!user.emailVerifiedAt)
+      throw new AppError(
+        403,
+        'EMAIL_NOT_VERIFIED',
+        'Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse',
+      );
 
     const accountId = await this.pickAccount(user.id, user.lastAccountId);
-    const { token, session } = await this.sessions.create({ userId: user.id, accountId, mfaPending: user.mfaEnabled, ...client });
-    await this.audit.security({ type: user.mfaEnabled ? 'auth.login_password_ok' : 'auth.login', userId: user.id, ...client });
-    if (!user.mfaEnabled && accountId) await this.auditLogin(user.id, accountId, session.id, client.ip);
+    const { token, session } = await this.sessions.create({
+      userId: user.id,
+      accountId,
+      mfaPending: user.mfaEnabled,
+      ...client,
+    });
+    await this.audit.security({
+      type: user.mfaEnabled ? 'auth.login_password_ok' : 'auth.login',
+      userId: user.id,
+      ...client,
+    });
+    if (!user.mfaEnabled && accountId)
+      await this.auditLogin(user.id, accountId, session.id, client.ip);
     return { token, mfaRequired: user.mfaEnabled };
   }
 
-  async completeMfa(sessionId: string, userId: string, code: string, client: ClientInfo): Promise<void> {
+  async completeMfa(
+    sessionId: string,
+    userId: string,
+    code: string,
+    client: ClientInfo,
+  ): Promise<void> {
     if (!(await this.mfa.verify(userId, code))) {
       await this.audit.security({ type: 'auth.mfa_failed', userId, ...client });
       throw new AppError(401, 'MFA_INVALID', 'Der Code ist ungültig');
@@ -106,9 +152,21 @@ export class AuthService {
     if (s?.accountId) await this.auditLogin(userId, s.accountId, sessionId, client.ip);
   }
 
-  private async auditLogin(userId: string, accountId: string, sessionId: string, ip: string | null): Promise<void> {
+  private async auditLogin(
+    userId: string,
+    accountId: string,
+    sessionId: string,
+    ip: string | null,
+  ): Promise<void> {
     await this.db.tenant({ accountId, userId }, (tx) =>
-      this.audit.record(tx, { accountId, userId, action: 'auth.login', entityType: 'session', entityId: sessionId, ip }),
+      this.audit.record(tx, {
+        accountId,
+        userId,
+        action: 'auth.login',
+        entityType: 'session',
+        entityId: sessionId,
+        ip,
+      }),
     );
   }
 
@@ -133,7 +191,11 @@ export class AuthService {
       subject: 'Passwort zurücksetzen',
       text: `Sie haben das Zurücksetzen Ihres Passworts angefordert:\n${this.mail.link('/reset-password', token)}\n\nDer Link ist 1 Stunde gültig. Falls Sie das nicht waren, ignorieren Sie diese E-Mail.`,
     });
-    await this.audit.security({ type: 'auth.password_reset_requested', userId: user.id, ...client });
+    await this.audit.security({
+      type: 'auth.password_reset_requested',
+      userId: user.id,
+      ...client,
+    });
   }
 
   async resetPassword(token: string, password: string, client: ClientInfo): Promise<void> {
@@ -147,10 +209,20 @@ export class AuthService {
     await this.audit.security({ type: 'auth.password_reset', userId: t.userId, ...client });
   }
 
-  async changePassword(userId: string, sessionId: string, current: string, next: string, client: ClientInfo): Promise<void> {
+  async changePassword(
+    userId: string,
+    sessionId: string,
+    current: string,
+    next: string,
+    client: ClientInfo,
+  ): Promise<void> {
     const user = await this.db.global.user.findUniqueOrThrow({ where: { id: userId } });
-    if (!(await verifyPassword(user.passwordHash, current))) throw new AppError(400, 'INVALID_CREDENTIALS', 'Das aktuelle Passwort ist falsch');
-    await this.db.global.user.update({ where: { id: userId }, data: { passwordHash: await hashPassword(next) } });
+    if (!(await verifyPassword(user.passwordHash, current)))
+      throw new AppError(400, 'INVALID_CREDENTIALS', 'Das aktuelle Passwort ist falsch');
+    await this.db.global.user.update({
+      where: { id: userId },
+      data: { passwordHash: await hashPassword(next) },
+    });
     await this.sessions.revokeAllForUser(userId, sessionId);
     await this.audit.security({ type: 'auth.password_changed', userId, ...client });
   }
@@ -162,9 +234,18 @@ export class AuthService {
 
   private async issueToken(userId: string, type: AuthTokenType, ttlMs: number): Promise<string> {
     const token = randomToken();
-    await this.db.global.authToken.updateMany({ where: { userId, type, usedAt: null }, data: { usedAt: new Date() } });
+    await this.db.global.authToken.updateMany({
+      where: { userId, type, usedAt: null },
+      data: { usedAt: new Date() },
+    });
     await this.db.global.authToken.create({
-      data: { id: uuidv7(), userId, type, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + ttlMs) },
+      data: {
+        id: uuidv7(),
+        userId,
+        type,
+        tokenHash: hashToken(token),
+        expiresAt: new Date(Date.now() + ttlMs),
+      },
     });
     return token;
   }
@@ -173,7 +254,10 @@ export class AuthService {
   private async consumeToken(token: string, type: AuthTokenType): Promise<{ userId: string }> {
     const t = await this.db.global.authToken.findUnique({ where: { tokenHash: hashToken(token) } });
     if (!t || t.type !== type || t.usedAt || t.expiresAt < new Date()) throw Errors.invalidToken();
-    const r = await this.db.global.authToken.updateMany({ where: { id: t.id, usedAt: null }, data: { usedAt: new Date() } });
+    const r = await this.db.global.authToken.updateMany({
+      where: { id: t.id, usedAt: null },
+      data: { usedAt: new Date() },
+    });
     if (r.count !== 1) throw Errors.invalidToken();
     return { userId: t.userId };
   }

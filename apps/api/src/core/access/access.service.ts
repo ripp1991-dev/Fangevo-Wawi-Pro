@@ -28,7 +28,9 @@ export function effectivePermissions(input: {
   directPermissions: string[];
   entitlement: EntitlementSnapshot;
 }): Set<Permission> {
-  const raw = input.isOwner ? ALL_PERMISSIONS : [...input.rolePermissions, ...input.directPermissions];
+  const raw = input.isOwner
+    ? ALL_PERMISSIONS
+    : [...input.rolePermissions, ...input.directPermissions];
   const out = new Set<Permission>();
   for (const p of raw) {
     if (!isPermission(p)) continue;
@@ -60,7 +62,11 @@ export class AccessService {
       const allCompanies = m.isOwner || m.allCompanies;
       // Zugängliche, nicht archivierte Firmen (bei "alle Firmen" alle des Accounts)
       const companies = await tx.company.findMany({
-        where: { accountId, archivedAt: null, ...(allCompanies ? {} : { id: { in: m.companies.map((c) => c.companyId) } }) },
+        where: {
+          accountId,
+          archivedAt: null,
+          ...(allCompanies ? {} : { id: { in: m.companies.map((c) => c.companyId) } }),
+        },
         select: { id: true },
       });
       const entitlement = toSnapshot(ent);

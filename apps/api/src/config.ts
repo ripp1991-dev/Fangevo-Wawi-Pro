@@ -8,20 +8,30 @@ const schema = z.object({
   WEB_ORIGIN: z.string().url().default('http://localhost:5173'),
   APP_ENCRYPTION_KEY: z
     .string()
-    .refine((v) => Buffer.from(v, 'base64').length === 32, 'APP_ENCRYPTION_KEY muss 32 Byte (base64) lang sein'),
+    .refine(
+      (v) => Buffer.from(v, 'base64').length === 32,
+      'APP_ENCRYPTION_KEY muss 32 Byte (base64) lang sein',
+    ),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().default(587),
   SMTP_USER: z.string().optional(),
   SMTP_PASSWORD: z.string().optional(),
   SMTP_FROM: z.string().default('FangEvo Wawi Pro <no-reply@fangevo.local>'),
   MAIL_TRANSPORT: z.enum(['smtp', 'log', 'memory']).optional(),
-  SESSION_TTL_HOURS: z.coerce.number().int().min(1).default(24 * 7),
+  SESSION_TTL_HOURS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .default(24 * 7),
   SESSION_IDLE_HOURS: z.coerce.number().int().min(1).default(12),
   RATE_LIMIT_DISABLED: z.stringbool().default(false),
   LOG_LEVEL: z.string().default('info'),
 });
 
-export type AppConfig = z.infer<typeof schema> & { mailTransport: 'smtp' | 'log' | 'memory'; isProd: boolean };
+export type AppConfig = z.infer<typeof schema> & {
+  mailTransport: 'smtp' | 'log' | 'memory';
+  isProd: boolean;
+};
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const parsed = schema.safeParse(env);
@@ -32,6 +42,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const c = parsed.data;
   if (c.NODE_ENV === 'production' && c.MAIL_TRANSPORT && c.MAIL_TRANSPORT !== 'smtp') {
     throw new Error('In Produktion ist nur MAIL_TRANSPORT=smtp erlaubt');
+  }
+  if (c.NODE_ENV === 'production' && !c.SMTP_HOST) {
+    throw new Error(
+      'In Produktion muss SMTP_HOST gesetzt sein (sonst kommen keine Bestätigungs- und Reset-Mails an)',
+    );
   }
   if (c.NODE_ENV === 'production' && c.RATE_LIMIT_DISABLED) {
     throw new Error('Rate-Limits dürfen in Produktion nicht deaktiviert werden');

@@ -1,4 +1,10 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  randomBytes,
+  timingSafeEqual,
+} from 'node:crypto';
 import { hash, verify } from '@node-rs/argon2';
 
 /** Zufälliges, URL-sicheres Token mit 256 Bit Entropie. */
@@ -50,7 +56,12 @@ export class SecretBox {
     const iv = randomBytes(12);
     const c = createCipheriv('aes-256-gcm', this.key, iv);
     const enc = Buffer.concat([c.update(plain, 'utf8'), c.final()]);
-    return ['v1', iv.toString('base64'), c.getAuthTag().toString('base64'), enc.toString('base64')].join(':');
+    return [
+      'v1',
+      iv.toString('base64'),
+      c.getAuthTag().toString('base64'),
+      enc.toString('base64'),
+    ].join(':');
   }
   decrypt(box: string): string {
     const [v, iv, tag, data] = box.split(':');

@@ -8,31 +8,31 @@ Diese Analyse wurde in einer **Claude-Code-Cloud-Sitzung** durchgeführt, also i
 
 ## Repository
 
-| Punkt | Befund |
-|---|---|
-| Repository | `ripp1991-dev/Fangevo-Wawi-Pro` (privat) |
-| Branches | nur `main` |
-| Commits | 1 (`Initial commit`) |
-| Inhalt | nur `README.md` („Wawi for everyone“) |
+| Punkt            | Befund                                                        |
+| ---------------- | ------------------------------------------------------------- |
+| Repository       | `ripp1991-dev/Fangevo-Wawi-Pro` (privat)                      |
+| Branches         | nur `main`                                                    |
+| Commits          | 1 (`Initial commit`)                                          |
+| Inhalt           | nur `README.md` („Wawi for everyone“)                         |
 | Bestehender Code | keiner, es gibt keine Altlasten und keine Migrationspflichten |
 
 ## Laufzeitumgebungen und Werkzeuge (Container)
 
-| Werkzeug | Version | Bewertung |
-|---|---|---|
-| Betriebssystem | Ubuntu 24.04.5 LTS, x86_64, 4 CPU, 15 GB RAM | ausreichend |
-| Node.js | 22.23.4 (LTS) | ✅ passt zum Stack |
-| npm / pnpm / yarn / bun | 10.9.9 / 10.28.0 / 1.22.22 / 1.4.4 | ✅ pnpm für Monorepo vorhanden |
-| corepack | 0.36.0 | ✅ pnpm-Version kann im Repo fixiert werden |
-| Git | 2.43.0 | ✅ |
-| GitHub CLI | 2.89.0 | ⚠️ nur auf dieses Repo beschränkt, keine neuen Repos anlegbar |
-| Docker CLI / Compose | 29.9.2 / v5.6.1 | ⚠️ CLI vorhanden, **Docker-Daemon läuft nicht** |
-| PostgreSQL | 16.15 (Server installiert, Cluster `main` gestoppt) | ✅ kann für Tests gestartet werden |
-| Redis | 7.0.15 | ✅ |
-| Python | 3.13 | ✅ für Hilfsskripte |
-| Java / Go | 21 / 1.24 | nicht benötigt |
-| MS SQL Server / sqlcmd | **nicht vorhanden** | ❌ für JTL-Analyse nötig (siehe Checkliste) |
-| MySQL | nicht vorhanden | nicht benötigt |
+| Werkzeug                | Version                                             | Bewertung                                                     |
+| ----------------------- | --------------------------------------------------- | ------------------------------------------------------------- |
+| Betriebssystem          | Ubuntu 24.04.5 LTS, x86_64, 4 CPU, 15 GB RAM        | ausreichend                                                   |
+| Node.js                 | 22.23.4 (LTS)                                       | ✅ passt zum Stack                                            |
+| npm / pnpm / yarn / bun | 10.9.9 / 10.28.0 / 1.22.22 / 1.4.4                  | ✅ pnpm für Monorepo vorhanden                                |
+| corepack                | 0.36.0                                              | ✅ pnpm-Version kann im Repo fixiert werden                   |
+| Git                     | 2.43.0                                              | ✅                                                            |
+| GitHub CLI              | 2.89.0                                              | ⚠️ nur auf dieses Repo beschränkt, keine neuen Repos anlegbar |
+| Docker CLI / Compose    | 29.9.2 / v5.6.1                                     | ⚠️ CLI vorhanden, **Docker-Daemon läuft nicht**               |
+| PostgreSQL              | 16.15 (Server installiert, Cluster `main` gestoppt) | ✅ kann für Tests gestartet werden                            |
+| Redis                   | 7.0.15                                              | ✅                                                            |
+| Python                  | 3.13                                                | ✅ für Hilfsskripte                                           |
+| Java / Go               | 21 / 1.24                                           | nicht benötigt                                                |
+| MS SQL Server / sqlcmd  | **nicht vorhanden**                                 | ❌ für JTL-Analyse nötig (siehe Checkliste)                   |
+| MySQL                   | nicht vorhanden                                     | nicht benötigt                                                |
 
 npm-Registry ist erreichbar. Geprüfte aktuelle Versionen: NestJS 12.4, Next.js 16.4, React 19.3, TypeScript 7.0, Prisma 7.10, Drizzle 0.45, BullMQ 6.7.
 

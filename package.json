@@ -16,7 +16,8 @@
     "db:migrate": "pnpm --filter @fangevo/database migrate:deploy",
     "db:migrate:dev": "pnpm --filter @fangevo/database migrate:dev",
     "db:generate": "pnpm --filter @fangevo/database generate",
-    "db:test:migrate": "pnpm --filter @fangevo/database test:migrate"
+    "db:test:migrate": "pnpm --filter @fangevo/database test:migrate",
+    "test:e2e": "node tests/e2e/core-flow.mjs"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
@@ -27,7 +28,15 @@
     "prettier": "3.9.10",
     "turbo": "2.11.10",
     "typescript": "5.9.3",
-    "typescript-eslint": "8.72.0"
+    "typescript-eslint": "8.72.0",
+    "playwright": "1.64.1"
   },
-  "type": "module"
+  "type": "module",
+  "pnpm": {
+    "overrides": {
+      "fastify": "5.12.7",
+      "deepmerge-ts": "8.0.2",
+      "js-yaml": "5.5.0"
+    }
+  }
 }

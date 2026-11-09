@@ -11,8 +11,16 @@ export const companyInputSchema = z.object({
   street: z.string().trim().max(200).optional().nullable(),
   postalCode: z.string().trim().max(20).optional().nullable(),
   city: z.string().trim().max(120).optional().nullable(),
-  country: z.string().trim().length(2, 'Ländercode mit 2 Buchstaben, z. B. DE').toUpperCase().default('DE'),
-  email: z.union([emailSchema, z.literal('')]).optional().nullable(),
+  country: z
+    .string()
+    .trim()
+    .length(2, 'Ländercode mit 2 Buchstaben, z. B. DE')
+    .toUpperCase()
+    .default('DE'),
+  email: z
+    .union([emailSchema, z.literal('')])
+    .optional()
+    .nullable(),
   phone: z.string().trim().max(40).optional().nullable(),
 });
 export type CompanyInput = z.infer<typeof companyInputSchema>;
