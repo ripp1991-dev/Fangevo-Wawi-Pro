@@ -2,16 +2,16 @@
 
 Katalog: [`packages/licensing/src/catalog.ts`](packages/licensing/src/catalog.ts). „In Entwicklung“ heißt: geplant, aber **nicht** implementiert. Die Oberfläche zeigt das ehrlich an.
 
-| Modul                               | Phase | Status    | Inhalt heute                                                                                                                                                      |
-| ----------------------------------- | ----- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Core                                | 1     | ✅ fertig | Registrierung, Login, MFA, Sitzungen, Accounts, Firmen, Benutzer, Einladungen, Rollen & Rechte, Lizenz-Kern, Audit-Log, Administrationsoberfläche                 |
-| Dashboard und Core-Werkzeuge        | 2     | ✅ fertig | Dashboard-Baukasten, Tabellen-Baukasten, eigene Felder, globale Suche, Benachrichtigungen, Aktivitäten, anpassbares Menü                                          |
-| Artikel, Kunden, Lieferanten, Lager | 3a    | ✅ fertig | Stammdaten, Preise, Varianten, Sets, Adressen, Bezugsquellen, Bestandsjournal, Firmeneinstellungen                                                                |
-| Aufträge, Belege, Einkauf           | 3b    | ✅ fertig | Aufträge mit Preisermittlung, Reservierung und Versand; Belege mit PDF, E-Mail, Zahlungen, Gutschrift, Storno; Bestellvorschläge, Bestellungen, Wareneingang      |
-| Pack, Versand, Retouren             | 4     | ✅ fertig | Chargen/SN-Bestand, Picklisten, Packtisch mit Prüfung, Sendungen mit eigenem Etikett, Retouren, mobile Scan-Seite (Versanddienstleister folgen nach Sandbox-Test) |
-| Import, Multichannel, Finanzen, API | 5     | geplant   | –                                                                                                                                                                 |
-| Automatisierung, CRM, Analytics     | 6     | geplant   | –                                                                                                                                                                 |
-| Marketplace                         | 7     | geplant   | –                                                                                                                                                                 |
+| Modul                               | Phase | Status    | Inhalt heute                                                                                                                                                                    |
+| ----------------------------------- | ----- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Core                                | 1     | ✅ fertig | Registrierung, Login, MFA, Sitzungen, Accounts, Firmen, Benutzer, Einladungen, Rollen & Rechte, Lizenz-Kern, Audit-Log, Administrationsoberfläche                               |
+| Dashboard und Core-Werkzeuge        | 2     | ✅ fertig | Dashboard-Baukasten, Tabellen-Baukasten, eigene Felder, globale Suche, Benachrichtigungen, Aktivitäten, anpassbares Menü                                                        |
+| Artikel, Kunden, Lieferanten, Lager | 3a    | ✅ fertig | Stammdaten, Preise, Varianten, Sets, Adressen, Bezugsquellen, Bestandsjournal, Firmeneinstellungen                                                                              |
+| Aufträge, Belege, Einkauf           | 3b    | ✅ fertig | Aufträge mit Preisermittlung, Reservierung und Versand; Belege mit PDF, E-Mail, Zahlungen, Gutschrift, Storno; Bestellvorschläge, Bestellungen, Wareneingang                    |
+| Pack, Versand, Retouren             | 4     | ✅ fertig | Chargen/SN-Bestand, Picklisten, Packtisch mit Prüfung, Sendungen mit eigenem Etikett, Retouren, mobile Scan-Seite (Versanddienstleister folgen nach Sandbox-Test)               |
+| Import, Multichannel, API           | 5     | ✅ fertig | FangEvo Import (CSV/XLSX, Prüflauf, Hintergrund, Rückgängig), Export, API-Schlüssel, Verkaufskanal „Eigener Shop über API“ (Marktplätze erst nach Sandbox-Test); Finanzen folgt |
+| Automatisierung, CRM, Analytics     | 6     | geplant   | –                                                                                                                                                                               |
+| Marketplace                         | 7     | geplant   | –                                                                                                                                                                               |
 
 ## Core im Detail
 
@@ -73,3 +73,11 @@ Bekannte Grenzen (bewusst, folgen später):
 7. Suchindex mit `SearchService.upsert` in derselben Transaktion pflegen; Menüeintrag in `apps/web/src/lib/navigation.ts`; Widgets in `packages/shared/src/widgets.ts`.
 8. Änderungen über `AuditService.record` protokollieren, dann entstehen Ereignisse und Verlauf automatisch.
 9. Dokumentation in `docs/modules/<name>.md`.
+
+## Phase 5 im Detail
+
+| Bereich        | API                              | Oberfläche        | Tests            |
+| -------------- | -------------------------------- | ----------------- | ---------------- |
+| Import, Export | `modules/import` (+ `core/jobs`) | `/import`         | phase5.test, E2E |
+| API-Schlüssel  | `core/apikeys`, `AccessGuard`    | `/admin/api-keys` | phase5.test, E2E |
+| Verkaufskanäle | `modules/channels`               | `/channels`       | phase5.test, E2E |

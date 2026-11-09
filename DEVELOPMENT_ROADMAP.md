@@ -1,6 +1,6 @@
 # FangEvo Wawi Pro – Entwicklungsplan
 
-**Stand:** 2026-11-09 · **Status:** Phase 0–4 abgeschlossen · nächster Schritt: Phase 5 (Import und Multichannel)
+**Stand:** 2026-11-09 · **Status:** Phase 0–5 abgeschlossen · nächster Schritt: Phase 6 (Automatisierung)
 Grundlage: [Master Playbook v1.0](docs/product/MASTER_PLAYBOOK_v1.0.md) · Technik: [ADR-001](docs/decisions/ADR-001_TECHNOLOGIE_EMPFEHLUNG.md)
 
 ---
@@ -238,17 +238,19 @@ Bewusst später: E-Rechnung (XRechnung/ZUGFeRD) und Steuer-Sonderfälle (Reverse
 
 Ergebnis Phase 4: alle Arbeitspakete umgesetzt und getestet (phase4.test, E2E `phase4-flow.mjs`). Offen: Etiketten echter Versanddienstleister (brauchen Zugangsdaten und Sandbox-Test), Reservierung je Charge, Waagen-/Druckeranbindung am Packplatz (heute Browser-Druck).
 
-### Phase 5 – Import und Multichannel (gestartet 2026-11-09)
+### Phase 5 – Import und Multichannel (gestartet 2026-11-09) · Status: abgeschlossen
 
-| AP                         | Inhalt                                                                                                                                                                                                 |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 5.1 FangEvo Import         | CSV (Trennzeichen/Zeichensatz automatisch, z. B. JTL-Export) und Excel (XLSX); Spaltenzuordnung mit Vorschlag, Standardwerte, Vorschau, Prüflauf (Testimport ohne Speichern), Ausführung im Hintergrund mit Fortschritt, Fehlerprotokoll je Zeile, Historie, Vorlagen; Rückgängig für neu angelegte Stammdaten (archivieren). Datenarten: Artikel, Kunden, Lieferanten, Bestände, Preise, Kategorien |
-| 5.2 Export                 | CSV-Export von Artikeln, Kunden, Lieferanten und Beständen über die API (Excel-tauglich)                                                                                                              |
-| 5.3 Öffentliche API        | API-Schlüssel je Firma mit ausgewählten Rechten, nur gehasht gespeichert, Ablaufdatum, Sperren, Rate-Limit je Schlüssel, Protokoll der letzten Nutzung                                                |
-| 5.4 Connector-Architektur  | Verkaufskanäle mit Konfiguration (Geheimnisse verschlüsselt), Statusanzeige, Protokoll, Wiederholungen; Zuordnung externe ↔ interne IDs; kanalbezogene Artikeldaten (aktiv, Preis)                    |
-| 5.5 Erster Kanal           | „Eigener Shop über API“: Bestellungen per API übernehmen (doppelte Übernahme ausgeschlossen), Bestände und Preise je Kanal abrufen, Status/Tracking abrufen. Echte Marktplätze/Shopsysteme (Amazon, eBay, Shopify …) erst mit Zugangsdaten und Sandbox-Test |
+| AP                        | Inhalt                                                                                                                                                                                                                                                                                                                                                                                               |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 5.1 FangEvo Import        | CSV (Trennzeichen/Zeichensatz automatisch, z. B. JTL-Export) und Excel (XLSX); Spaltenzuordnung mit Vorschlag, Standardwerte, Vorschau, Prüflauf (Testimport ohne Speichern), Ausführung im Hintergrund mit Fortschritt, Fehlerprotokoll je Zeile, Historie, Vorlagen; Rückgängig für neu angelegte Stammdaten (archivieren). Datenarten: Artikel, Kunden, Lieferanten, Bestände, Preise, Kategorien |
+| 5.2 Export                | CSV-Export von Artikeln, Kunden, Lieferanten und Beständen über die API (Excel-tauglich)                                                                                                                                                                                                                                                                                                             |
+| 5.3 Öffentliche API       | API-Schlüssel je Firma mit ausgewählten Rechten, nur gehasht gespeichert, Ablaufdatum, Sperren, Rate-Limit je Schlüssel, Protokoll der letzten Nutzung                                                                                                                                                                                                                                               |
+| 5.4 Connector-Architektur | Verkaufskanäle mit Konfiguration (Geheimnisse verschlüsselt), Statusanzeige, Protokoll, Wiederholungen; Zuordnung externe ↔ interne IDs; kanalbezogene Artikeldaten (aktiv, Preis)                                                                                                                                                                                                                   |
+| 5.5 Erster Kanal          | „Eigener Shop über API“: Bestellungen per API übernehmen (doppelte Übernahme ausgeschlossen), Bestände und Preise je Kanal abrufen, Status/Tracking abrufen. Echte Marktplätze/Shopsysteme (Amazon, eBay, Shopify …) erst mit Zugangsdaten und Sandbox-Test                                                                                                                                          |
 
-### Phase 5–8
+Ergebnis Phase 5: alle Arbeitspakete umgesetzt und getestet (phase5.test, E2E `phase5-flow.mjs`). Offen: Anbindungen von Amazon, eBay, Shopify & Co. (brauchen Zugangsdaten und Sandbox-Test), ausgehende Bestandsübertragung (mit Webhooks in Phase 6), geplante/automatische Importe (Phase 6), FTP/SFTP-Quellen, Finanz-Export.
+
+### Phase 6–8
 
 Wie im Playbook. Sie werden vor Beginn jeweils in Arbeitspakete wie in Phase 1 zerlegt und zur Freigabe vorgelegt.
 

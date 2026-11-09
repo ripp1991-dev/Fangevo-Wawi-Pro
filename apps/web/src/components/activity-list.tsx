@@ -106,6 +106,14 @@ export const ACTION_LABELS: Record<string, string> = {
   'return.created': 'hat eine Retoure angelegt',
   'return.received': 'hat den Eingang einer Retoure gebucht',
   'return.cancelled': 'hat eine Retoure storniert',
+  'import.uploaded': 'hat eine Importdatei hochgeladen',
+  'import.started': 'hat einen Import gestartet',
+  'import.finished': 'Import abgeschlossen',
+  'import.rolled_back': 'hat einen Import rückgängig gemacht',
+  'api_key.created': 'hat einen API-Schlüssel angelegt',
+  'api_key.revoked': 'hat einen API-Schlüssel gesperrt',
+  'channel.created': 'hat einen Verkaufskanal angelegt',
+  'channel.updated': 'hat einen Verkaufskanal geändert',
 };
 
 const FIELD_LABELS: Record<string, string> = {

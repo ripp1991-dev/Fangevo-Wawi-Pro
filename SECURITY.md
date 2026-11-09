@@ -84,3 +84,13 @@ Bitte nicht öffentlich als Issue melden, sondern direkt an das FangEvo-Team.
 | Sendungen     | Nicht löschbar (Trigger); Etiketten nur mit Firmenkontext abrufbar                                                    |
 | Retouren      | Höchstens die versendete Menge; Gutschrift nur mit zusätzlichem Recht `documents.manage`                              |
 | Kamera        | Zugriff nur nach Freigabe im Browser; die Erkennung läuft lokal (BarcodeDetector), Bilder verlassen das Gerät nicht   |
+
+## Ergänzungen Phase 5
+
+| Bereich       | Maßnahme                                                                                                                                                                                                                                       |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| API-Schlüssel | Nur SHA-256-Hash gespeichert, einmalige Anzeige, nur Fachrechte (keine Administration), Schnittmenge mit den aktuellen Rechten der anlegenden Person, an eine Firma gebunden, Ablaufdatum, Sperren, 600 Anfragen/Minute, letzte Nutzung mit IP |
+| CSRF          | Nur Anfragen mit API-Schlüssel und ohne Cookie sind vom CSRF-Header ausgenommen                                                                                                                                                                |
+| Import        | Max. 10 MB und 50.000 Zeilen; nur CSV/XLSX; Größenlimit nur für den Upload-Endpunkt erhöht; Ausführung mit den aktuellen Rechten der Person über die Fach-Services                                                                             |
+| Export (CSV)  | Schutz gegen Formel-Einschleusung; Einkaufspreise nur mit `articles.prices`                                                                                                                                                                    |
+| Kanäle        | Externe Bestellnummer je Kanal eindeutig (DB-Index), Fehler werden protokolliert; Hintergrundtabellen `job_queue` und `api_key_index` enthalten nur IDs/Hashes                                                                                 |

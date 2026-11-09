@@ -105,3 +105,10 @@ Worker / EventDispatcher ──► holt outbox_pending (SKIP LOCKED) ──► T
 - Packtisch und Picklisten nutzen nur Services anderer Module: `OrdersService.demands/transitionInTx/shipInTx`, `DocumentsService.fromOrderInTx/doFinalize/creditNoteInTx`, `InventoryService.apply/checkSlot/checkTracking`.
 - Versanddienstleister sind als austauschbare Arten (`CARRIERS` in `packages/shared/src/schemas/logistics.ts`) angelegt; echte Anbindungen kommen als zusätzliche Arten (ADR-009).
 - Oberfläche: `picking.tsx`, `packing.tsx`, `returns.tsx`, `scan.tsx` (mobil); Barcodes als Reiter im Artikel.
+
+## Phase 5: Import, API, Kanäle
+
+- `core/jobs/JobQueue`: Hintergrundaufgaben (Worker und im Entwicklungsmodus auch die API). Handler registrieren sich über `JOB_HANDLERS`.
+- `modules/import`: Datei lesen (`parse.ts`), Zeilen vorbereiten und über `ArticlesService`, `CustomersService`, `SuppliersService`, `InventoryService` ausführen; Kategorien/Hersteller/Lagerplätze über `MasterDataService` (settings).
+- `core/apikeys` + `AccessGuard`: Bearer-Anmeldung baut denselben Kontext wie eine Sitzung (Firma fest, Rechte = Schlüssel ∩ Person).
+- `modules/channels`: Kanäle, Artikel je Kanal, Shop-Schnittstelle; Aufträge über `OrdersService.createInTx`, Kunden über `CustomersService.createInTx`.

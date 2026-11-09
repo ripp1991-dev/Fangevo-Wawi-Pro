@@ -135,3 +135,16 @@ Migration `20261109151957_phase4_logistics`. Alle mit `company_isolation`.
 | `returns`, `return_lines`       | Retouren mit Zustand je Position und Verweis auf die Gutschrift                                        |
 
 Buchungsart `return` im Bestandsjournal ergänzt. Neue Nummernkreise `pick_list` (PL-), `shipment` (SE-), `return` (RT-).
+
+## Tabellen (Phase 5)
+
+Migrationen `…_phase5_import_api_channels` und `…_phase5_api_key_company`.
+
+| Tabelle                                                               | Inhalt                                                                                                      |
+| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `job_queue` (global)                                                  | Hintergrundaufgaben (nur IDs)                                                                               |
+| `import_jobs`, `import_job_records`, `import_templates`               | Importaufträge mit Zeilen, Zuordnung, Prüflauf, Fortschritt, Fehlern; was angelegt/geändert wurde; Vorlagen |
+| `api_keys`                                                            | Schlüssel je Firma (Name, Präfix, Rechte, Ablauf, Sperre, letzte Nutzung)                                   |
+| `api_key_index` (global)                                              | Hash → Schlüssel/Account/Firma für die Anmeldung                                                            |
+| `sales_channels`, `channel_logs`, `channel_listings`, `external_refs` | Verkaufskanäle, Protokoll, Artikel je Kanal, Zuordnung externer IDs                                         |
+| `sales_orders.channel_id`                                             | Herkunftskanal eines Auftrags                                                                               |
