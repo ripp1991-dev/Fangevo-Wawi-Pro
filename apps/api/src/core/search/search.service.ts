@@ -5,7 +5,15 @@ import { Database } from '../database/database.service';
 import { type TenantContext } from '../http/context';
 
 export interface SearchDoc {
-  entityType: 'company' | 'member' | 'role' | 'article' | 'customer' | 'supplier';
+  entityType:
+    | 'company'
+    | 'member'
+    | 'role'
+    | 'article'
+    | 'customer'
+    | 'supplier'
+    | 'order'
+    | 'purchase_order';
   entityId: string;
   companyId?: string | null;
   permission: Permission;

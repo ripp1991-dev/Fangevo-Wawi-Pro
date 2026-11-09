@@ -9,6 +9,14 @@ const DEFAULT_SEQUENCES: Record<NumberSequenceKey, { prefix: string; padding: nu
   article: { prefix: 'A-', padding: 6 },
   customer: { prefix: 'K-', padding: 6 },
   supplier: { prefix: 'L-', padding: 5 },
+  order: { prefix: 'AU-', padding: 6 },
+  offer: { prefix: 'AN-', padding: 6 },
+  order_confirmation: { prefix: 'AB-', padding: 6 },
+  delivery_note: { prefix: 'LS-', padding: 6 },
+  invoice: { prefix: 'RE-', padding: 6 },
+  credit_note: { prefix: 'GU-', padding: 6 },
+  cancellation: { prefix: 'ST-', padding: 6 },
+  purchase_order: { prefix: 'BE-', padding: 6 },
 };
 
 /** Firmenkontext einer Anfrage (Account, Benutzer und aktive Firma). */
@@ -53,8 +61,13 @@ export class CompanyDb {
       data: [{ companyId, accountId }],
       skipDuplicates: true,
     });
-    if (created.count === 0) return;
     const base = { accountId, companyId };
+    // Nummernkreise neuer Module auch bei bestehenden Firmen ergänzen (bestehende bleiben unverändert).
+    await tx.numberSequence.createMany({
+      data: Object.entries(DEFAULT_SEQUENCES).map(([key, v]) => ({ ...base, key, ...v })),
+      skipDuplicates: true,
+    });
+    if (created.count === 0) return;
     await tx.taxRate.createMany({
       data: [
         {
@@ -76,9 +89,6 @@ export class CompanyDb {
     });
     await tx.warehouse.create({
       data: { ...base, id: uuidv7(), code: 'HL', name: 'Hauptlager', isDefault: true },
-    });
-    await tx.numberSequence.createMany({
-      data: Object.entries(DEFAULT_SEQUENCES).map(([key, v]) => ({ ...base, key, ...v })),
     });
   }
 

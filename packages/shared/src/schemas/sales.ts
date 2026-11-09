@@ -43,8 +43,10 @@ export const ORDER_EDITABLE: OrderStatus[] = [
   'awaiting_payment',
   'awaiting_stock',
 ];
-/** Status, in denen Bestand reserviert ist. */
+/** Status, in denen Bestand reserviert ist (von der Anlage bis Versand oder Storno). */
 export const ORDER_RESERVING: OrderStatus[] = [
+  'new',
+  'unchecked',
   'in_progress',
   'awaiting_payment',
   'awaiting_stock',
@@ -52,15 +54,10 @@ export const ORDER_RESERVING: OrderStatus[] = [
   'packing',
   'ready_to_ship',
 ];
-/** Status, aus denen versendet werden kann. */
-export const ORDER_SHIPPABLE: OrderStatus[] = [
-  'in_progress',
-  'awaiting_payment',
-  'awaiting_stock',
-  'picking',
-  'packing',
-  'ready_to_ship',
-];
+/** Status, die vollständig verfügbaren Bestand voraussetzen. */
+export const ORDER_NEEDS_STOCK: OrderStatus[] = ['picking', 'packing', 'ready_to_ship'];
+/** Status, aus denen versendet werden kann (kleine Händler versenden auch direkt aus „Neu“). */
+export const ORDER_SHIPPABLE: OrderStatus[] = ORDER_RESERVING;
 
 export function canTransition(from: OrderStatus, to: OrderStatus): boolean {
   return ORDER_TRANSITIONS[from]?.includes(to) ?? false;

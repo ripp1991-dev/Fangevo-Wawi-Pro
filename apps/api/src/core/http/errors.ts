@@ -19,5 +19,7 @@ export const Errors = {
   forbidden: (code: ErrorCode = 'FORBIDDEN', detail?: string) => new AppError(403, code, detail),
   notFound: (detail = 'Nicht gefunden') => new AppError(404, 'NOT_FOUND', detail),
   conflict: (detail: string) => new AppError(409, 'CONFLICT', detail),
+  versionConflict: (detail = 'Der Datensatz wurde zwischenzeitlich geändert. Bitte neu laden.') =>
+    new AppError(409, 'CONFLICT', detail),
   invalidToken: () => new AppError(400, 'TOKEN_INVALID', 'Der Link ist ungültig oder abgelaufen'),
 };

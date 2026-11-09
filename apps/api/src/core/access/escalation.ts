@@ -8,7 +8,11 @@ import { type AccountContext } from '../http/context';
  */
 export function assertCanGrant(actor: AccountContext, permissions: Iterable<string>): void {
   if (actor.isOwner) return;
-  const missing = [...new Set(permissions)].filter((p) => !actor.permissions.has(p as Permission));
+  // Maßstab sind die eigenen Rechte ohne Lizenzfilter: Rechte nicht gebuchter Module dürfen nur
+  // weitergegeben werden, wenn man sie selbst besitzt (sie werden erst mit der Buchung wirksam).
+  const missing = [...new Set(permissions)].filter(
+    (p) => !actor.permissions.has(p as Permission) && !actor.grantable.has(p),
+  );
   if (missing.length) {
     throw new AppError(
       403,

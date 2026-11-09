@@ -29,7 +29,15 @@ describe('Firmeneinstellungen', () => {
     expect(md.warehouses[0]).toMatchObject({ code: 'HL', isDefault: true });
     expect(md.sequences.map((s: { key: string }) => s.key).sort()).toEqual([
       'article',
+      'cancellation',
+      'credit_note',
       'customer',
+      'delivery_note',
+      'invoice',
+      'offer',
+      'order',
+      'order_confirmation',
+      'purchase_order',
       'supplier',
     ]);
   });

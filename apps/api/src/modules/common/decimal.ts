@@ -12,3 +12,13 @@ export function decimalsToString<T>(value: T): T {
   }
   return value;
 }
+
+/** Zahlen aus SQL-Text (z. B. "12.5000") in kurze Schreibweise ("12.5") bringen. */
+export function normalizeNumbers<T extends Record<string, unknown>>(row: T, keys: (keyof T)[]): T {
+  const out = { ...row };
+  for (const k of keys) {
+    const v = row[k];
+    if (typeof v === 'string') out[k] = dec(v).toString() as T[keyof T];
+  }
+  return out;
+}

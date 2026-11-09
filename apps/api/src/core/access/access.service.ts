@@ -85,6 +85,8 @@ export class AccessService {
             select: { id: true },
           });
       const entitlement = toSnapshot(ent);
+      const rolePerms = m.roles.flatMap((r) => rolePermissions(r.role));
+      const directPerms = m.permissions.map((p) => p.permission);
       return {
         id: accountId,
         name: m.account.name,
@@ -92,10 +94,11 @@ export class AccessService {
         isOwner: m.isOwner,
         permissions: effectivePermissions({
           isOwner: m.isOwner,
-          rolePermissions: m.roles.flatMap((r) => rolePermissions(r.role)),
-          directPermissions: m.permissions.map((p) => p.permission),
+          rolePermissions: rolePerms,
+          directPermissions: directPerms,
           entitlement,
         }),
+        grantable: new Set(m.isOwner ? ALL_PERMISSIONS : [...rolePerms, ...directPerms]),
         entitlement,
         accessMode: accessMode(entitlement),
         allCompanies,

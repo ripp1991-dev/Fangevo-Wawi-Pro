@@ -9,7 +9,17 @@ import { CompanyDb } from '../../modules/common/company-db';
 
 const schema = z.object({
   entityType: z
-    .enum(['company', 'membership', 'role', 'custom_field', 'article', 'customer', 'supplier'])
+    .enum([
+      'company',
+      'membership',
+      'role',
+      'custom_field',
+      'article',
+      'customer',
+      'supplier',
+      'order',
+      'purchase_order',
+    ])
     .optional(),
   entityId: z.uuid().optional(),
   cursor: z.uuid().optional(),
@@ -24,8 +34,10 @@ const READ_PERMISSION = {
   article: 'articles.read',
   customer: 'customers.read',
   supplier: 'suppliers.read',
+  order: 'orders.read',
+  purchase_order: 'purchasing.read',
 } as const;
-const COMPANY_SCOPED = new Set(['article', 'customer', 'supplier']);
+const COMPANY_SCOPED = new Set(['article', 'customer', 'supplier', 'order', 'purchase_order']);
 
 /**
  * Aktivitäten (aus dem Audit-Log, verständlich aufbereitet im Frontend).
@@ -49,13 +61,20 @@ export class ActivityController {
       if (COMPANY_SCOPED.has(q.entityType)) {
         // Datensatz muss in der aktiven Firma liegen (RLS mit Firmenkontext)
         const id = q.entityId;
-        const exists = await this.cdb.run(t, (tx) =>
-          q.entityType === 'article'
-            ? tx.article.count({ where: { id } })
-            : q.entityType === 'customer'
-              ? tx.customer.count({ where: { id } })
-              : tx.supplier.count({ where: { id } }),
-        );
+        const exists = await this.cdb.run(t, (tx) => {
+          switch (q.entityType) {
+            case 'article':
+              return tx.article.count({ where: { id } });
+            case 'customer':
+              return tx.customer.count({ where: { id } });
+            case 'order':
+              return tx.salesOrder.count({ where: { id } });
+            case 'purchase_order':
+              return tx.purchaseOrder.count({ where: { id } });
+            default:
+              return tx.supplier.count({ where: { id } });
+          }
+        });
         if (!exists) throw new AppError(404, 'NOT_FOUND', 'Nicht gefunden');
       }
       if (q.entityType === 'company') {

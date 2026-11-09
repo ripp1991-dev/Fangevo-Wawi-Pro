@@ -45,6 +45,12 @@ import { CustomersController } from './modules/customers/customers.controller';
 import { CustomersService } from './modules/customers/customers.service';
 import { InventoryController } from './modules/inventory/inventory.controller';
 import { InventoryService } from './modules/inventory/inventory.service';
+import { DocumentsController } from './modules/documents/documents.controller';
+import { DocumentsService } from './modules/documents/documents.service';
+import { OrdersController } from './modules/orders/orders.controller';
+import { OrdersService } from './modules/orders/orders.service';
+import { PurchasingController } from './modules/purchasing/purchasing.controller';
+import { PurchasingService } from './modules/purchasing/purchasing.service';
 import { SettingsController } from './modules/settings/settings.controller';
 import { SuppliersController } from './modules/suppliers/suppliers.controller';
 import { SuppliersService } from './modules/suppliers/suppliers.service';
@@ -107,6 +113,10 @@ export class AppModule {
         CustomersController,
         SuppliersController,
         InventoryController,
+        // Phase 3b: Aufträge, Belege, Einkauf
+        OrdersController,
+        DocumentsController,
+        PurchasingController,
       ],
       providers: [
         { provide: APP_CONFIG, useValue: config },
@@ -138,6 +148,9 @@ export class AppModule {
         CustomersService,
         SuppliersService,
         InventoryService,
+        OrdersService,
+        DocumentsService,
+        PurchasingService,
         { provide: APP_FILTER, useClass: ProblemFilter },
         // Reihenfolge wichtig: zuerst Rate-Limit, dann Zugriffskontrolle
         { provide: APP_GUARD, useClass: RateLimitGuard },

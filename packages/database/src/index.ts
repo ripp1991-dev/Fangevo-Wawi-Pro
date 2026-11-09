@@ -19,6 +19,11 @@ export type {
   StockLevel,
   StockMovement,
   TaxRate,
+  SalesOrder,
+  SalesOrderLine,
+  Document,
+  PurchaseOrder,
+  PurchaseOrderLine,
 } from '@prisma/client';
 export { createPrismaClient } from './client';
 export { withTenant, type Tx, type DbContext } from './tenant';
