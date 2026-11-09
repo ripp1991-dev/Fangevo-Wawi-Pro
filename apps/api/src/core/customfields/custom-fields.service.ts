@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { z } from 'zod';
+import { type z } from 'zod';
 import { uuidv7, type Tx } from '@fangevo/database';
 import {
-  customFieldCreateSchema,
-  customFieldUpdateSchema,
+  type customFieldCreateSchema,
+  type customFieldUpdateSchema,
   type CustomFieldEntity,
 } from '@fangevo/shared';
 import { AuditService } from '../audit/audit.service';

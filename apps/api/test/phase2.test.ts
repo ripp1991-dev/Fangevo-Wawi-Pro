@@ -241,6 +241,35 @@ describe('Eigene Felder', () => {
     ).toEqual(['mitarbeiter', 'mutter']);
   });
 
+  it('Systemrolle Administrator erhält neue Rechte automatisch und darf sie weitergeben', async () => {
+    const owner = await signUp(app);
+    const adminRole = await roleIdByName(owner.client, 'Administrator');
+    const admin = await inviteNewMember(app, owner.client, {
+      roleIds: [adminRole],
+      allCompanies: true,
+    });
+    expect((await admin.client.get('/auth/session')).body.account.permissions).toContain(
+      'custom_fields.manage',
+    );
+    expect(
+      (
+        await admin.client.post('/custom-fields', {
+          entityType: 'company',
+          key: 'kanal',
+          label: 'Kanal',
+          type: 'text',
+        })
+      ).status,
+    ).toBe(201);
+    const inv = await admin.client.post('/admin/members/invitations', {
+      email: `weiter-${Date.now()}@example.test`,
+      roleIds: [adminRole],
+      allCompanies: true,
+      companyIds: [],
+    });
+    expect(inv.status).toBe(201);
+  });
+
   it('nur mit Recht anlegbar; Verweise nur auf eigene Datensätze', async () => {
     const a = await signUp(app);
     const b = await signUp(app);

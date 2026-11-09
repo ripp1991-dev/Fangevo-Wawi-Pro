@@ -79,10 +79,7 @@ export class MembersService {
     });
     if (roles.length !== new Set(roleIds).size)
       throw new AppError(422, 'VALIDATION_FAILED', 'Unbekannte Rolle');
-    assertCanGrant(t.account, [
-      ...roles.flatMap((r) => r.permissions.map((p) => p.permission)),
-      ...extraPermissions,
-    ]);
+    assertCanGrant(t.account, [...roles.flatMap((r) => rolePermissions(r)), ...extraPermissions]);
     if (companyIds.length) {
       const n = await tx.company.count({ where: { id: { in: companyIds } } });
       if (n !== new Set(companyIds).size)
