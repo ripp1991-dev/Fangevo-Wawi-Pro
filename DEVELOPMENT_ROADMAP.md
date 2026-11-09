@@ -225,6 +225,17 @@ Offen bzw. bewusst später: Produktbilder (Dateispeicher folgt mit Phase 3b), Be
 
 Bewusst später: E-Rechnung (XRechnung/ZUGFeRD) und Steuer-Sonderfälle (Reverse-Charge, innergemeinschaftliche Lieferung, Kleinunternehmer) nach Prüfung durch den Steuerberater; Verkauf von Artikeln mit Chargen-/Seriennummernpflicht (Auswahl beim Versand, Phase 4); Produktbilder und Dateispeicher (mit Phase 4/5); Prioritäten zwischen Aufträgen bei knappem Bestand (Phase 4, FangEvo Pack); Mahnwesen (Phase 5, Finanzen).
 
+### Phase 4 – Logistik (Plan, gestartet 2026-11-09 auf Auftrag „alle Phasen automatisch durcharbeiten“)
+
+| AP                         | Inhalt                                                                                                                                                                          |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 4.1 Lager mit Chargen/SN   | Bestand je Lagerplatz **und** Charge/Seriennummer/MHD; zusätzliche Barcodes je Artikel; Scan-Auflösung (Artikel, Lagerplatz); Verkauf von Chargen-/SN-Artikeln (Charge nach MHD zuerst, SN beim Packen scannen) |
+| 4.2 Picklisten             | Pickliste aus mehreren Aufträgen, Platzvorschlag (Lagerplatz mit Bestand, Charge mit frühestem MHD), Pick bestätigen, Fehlmengen; Aufträge wechseln auf „Kommissionierung“/„Verpackung“ |
+| 4.3 FangEvo Pack           | Packtisch-Arbeitsplätze, Auftrag scannen, Artikel scannen mit Fehlerprüfung (falscher Artikel, Variante, doppelt, unvollständig), Seriennummern, Gewicht/Pakete, Abschluss = Versand + Belege |
+| 4.4 Versand                | Sendungen mit Paketen, Trackingnummer, Versandetikett. Versanddienstleister als austauschbare Adapter; ohne Zugangsdaten und Sandbox-Test nur „manuell“ (eigene Trackingnummer) und „eigenes Adressetikett“ (PDF). DHL/DPD/GLS usw. werden **nicht** als fertig gemeldet |
+| 4.5 Retouren               | Retoure zum Auftrag, Wareneingang mit Zustand (wieder verkaufbar/beschädigt/entsorgen), Bestandsbuchung, Gutschrift aus der Rechnung                                            |
+| 4.6 Mobile Scanner         | Handy-Oberfläche `/scan`: Artikel/Platz scannen (Kamera, wo der Browser es kann, sonst Handscanner/Eingabe), Bestand abfragen, Wareneingang, Umlagerung, Inventur, Kommissionieren |
+
 ### Phase 4–8
 
 Wie im Playbook. Sie werden vor Beginn jeweils in Arbeitspakete wie in Phase 1 zerlegt und zur Freigabe vorgelegt.

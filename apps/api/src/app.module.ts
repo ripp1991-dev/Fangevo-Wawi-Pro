@@ -51,6 +51,17 @@ import { OrdersController } from './modules/orders/orders.controller';
 import { OrdersService } from './modules/orders/orders.service';
 import { PurchasingController } from './modules/purchasing/purchasing.controller';
 import { PurchasingService } from './modules/purchasing/purchasing.service';
+import {
+  BarcodesController,
+  PackingController,
+  PickListsController,
+  ReturnsController,
+  ScanController,
+} from './modules/logistics/logistics.controller';
+import { PackingService } from './modules/logistics/packing.service';
+import { PickingService } from './modules/logistics/picking.service';
+import { ReturnsService } from './modules/logistics/returns.service';
+import { ScanService } from './modules/logistics/scan.service';
 import { SettingsController } from './modules/settings/settings.controller';
 import { SuppliersController } from './modules/suppliers/suppliers.controller';
 import { SuppliersService } from './modules/suppliers/suppliers.service';
@@ -117,6 +128,12 @@ export class AppModule {
         OrdersController,
         DocumentsController,
         PurchasingController,
+        // Phase 4: Logistik
+        ScanController,
+        BarcodesController,
+        PickListsController,
+        PackingController,
+        ReturnsController,
       ],
       providers: [
         { provide: APP_CONFIG, useValue: config },
@@ -151,6 +168,10 @@ export class AppModule {
         OrdersService,
         DocumentsService,
         PurchasingService,
+        ScanService,
+        PickingService,
+        PackingService,
+        ReturnsService,
         { provide: APP_FILTER, useClass: ProblemFilter },
         // Reihenfolge wichtig: zuerst Rate-Limit, dann Zugriffskontrolle
         { provide: APP_GUARD, useClass: RateLimitGuard },

@@ -37,7 +37,10 @@ describe('Firmeneinstellungen', () => {
       'offer',
       'order',
       'order_confirmation',
+      'pick_list',
       'purchase_order',
+      'return',
+      'shipment',
       'supplier',
     ]);
   });

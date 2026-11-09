@@ -51,6 +51,20 @@ export const PERMISSIONS = {
     module: 'purchasing',
     label: 'Bestellungen anlegen, versenden und Wareneingang buchen',
   },
+  'picking.execute': {
+    module: 'inventory',
+    label: 'Picklisten erstellen und kommissionieren',
+  },
+  'packing.execute': { module: 'packing', label: 'Am Packtisch packen und Sendungen erstellen' },
+  'shipping.manage': {
+    module: 'shipping',
+    label: 'Packplätze und Versandarten einrichten, Sendungen ansehen',
+  },
+  'returns.read': { module: 'returns', label: 'Retouren ansehen' },
+  'returns.manage': {
+    module: 'returns',
+    label: 'Retouren anlegen, Wareneingang buchen und Gutschriften auslösen',
+  },
 } as const satisfies Record<string, { module: string; label: string }>;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -87,6 +101,7 @@ export const SYSTEM_ROLES = {
       'orders.read',
       'documents.read',
       'purchasing.read',
+      'returns.read',
     ] as Permission[],
   },
 } as const;
