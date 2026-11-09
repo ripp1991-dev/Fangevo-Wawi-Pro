@@ -2,3 +2,7 @@ pnpm-lock.yaml
 **/migrations/**/*.sql
 docs/product/MASTER_PLAYBOOK_v1.0.md
 apps/web/src/routeTree.gen.ts
+
+# nginx-Konfiguration: Prettier würde Zeilen umbrechen und damit Header zerstören
+infrastructure/production/*.inc
+infrastructure/production/*.conf
