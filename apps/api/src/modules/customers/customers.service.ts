@@ -142,7 +142,12 @@ export class CustomersService {
   }
 
   create(t: TenantContext, input: CustomerInput) {
-    return this.cdb.run(t, async (tx, c) => {
+    return this.cdb.run(t, (tx, c) => this.createInTx(tx, c, input));
+  }
+
+  /** Kunde in einer laufenden Transaktion anlegen (z. B. aus einem Verkaufskanal). */
+  async createInTx(tx: Tx, c: CompanyContext, input: CustomerInput) {
+    {
       const groupId = await this.checkGroup(tx, input);
       const customFields = await this.fields.validate(tx, 'customer', input.customFields);
       const number = input.number ?? (await this.cdb.nextNumber(tx, c.companyId, 'customer'));
@@ -167,7 +172,7 @@ export class CustomersService {
       await this.index(tx, row);
       await this.log(tx, c, 'customer.created', id, { number, name: customerDisplayName(row) });
       return { ...row, displayName: customerDisplayName(row) };
-    });
+    }
   }
 
   update(t: TenantContext, id: string, input: CustomerInput, version: number) {

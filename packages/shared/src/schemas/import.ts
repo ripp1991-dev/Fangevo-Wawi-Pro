@@ -307,3 +307,110 @@ export const EXPORT_ENTITIES = {
   stock: 'Bestände',
 } as const;
 export type ExportEntity = keyof typeof EXPORT_ENTITIES;
+
+// ───── Öffentliche API ─────
+export const API_KEY_PREFIX = 'fe_live_';
+
+export const apiKeyInputSchema = z.object({
+  name: z.string().trim().min(1, 'Name fehlt').max(80),
+  permissions: z.array(z.string().max(60)).min(1, 'Mindestens ein Recht').max(60),
+  expiresAt: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Datum JJJJ-MM-TT')
+    .optional()
+    .nullable(),
+});
+
+// ───── Verkaufskanäle ─────
+export const CHANNEL_TYPES = {
+  api: 'Eigener Shop über API',
+} as const;
+export type ChannelType = keyof typeof CHANNEL_TYPES;
+
+/** Geplante Anbindungen: erst nach Zugangsdaten und Sandbox-Test verfügbar (Playbook 15). */
+export const PLANNED_CHANNELS = [
+  'Amazon',
+  'eBay',
+  'Kaufland',
+  'OTTO',
+  'Shopify',
+  'WooCommerce',
+  'Shopware',
+  'Etsy',
+  'TikTok Shop',
+] as const;
+
+export const channelInputSchema = z.object({
+  type: z.enum(Object.keys(CHANNEL_TYPES) as [ChannelType, ...ChannelType[]]).default('api'),
+  name: z.string().trim().min(1, 'Name fehlt').max(80),
+  warehouseId: z.uuid().optional().nullable(),
+  active: z.boolean().default(true),
+  /** Nur gelistete Artikel an den Kanal geben (sonst alle aktiven Artikel) */
+  listedOnly: z.boolean().default(false),
+});
+
+export const channelListingSchema = z.object({
+  active: z.boolean().default(true),
+  priceNet: z
+    .union([z.string(), z.number()])
+    .transform((v) => String(v).trim().replace(',', '.'))
+    .refine((v) => v === '' || /^\d{1,15}(\.\d{1,4})?$/.test(v), 'Preis ungültig')
+    .optional()
+    .nullable(),
+});
+
+const optT = (max: number) => z.string().trim().max(max).optional().nullable();
+
+/** Bestellung, die ein Shop über die API übergibt. */
+export const channelOrderSchema = z.object({
+  externalId: z.string().trim().min(1).max(80),
+  customer: z.object({
+    externalId: optT(80),
+    email: z.string().trim().toLowerCase().pipe(z.email('Ungültige E-Mail-Adresse')),
+    companyName: optT(200),
+    firstName: optT(120),
+    lastName: optT(120),
+    phone: optT(60),
+    vatId: optT(32),
+  }),
+  billingAddress: z.object({
+    name: optT(200),
+    street: z.string().trim().min(1).max(200),
+    postalCode: z.string().trim().min(1).max(20),
+    city: z.string().trim().min(1).max(120),
+    country: z.string().trim().length(2).toUpperCase().default('DE'),
+  }),
+  shippingAddress: z
+    .object({
+      name: optT(200),
+      street: z.string().trim().min(1).max(200),
+      postalCode: z.string().trim().min(1).max(20),
+      city: z.string().trim().min(1).max(120),
+      country: z.string().trim().length(2).toUpperCase().default('DE'),
+    })
+    .optional()
+    .nullable(),
+  lines: z
+    .array(
+      z.object({
+        /** Artikelnummer, EAN oder zusätzlicher Barcode */
+        sku: z.string().trim().min(1).max(80),
+        quantity: z.union([z.string(), z.number()]).transform((v) => String(v)),
+        unitPriceNet: z
+          .union([z.string(), z.number()])
+          .transform((v) => String(v))
+          .optional()
+          .nullable(),
+      }),
+    )
+    .min(1)
+    .max(500),
+  shippingNet: z
+    .union([z.string(), z.number()])
+    .transform((v) => String(v))
+    .default('0'),
+  paymentMethod: optT(80),
+  shippingMethod: optT(80),
+  notes: optT(5000),
+});
+export type ChannelOrder = z.infer<typeof channelOrderSchema>;

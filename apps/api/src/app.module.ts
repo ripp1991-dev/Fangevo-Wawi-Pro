@@ -32,6 +32,10 @@ import { DashboardsController } from './core/dashboards/dashboards.controller';
 import { EventDispatcher } from './core/events/dispatcher.service';
 import { EVENT_HANDLERS } from './core/events/event-types';
 import { JOB_HANDLERS, JobQueue } from './core/jobs/job-queue.service';
+import { ApiKeysController } from './core/apikeys/api-keys.controller';
+import { ApiKeysService } from './core/apikeys/api-keys.service';
+import { ChannelsController } from './modules/channels/channels.controller';
+import { ChannelsService } from './modules/channels/channels.service';
 import { ImportController } from './modules/import/import.controller';
 import { ImportService } from './modules/import/import.service';
 import { MasterDataService } from './modules/settings/master-data.service';
@@ -140,6 +144,8 @@ export class AppModule {
         ReturnsController,
         // Phase 5: Import, API, Multichannel
         ImportController,
+        ApiKeysController,
+        ChannelsController,
       ],
       providers: [
         { provide: APP_CONFIG, useValue: config },
@@ -180,6 +186,8 @@ export class AppModule {
         ReturnsService,
         MasterDataService,
         ImportService,
+        ApiKeysService,
+        ChannelsService,
         {
           provide: JOB_HANDLERS,
           useFactory: (i: ImportService) => [i],

@@ -1292,6 +1292,7 @@ model ApiKeyIndex {
   hash      String @id
   keyId     String @unique @map("key_id") @db.Uuid
   accountId String @map("account_id") @db.Uuid
+  companyId String @map("company_id") @db.Uuid
 
   @@map("api_key_index")
 }

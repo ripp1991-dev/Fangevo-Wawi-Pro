@@ -238,3 +238,161 @@ describe('FangEvo Import', () => {
     expect((await client.post(`/imports/${up.id}/validate`, { mapping: {} })).status).toBe(422);
   });
 });
+
+/** Anfrage mit API-Schlüssel (ohne Cookie, ohne CSRF-Header). */
+async function keyReq(
+  method: string,
+  url: string,
+  token: string,
+  body?: unknown,
+  headers: Record<string, string> = {},
+) {
+  const r = await app
+    .getHttpAdapter()
+    .getInstance()
+    .inject({
+      method: method as 'GET',
+      url: `/api/v1${url}`,
+      payload: body as object,
+      headers: { authorization: `Bearer ${token}`, ...headers },
+    });
+  return { status: r.statusCode, body: r.body ? JSON.parse(r.body) : undefined };
+}
+
+describe('Öffentliche API mit Schlüsseln', () => {
+  it('Schlüssel einmalig anzeigen, nur erlaubte Rechte, Firma fest, sperrbar', async () => {
+    const { client, companyId } = await setup('professional');
+    const perms = (await client.get('/api-keys/permissions')).body.map(
+      (p: { key: string }) => p.key,
+    );
+    expect(perms).toContain('articles.read');
+    expect(perms).not.toContain('users.manage');
+    expect(
+      (await client.post('/api-keys', { name: 'Admin?', permissions: ['users.manage'] })).status,
+    ).toBe(422);
+    const k = await client.post('/api-keys', { name: 'Shop', permissions: ['articles.read'] });
+    expect(k.status).toBe(201);
+    expect(k.body.token).toMatch(/^fe_live_/);
+    expect((await client.get('/api-keys')).body[0].token).toBeUndefined();
+
+    await client.post('/articles', { number: 'K-1', name: 'Kescher' });
+    const ok = await keyReq('GET', '/articles', k.body.token);
+    expect(ok.status).toBe(200);
+    expect(ok.body.items[0].number).toBe('K-1');
+    // Ohne passendes Recht, ohne CSRF-Header trotzdem nur Rechte des Schlüssels
+    expect((await keyReq('POST', '/articles', k.body.token, { name: 'X' })).status).toBe(403);
+    expect((await keyReq('GET', '/admin/members', k.body.token)).status).toBe(403);
+    // Andere Firma per Header: abgelehnt
+    const two = (await client.post('/admin/companies', { name: 'Zweit', country: 'DE' })).body;
+    expect(
+      (await keyReq('GET', '/articles', k.body.token, undefined, { 'x-company-id': two.id }))
+        .status,
+    ).toBe(403);
+    expect(
+      (await keyReq('GET', '/articles', k.body.token, undefined, { 'x-company-id': companyId }))
+        .status,
+    ).toBe(200);
+    // Gesperrt / falsch
+    expect((await client.post(`/api-keys/${k.body.id}/revoke`)).status).toBe(204);
+    expect((await keyReq('GET', '/articles', k.body.token)).status).toBe(401);
+    expect((await keyReq('GET', '/articles', 'fe_live_falsch')).status).toBe(401);
+  });
+
+  it('nur mit Modul „Öffentliche API“', async () => {
+    const { client } = await setup('business');
+    expect((await client.get('/api-keys')).body.code).toBe('MODULE_NOT_LICENSED');
+  });
+});
+
+describe('Verkaufskanäle', () => {
+  it('Shop übergibt Bestellungen per API (idempotent), liest Bestand und Versandstatus', async () => {
+    const { client, md } = await setup('professional');
+    const hl = md.warehouses.find((w: { isDefault: boolean }) => w.isDefault).id;
+    const a = (
+      await client.post('/articles', {
+        number: 'W-1',
+        name: 'Wobbler',
+        gtin: '4006381333931',
+        salePriceNet: '6.5',
+      })
+    ).body;
+    await client.post('/inventory/bookings', {
+      type: 'receipt',
+      articleId: a.id,
+      warehouseId: hl,
+      quantity: '10',
+    });
+    const ch = await client.post('/channels', { name: 'Mein Shop', type: 'api' });
+    expect(ch.status).toBe(201);
+    expect(
+      (
+        await client.put(`/channels/${ch.body.id}/listings/${a.id}`, {
+          active: true,
+          priceNet: '5,90',
+        })
+      ).status,
+    ).toBe(200);
+    const key = (
+      await client.post('/api-keys', {
+        name: 'Shop',
+        permissions: ['channels.read', 'orders.manage', 'orders.read', 'inventory.read'],
+      })
+    ).body;
+
+    const order = {
+      externalId: 'SHOP-1001',
+      customer: {
+        email: 'Kunde@Example.test',
+        firstName: 'Erika',
+        lastName: 'Muster',
+        externalId: 'C-77',
+      },
+      billingAddress: { street: 'Deichweg 1', postalCode: '25813', city: 'Husum', country: 'de' },
+      lines: [{ sku: '4006381333931', quantity: 2 }],
+      shippingNet: '4.90',
+      paymentMethod: 'PayPal',
+    };
+    const r1 = await keyReq('POST', `/channels/${ch.body.id}/orders`, key.token, order);
+    expect(r1.status).toBe(201);
+    expect(r1.body.created).toBe(true);
+    const r2 = await keyReq('POST', `/channels/${ch.body.id}/orders`, key.token, order);
+    expect(r2.body).toMatchObject({ created: false, order: { id: r1.body.order.id } });
+    const o = (await client.get(`/orders/${r1.body.order.id}`)).body;
+    expect(o).toMatchObject({
+      externalNumber: 'SHOP-1001',
+      channelId: ch.body.id,
+      paymentMethod: 'PayPal',
+    });
+    expect(o.lines[0].unitPriceNet).toBe('5.9');
+    expect((await client.get('/customers?q=kunde@example.test')).body.total).toBe(1);
+
+    const stock = await keyReq('GET', `/channels/${ch.body.id}/stock`, key.token);
+    expect(stock.body.items.find((i: { number: string }) => i.number === 'W-1')).toMatchObject({
+      available: '8',
+      priceNet: '5.9',
+      active: true,
+    });
+
+    const bad = await keyReq('POST', `/channels/${ch.body.id}/orders`, key.token, {
+      ...order,
+      externalId: 'SHOP-1002',
+      lines: [{ sku: 'NIX', quantity: 1 }],
+    });
+    expect(bad.status).toBe(422);
+    const logs = (await client.get(`/channels/${ch.body.id}`)).body.logs;
+    expect(logs[0]).toMatchObject({ level: 'error' });
+    expect(logs[0].message).toContain('SHOP-1002');
+
+    await client.post(`/orders/${r1.body.order.id}/ship`, {});
+    const st = await keyReq('GET', `/channels/${ch.body.id}/orders/SHOP-1001`, key.token);
+    expect(st.body).toMatchObject({ status: 'shipped', number: o.number });
+    expect(
+      (await keyReq('GET', `/channels/${ch.body.id}/orders/UNBEKANNT`, key.token)).status,
+    ).toBe(404);
+
+    // Andere Firma sieht den Kanal nicht
+    const two = (await client.post('/admin/companies', { name: 'Zweit', country: 'DE' })).body;
+    client.companyId = two.id;
+    expect((await client.get(`/channels/${ch.body.id}`)).status).toBe(404);
+  });
+});
