@@ -29,6 +29,11 @@ import {
 } from './pages/auth/token-pages';
 import { DashboardPage } from './pages/dashboard/dashboard';
 import { CustomFieldsPage } from './pages/admin/custom-fields';
+import { ArticlesPage } from './pages/wawi/articles';
+import { CompanySettingsPage } from './pages/wawi/company-settings';
+import { CustomersPage } from './pages/wawi/customers';
+import { InventoryPage } from './pages/wawi/inventory';
+import { SuppliersPage } from './pages/wawi/suppliers';
 import { SecurityPage } from './pages/settings/security';
 
 const root = createRootRouteWithContext<{ queryClient: QueryClient }>()({ component: Outlet });
@@ -120,6 +125,11 @@ const routeTree = root.addChildren([
   mfaRoute,
   app.addChildren([
     page('/', DashboardPage),
+    page('/articles', ArticlesPage, 'articles.read'),
+    page('/customers', CustomersPage, 'customers.read'),
+    page('/suppliers', SuppliersPage, 'suppliers.read'),
+    page('/inventory', InventoryPage, 'inventory.read'),
+    page('/company-settings', CompanySettingsPage, 'company_settings.manage'),
     page('/admin/companies', CompaniesPage, 'companies.read'),
     page('/admin/members', MembersPage, 'users.read'),
     page('/admin/roles', RolesPage, 'roles.read'),

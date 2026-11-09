@@ -51,3 +51,13 @@ Bitte nicht öffentlich als Issue melden, sondern direkt an das FangEvo-Team.
 | Eigene Felder           | Serverseitige Typprüfung; Verweise nur auf Datensätze im eigenen Mandanten                                                                 |
 | CSV-Export              | Zellen, die mit `=`, `+`, `-`, `@` beginnen, werden entschärft (Schutz gegen Formel-Einschleusung in Excel)                                |
 | Dashboards              | Widgets ohne passendes Recht werden serverseitig entfernt; Vorlagen übernehmen keine persönlichen Notizen                                  |
+
+## Ergänzungen Phase 3a
+
+| Bereich        | Maßnahme                                                                                                                         |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Firmentrennung | RLS prüft Account **und** Firma; Firmenkontext nur aus dem geprüften Header `X-Company-Id`; Tests auf API- und DB-Ebene          |
+| Preise         | Einkaufspreise nur mit `articles.prices` sichtbar und änderbar (auch in Listen, Sortierung, Filtern, Lieferanten-Artikeln)       |
+| Bestand        | Unveränderliches Journal, Sperre der Bestandszeile gegen gleichzeitige Buchungen (Test mit 20 parallelen Abgängen)               |
+| Nummern        | Lückenlos und eindeutig je Firma                                                                                                 |
+| JTL-Daten      | Export nur lesend, nur Artikeldaten, keine personenbezogenen Daten; Exportdateien per `.gitignore` vom Repository ausgeschlossen |

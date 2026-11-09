@@ -14,7 +14,7 @@ import {
   X,
 } from 'lucide-react';
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
-import { type ListFilter, type TableState } from '@fangevo/shared';
+import { type ListFilter, type TABLE_KEYS, type TableState } from '@fangevo/shared';
 import {
   Alert,
   Button,
@@ -40,7 +40,7 @@ type Fetcher<T> = (p: {
 }) => Promise<{ items: T[]; total: number }>;
 
 interface BaseProps<T> {
-  tableKey: 'companies' | 'members' | 'audit';
+  tableKey: (typeof TABLE_KEYS)[number];
   columns: Column<T>[];
   rowId: (r: T) => string;
   exportName: string;

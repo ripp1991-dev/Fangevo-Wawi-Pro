@@ -79,3 +79,25 @@ Abgesichert durch die Testsuite `apps/api/test/tenant-isolation.test.ts` (API- u
 **Von Hand gepflegte Indizes** (Prisma kennt sie nicht; bei neuen Migrationen mit `--create-only` prüfen, dass sie bleiben): `search_documents_fts` (Volltext deutsch), `search_documents_title_trgm` (Trigramm), `preferences_scope_key` (eindeutig je Account/Benutzer/Schlüssel). Die Erweiterung `pg_trgm` wird von der Migration angelegt.
 
 **Befüllung des Suchindex:** Die Migration `phase2_tools` übernimmt vorhandene Firmen, Mitglieder und Rollen. Dafür wird RLS für den Eigentümer innerhalb der Migration kurz gelockert (`NO FORCE`) und sofort wieder aktiviert.
+
+## Tabellen (Phase 3a, firmenbezogen)
+
+Alle mit `account_id` **und** `company_id`, Policy `company_isolation` (Account und aktive Firma müssen passen, siehe ADR-007).
+
+| Tabelle                                          | Inhalt                                                                                                                    |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| `company_settings`                               | Minusbestand erlaubt, Währung                                                                                             |
+| `tax_rates`                                      | Steuersätze (Prozentsatz nach Anlage fest, archivierbar, ein Standard)                                                    |
+| `number_sequences`                               | Nummernkreise (Präfix, nächste Nummer, Stellen)                                                                           |
+| `categories`, `manufacturers`, `customer_groups` | Auswahllisten                                                                                                             |
+| `articles`                                       | Artikel inkl. Art (standard/parent/variant/set), Preise netto `numeric(19,4)`, Rückverfolgung, `custom_fields`, `version` |
+| `article_prices`                                 | Staffel-/Kundengruppenpreise                                                                                              |
+| `set_components`                                 | Bestandteile von Sets                                                                                                     |
+| `customers`, `suppliers`                         | Stammdaten inkl. `custom_fields`, `version`                                                                               |
+| `addresses`, `contacts`                          | Adressen und Ansprechpartner von Kunden/Lieferanten (`owner_type`, `owner_id`)                                            |
+| `supplier_articles`                              | Bezugsquellen (Lief.-Art.-Nr., EK, Lieferzeit, Mindestmenge, bevorzugt)                                                   |
+| `warehouses`, `storage_locations`                | Lager und Lagerplätze                                                                                                     |
+| `stock_movements`                                | **Bestandsjournal, unveränderlich** (Trigger; App-Rolle nur `SELECT/INSERT`)                                              |
+| `stock_levels`                                   | aktueller Bestand je Artikel/Lager/Lagerplatz (eindeutig über Ausdrucks-Index `stock_levels_slot`)                        |
+
+Zusätzliche Prüfregeln in der Datenbank: Steuersatz 0–100 %, gültige Artikel-/Kunden-/Buchungsarten, Preise ≥ 0, Buchungsmenge ≠ 0. Von Hand gepflegte Indizes: `stock_levels_slot`, `articles_name_trgm`, `customers_search_trgm`.

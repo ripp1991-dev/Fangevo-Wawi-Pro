@@ -2,15 +2,16 @@
 
 Katalog: [`packages/licensing/src/catalog.ts`](packages/licensing/src/catalog.ts). „In Entwicklung“ heißt: geplant, aber **nicht** implementiert. Die Oberfläche zeigt das ehrlich an.
 
-| Modul                                                             | Phase | Status    | Inhalt heute                                                                                                                                      |
-| ----------------------------------------------------------------- | ----- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Core                                                              | 1     | ✅ fertig | Registrierung, Login, MFA, Sitzungen, Accounts, Firmen, Benutzer, Einladungen, Rollen & Rechte, Lizenz-Kern, Audit-Log, Administrationsoberfläche |
-| Dashboard und Core-Werkzeuge                                      | 2     | ✅ fertig | Dashboard-Baukasten, Tabellen-Baukasten, eigene Felder, globale Suche, Benachrichtigungen, Aktivitäten, anpassbares Menü                          |
-| Artikel, Kunden, Lieferanten, Aufträge, Lager, Dokumente, Einkauf | 3     | geplant   | –                                                                                                                                                 |
-| Pack, Versand, Retouren                                           | 4     | geplant   | –                                                                                                                                                 |
-| Import, Multichannel, Finanzen, API                               | 5     | geplant   | –                                                                                                                                                 |
-| Automatisierung, CRM, Analytics                                   | 6     | geplant   | –                                                                                                                                                 |
-| Marketplace                                                       | 7     | geplant   | –                                                                                                                                                 |
+| Modul                               | Phase | Status    | Inhalt heute                                                                                                                                      |
+| ----------------------------------- | ----- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Core                                | 1     | ✅ fertig | Registrierung, Login, MFA, Sitzungen, Accounts, Firmen, Benutzer, Einladungen, Rollen & Rechte, Lizenz-Kern, Audit-Log, Administrationsoberfläche |
+| Dashboard und Core-Werkzeuge        | 2     | ✅ fertig | Dashboard-Baukasten, Tabellen-Baukasten, eigene Felder, globale Suche, Benachrichtigungen, Aktivitäten, anpassbares Menü                          |
+| Artikel, Kunden, Lieferanten, Lager | 3a    | ✅ fertig | Stammdaten, Preise, Varianten, Sets, Adressen, Bezugsquellen, Bestandsjournal, Firmeneinstellungen                                                |
+| Aufträge, Belege, Einkauf           | 3b    | geplant   | –                                                                                                                                                 |
+| Pack, Versand, Retouren             | 4     | geplant   | –                                                                                                                                                 |
+| Import, Multichannel, Finanzen, API | 5     | geplant   | –                                                                                                                                                 |
+| Automatisierung, CRM, Analytics     | 6     | geplant   | –                                                                                                                                                 |
+| Marketplace                         | 7     | geplant   | –                                                                                                                                                 |
 
 ## Core im Detail
 

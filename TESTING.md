@@ -1,16 +1,16 @@
 # Tests
 
-## Übersicht (Stand Phase 2)
+## Übersicht (Stand Phase 3a)
 
-| Ebene                              | Werkzeug                | Ort                                                                                  | Anzahl    |
-| ---------------------------------- | ----------------------- | ------------------------------------------------------------------------------------ | --------- |
-| Unit                               | Vitest                  | `packages/*/src/*.test.ts`, `apps/api/src/**/*.test.ts`, `apps/web/src/**/*.test.ts` | 36        |
-| Integration (API + echte DB/Redis) | Vitest + Fastify-Inject | `apps/api/test/auth.test.ts`, `admin.test.ts`, `phase2.test.ts`                      | 50        |
-| **Mandantentrennung (Pflicht)**    | Vitest                  | `apps/api/test/tenant-isolation.test.ts`                                             | 14        |
-| End-to-End im Browser              | Playwright              | `tests/e2e/core-flow.mjs`, `tests/e2e/phase2-flow.mjs`                               | 2 Abläufe |
-| Last                               | eigenes Skript          | `apps/api/scripts/perf-lists.ts`                                                     | manuell   |
+| Ebene                                       | Werkzeug                | Ort                                                                                             | Anzahl    |
+| ------------------------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------- | --------- |
+| Unit                                        | Vitest                  | `packages/*/src/**/*.test.ts`, `apps/api/src/**/*.test.ts`, `apps/web/src/**/*.test.ts`         | 43        |
+| Integration (API + echte DB/Redis)          | Vitest + Fastify-Inject | `apps/api/test/auth.test.ts`, `admin.test.ts`, `phase2.test.ts`, `phase3a.test.ts`              | 68        |
+| **Mandanten- und Firmentrennung (Pflicht)** | Vitest                  | `apps/api/test/tenant-isolation.test.ts` + Abschnitt „Trennung der Firmen“ in `phase3a.test.ts` | 14 + 2    |
+| End-to-End im Browser                       | Playwright              | `tests/e2e/core-flow.mjs`, `phase2-flow.mjs`, `phase3a-flow.mjs`                                | 3 Abläufe |
+| Last                                        | eigenes Skript          | `apps/api/scripts/perf-lists.ts`                                                                | manuell   |
 
-Insgesamt 100 automatisierte Tests + 2 E2E-Abläufe. Kein Merge ohne grüne CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
+Insgesamt 125 automatisierte Tests + 3 E2E-Abläufe. Kein Merge ohne grüne CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
 
 ## Ausführen
 
