@@ -64,7 +64,9 @@ export type AppConfig = z.infer<typeof schema> & {
 };
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
-  const parsed = schema.safeParse(env);
+  // Leere Werte (z. B. `SUPPORT_EMAIL=` aus der Vorlage) gelten als nicht gesetzt
+  const cleaned = Object.fromEntries(Object.entries(env).filter(([, v]) => v !== ''));
+  const parsed = schema.safeParse(cleaned);
   if (!parsed.success) {
     const msg = parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('\n');
     throw new Error(`Ungültige Konfiguration:\n${msg}`);

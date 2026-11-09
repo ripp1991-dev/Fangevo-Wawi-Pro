@@ -1,0 +1,100 @@
+# Pilotbetrieb auf einem Server (Phase 8, siehe OPERATIONS.md).
+#
+#   cp infrastructure/production/env.production.example .env.production   # Werte eintragen!
+#   docker compose -f infrastructure/production/docker-compose.yml --env-file .env.production up -d --build
+#
+# Für größeren Betrieb: verwaltete PostgreSQL-/Redis-Dienste nutzen und nur api, worker, web betreiben.
+name: fangevo
+
+x-app-env: &app-env
+  NODE_ENV: production
+  DATABASE_URL: postgresql://fangevo_app:${FANGEVO_APP_PASSWORD}@postgres:5432/fangevo
+  REDIS_URL: redis://redis:6379
+  WEB_ORIGIN: ${WEB_ORIGIN}
+  APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY}
+  SMTP_HOST: ${SMTP_HOST}
+  SMTP_PORT: ${SMTP_PORT:-587}
+  SMTP_USER: ${SMTP_USER:-}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+  SMTP_FROM: ${SMTP_FROM}
+  PLATFORM_ADMIN_EMAILS: ${PLATFORM_ADMIN_EMAILS:-}
+  SUPPORT_EMAIL: ${SUPPORT_EMAIL:-}
+  PLATFORM_ISSUER_NAME: ${PLATFORM_ISSUER_NAME:-}
+  PLATFORM_ISSUER_STREET: ${PLATFORM_ISSUER_STREET:-}
+  PLATFORM_ISSUER_POSTAL_CODE: ${PLATFORM_ISSUER_POSTAL_CODE:-}
+  PLATFORM_ISSUER_CITY: ${PLATFORM_ISSUER_CITY:-}
+  PLATFORM_ISSUER_EMAIL: ${PLATFORM_ISSUER_EMAIL:-}
+  PLATFORM_ISSUER_VAT_ID: ${PLATFORM_ISSUER_VAT_ID:-}
+  PLATFORM_ISSUER_TAX_NUMBER: ${PLATFORM_ISSUER_TAX_NUMBER:-}
+  PLATFORM_ISSUER_IBAN: ${PLATFORM_ISSUER_IBAN:-}
+  PLATFORM_ISSUER_BIC: ${PLATFORM_ISSUER_BIC:-}
+  PLATFORM_ISSUER_BANK_NAME: ${PLATFORM_ISSUER_BANK_NAME:-}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+
+services:
+  postgres:
+    image: postgres:16.10
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      FANGEVO_OWNER_PASSWORD: ${FANGEVO_OWNER_PASSWORD}
+      FANGEVO_APP_PASSWORD: ${FANGEVO_APP_PASSWORD}
+      FANGEVO_BACKUP_PASSWORD: ${FANGEVO_BACKUP_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init-roles.sh:/docker-entrypoint-initdb.d/10-init-roles.sh:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d fangevo']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7.4
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - redisdata:/data
+
+  migrate:
+    build: { context: ../.., target: migrate }
+    image: fangevo/migrate
+    environment:
+      DATABASE_URL: postgresql://fangevo_owner:${FANGEVO_OWNER_PASSWORD}@postgres:5432/fangevo
+      DATABASE_MIGRATE_URL: postgresql://fangevo_owner:${FANGEVO_OWNER_PASSWORD}@postgres:5432/fangevo
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: 'no'
+
+  api:
+    build: { context: ../.., target: api }
+    image: fangevo/api
+    restart: unless-stopped
+    environment: *app-env
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_started }
+
+  worker:
+    build: { context: ../.., target: api }
+    image: fangevo/api
+    restart: unless-stopped
+    command: ['dist/worker.js']
+    # Der Worker hat keinen HTTP-Port; die Prüfung des API-Images gilt hier nicht
+    healthcheck: { disable: true }
+    environment: *app-env
+    depends_on:
+      api: { condition: service_healthy }
+
+  web:
+    build: { context: ../.., target: web }
+    image: fangevo/web
+    restart: unless-stopped
+    ports:
+      - '${WEB_PORT:-8080}:8080'
+    depends_on:
+      api: { condition: service_healthy }
+
+volumes:
+  pgdata:
+  redisdata:

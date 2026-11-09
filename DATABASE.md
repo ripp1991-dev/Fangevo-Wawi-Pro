@@ -174,3 +174,7 @@ Migration `…_phase6_automation`.
 | `support_ticket_index` | global  | Postfach-Index für den Support (nur IDs, Status, Priorität)                                                       |
 
 Migrationen: `phase7_commercial` (Tabellen, RLS, Trigger, Verzeichnis-Befüllung), `phase7_subscription_extras` (geplantes Intervall, Sperre, zusätzliche Firmen). Beide sind nicht-destruktiv. Accounts von vor Phase 7 erhalten ihr Abo beim ersten Aufruf automatisch aus der bestehenden Lizenz (Module außerhalb des Pakets werden als Zusatzmodule übernommen).
+
+## Sicherung und Wiederherstellung (Phase 8)
+
+Rolle `fangevo_backup` (nur lesen, `BYPASSRLS`) für `pg_dump`. Mit `fangevo_owner` bricht `pg_dump` wegen erzwungener RLS ab; das ist gewollt. Wiederherstellung mit der Administrator-Rolle in eine **neue** Datenbank. Skripte und Ablauf: [OPERATIONS.md](OPERATIONS.md), ADR-013. Für Prisma wird zusätzlich die Engine `debian-openssl-3.0.x` erzeugt (Produktions-Image).

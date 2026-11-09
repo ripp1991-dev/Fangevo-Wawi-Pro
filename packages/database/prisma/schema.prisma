@@ -4,7 +4,9 @@
 // (siehe Migration 0001_core, Abschnitt RLS).
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  /// native = Entwicklungsrechner; debian-openssl-3.0.x = Produktions-Image (distroless, Debian 12)
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {

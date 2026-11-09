@@ -51,6 +51,17 @@ jobs:
       - run: pnpm build
       - name: Abhängigkeiten auf bekannte Sicherheitslücken prüfen
         run: pnpm audit --prod --audit-level high
+      - name: Migrationen auf leerer Datenbank und Abgleich mit dem Schema
+        run: scripts/db-migration-check.sh
+        env:
+          MIGRATE_ADMIN_URL: postgresql://fangevo_owner:fangevo_owner_dev@localhost:5432/postgres
+      - name: Sicherung und Wiederherstellungs-Probe (Testdatenbank nach den Tests)
+        run: |
+          scripts/db-backup.sh /tmp/backups
+          scripts/db-restore-check.sh "$(ls /tmp/backups/*.dump)"
+        env:
+          BACKUP_DATABASE_URL: postgresql://fangevo_backup:fangevo_backup_dev@localhost:5432/fangevo_test
+          PG_ADMIN_URL: postgresql://postgres:postgres@localhost:5432/postgres
 
   e2e:
     name: End-to-End (Browser)
@@ -102,3 +113,49 @@ jobs:
         with:
           name: e2e-screenshots
           path: tests/e2e/screenshots
+
+  production:
+    name: Produktions-Images und Rauchtest
+    runs-on: ubuntu-24.04
+    needs: check
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Testkonfiguration mit Zufallspasswörtern
+        run: |
+          {
+            for v in POSTGRES_PASSWORD FANGEVO_OWNER_PASSWORD FANGEVO_APP_PASSWORD FANGEVO_BACKUP_PASSWORD; do
+              echo "$v=$(openssl rand -hex 16)"
+            done
+            echo "APP_ENCRYPTION_KEY=$(openssl rand -base64 32)"
+            echo "WEB_ORIGIN=http://localhost:8080"
+            echo "SMTP_HOST=mailpit"
+            echo "SMTP_PORT=1025"
+            echo "SMTP_FROM=no-reply@example.test"
+          } > /tmp/env.smoke
+      - name: Images bauen und starten
+        run: docker compose -p fangevo -f infrastructure/production/docker-compose.yml -f infrastructure/production/docker-compose.smoke.yml --env-file /tmp/env.smoke up -d --build --wait
+      - name: Rauchtest im Browser
+        run: node tests/smoke/production-smoke.mjs
+        env:
+          SMOKE_BASE: http://localhost:8080
+          SMOKE_MAILPIT: http://localhost:8025
+      - name: Sicherung und Wiederherstellung im Container
+        run: |
+          set -a; . /tmp/env.smoke; set +a
+          mkdir -p /tmp/backups
+          docker run --rm --network fangevo_default -v "$PWD/scripts:/scripts:ro" -v /tmp/backups:/backups \
+            -e BACKUP_DATABASE_URL="postgresql://fangevo_backup:${FANGEVO_BACKUP_PASSWORD}@postgres:5432/fangevo" \
+            postgres:16.10 bash /scripts/db-backup.sh /backups
+          docker run --rm --network fangevo_default -v "$PWD/scripts:/scripts:ro" -v /tmp/backups:/backups:ro \
+            -e PG_ADMIN_URL="postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/postgres" \
+            postgres:16.10 bash -c 'bash /scripts/db-restore-check.sh /backups/*.dump'
+      - if: failure()
+        run: docker compose -p fangevo -f infrastructure/production/docker-compose.yml logs --tail 200

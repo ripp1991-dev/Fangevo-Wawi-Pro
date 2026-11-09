@@ -129,3 +129,16 @@ Abrechnungslauf (Worker) ───┘            │                            
 ```
 
 Der Abrechnungslauf läuft im Worker (alle 15 Minuten) und ist durch eine Zeilensperre je Abo mehrfach startbar. Support-Tickets bleiben beim Account; der Support arbeitet über einen globalen Index. Zahlungsanbieter sind bewusst noch nicht angebunden (ADR-012).
+
+## Phase 8: Betrieb
+
+```
+Internet ─► TLS-Proxy ─► web (nginx, CSP) ─┬─► /            statische Oberfläche
+                                            └─► /api, /health ─► api (n Instanzen, distroless)
+                                                                    │
+                     worker (n Instanzen) ──────────────────────────┤
+                                                                    ▼
+                                    PostgreSQL (RLS) ◄── fangevo_backup (pg_dump)   Redis
+```
+
+Details: [OPERATIONS.md](OPERATIONS.md), ADR-013.
