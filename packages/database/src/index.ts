@@ -12,6 +12,13 @@ export type {
   AuthTokenType,
   EntitlementStatus,
   MembershipStatus,
+  Article,
+  Customer,
+  Supplier,
+  Warehouse,
+  StockLevel,
+  StockMovement,
+  TaxRate,
 } from '@prisma/client';
 export { createPrismaClient } from './client';
 export { withTenant, type Tx, type DbContext } from './tenant';
