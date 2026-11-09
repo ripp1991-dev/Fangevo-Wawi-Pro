@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Inject, Param, Post, Put, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
-import { companyInputSchema } from '@fangevo/shared';
+import { companyInputSchema, listQuerySchema } from '@fangevo/shared';
 import { RequirePermission, RequiresModule, Tenant, type TenantContext } from '../http/context';
 import { ApiZodBody, uuidParam, zodPipe } from '../http/zod';
 import { CompaniesService } from './companies.service';
@@ -16,8 +16,11 @@ export class CompaniesController {
 
   @Get()
   @RequirePermission('companies.read')
-  list(@Tenant() t: TenantContext, @Query('archived') archived?: string) {
-    return this.companies.list(t, archived === 'true');
+  list(
+    @Tenant() t: TenantContext,
+    @Query(zodPipe(listQuerySchema)) q: z.infer<typeof listQuerySchema>,
+  ) {
+    return this.companies.list(t, q);
   }
 
   @Get(':id')

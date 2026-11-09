@@ -25,12 +25,15 @@ const schema = z.object({
     .default(24 * 7),
   SESSION_IDLE_HOURS: z.coerce.number().int().min(1).default(12),
   RATE_LIMIT_DISABLED: z.stringbool().default(false),
+  /** Ereignis-Verteiler im API-Prozess starten (Entwicklung). In Produktion läuft er als eigener Worker. */
+  EVENT_DISPATCH_INLINE: z.stringbool().optional(),
   LOG_LEVEL: z.string().default('info'),
 });
 
 export type AppConfig = z.infer<typeof schema> & {
   mailTransport: 'smtp' | 'log' | 'memory';
   isProd: boolean;
+  dispatchInline: boolean;
 };
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -54,6 +57,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   return {
     ...c,
     mailTransport: c.MAIL_TRANSPORT ?? (c.SMTP_HOST ? 'smtp' : 'log'),
+    dispatchInline: c.EVENT_DISPATCH_INLINE ?? c.NODE_ENV === 'development',
     isProd: c.NODE_ENV === 'production',
   };
 }

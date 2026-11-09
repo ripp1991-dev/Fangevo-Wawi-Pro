@@ -1,9 +1,25 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { ALL_PERMISSIONS, isPermission, permissionModule, type Permission } from '@fangevo/shared';
+import {
+  ALL_PERMISSIONS,
+  SYSTEM_ROLES,
+  isPermission,
+  permissionModule,
+  type Permission,
+} from '@fangevo/shared';
 import { accessMode, hasModule, isModuleKey, type EntitlementSnapshot } from '@fangevo/licensing';
 import { type Entitlement } from '@fangevo/database';
 import { Database } from '../database/database.service';
 import { type AccountContext } from '../http/context';
+
+/** Rechte einer Rolle. Systemrollen kommen aus dem Code (neue Rechte wirken sofort für alle Accounts). */
+export function rolePermissions(role: {
+  systemKey: string | null;
+  permissions: { permission: string }[];
+}): string[] {
+  if (role.systemKey && role.systemKey in SYSTEM_ROLES)
+    return [...SYSTEM_ROLES[role.systemKey as keyof typeof SYSTEM_ROLES].permissions];
+  return role.permissions.map((p) => p.permission);
+}
 
 export function toSnapshot(e: Entitlement): EntitlementSnapshot {
   return {
@@ -77,7 +93,7 @@ export class AccessService {
         isOwner: m.isOwner,
         permissions: effectivePermissions({
           isOwner: m.isOwner,
-          rolePermissions: m.roles.flatMap((r) => r.role.permissions.map((p) => p.permission)),
+          rolePermissions: m.roles.flatMap((r) => rolePermissions(r.role)),
           directPermissions: m.permissions.map((p) => p.permission),
           entitlement,
         }),

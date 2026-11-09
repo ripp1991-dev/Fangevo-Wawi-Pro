@@ -23,7 +23,7 @@ describe('API-Ebene', () => {
   it('Firmenliste enthält nur eigene Firmen', async () => {
     const r = await a.client.get('/admin/companies');
     expect(r.status).toBe(200);
-    expect(r.body.map((c: { id: string }) => c.id)).toEqual([a.companyId]);
+    expect(r.body.items.map((c: { id: string }) => c.id)).toEqual([a.companyId]);
   });
 
   it('fremde Firma ist nicht lesbar, änderbar oder archivierbar', async () => {
@@ -183,6 +183,96 @@ describe('Datenbank-Ebene (Row-Level Security)', () => {
       { rolbypassrls: boolean; rolsuper: boolean }[]
     >`SELECT rolbypassrls, rolsuper FROM pg_roles WHERE rolname = current_user`;
     expect(r[0]).toEqual({ rolbypassrls: false, rolsuper: false });
+    await db.$disconnect();
+  });
+});
+
+describe('Phase 2: neue Daten sind ebenfalls getrennt', () => {
+  it('Suche, Ansichten, eigene Felder, Dashboards, Benachrichtigungen, Einstellungen', async () => {
+    // B legt überall Daten an
+    const field = await b.client.post('/custom-fields', {
+      entityType: 'company',
+      key: 'geheim',
+      label: 'Geheim',
+      type: 'text',
+    });
+    const view = await b.client.post('/views', {
+      tableKey: 'companies',
+      name: 'B-Ansicht',
+      state: {},
+      shared: true,
+    });
+    await b.client.put('/admin/preferences/nav', {
+      hidden: ['/admin/audit'],
+      order: [],
+      favorites: [],
+    });
+    await b.client.post('/dashboards', { name: 'B-Seite', widgets: [] });
+    await b.client.post('/admin/companies', { name: 'Firma B Zwei', country: 'DE' });
+    const bNotes = await b.client.get('/notifications');
+
+    // A sieht davon nichts
+    const hits = (await a.client.get('/search?q=Firma%20B')).body.items as {
+      entityId: string;
+      title: string;
+    }[];
+    expect(hits.every((h) => !h.title.startsWith('Firma B') && h.entityId !== b.companyId)).toBe(
+      true,
+    );
+    expect(
+      (await a.client.get('/views?table=companies')).body.map((v: { name: string }) => v.name),
+    ).not.toContain('B-Ansicht');
+    expect(
+      (
+        await a.client.put(`/views/${view.body.id}`, {
+          tableKey: 'companies',
+          name: 'x',
+          state: {},
+        })
+      ).status,
+    ).toBe(404);
+    expect((await a.client.del(`/views/${view.body.id}`)).status).toBe(404);
+    expect(
+      (await a.client.get('/custom-fields?entityType=company')).body.map(
+        (d: { key: string }) => d.key,
+      ),
+    ).not.toContain('geheim');
+    expect((await a.client.post(`/custom-fields/${field.body.id}/archive`)).status).toBe(404);
+    expect((await a.client.get('/preferences/nav')).body.value).toBeNull();
+    expect(
+      (await a.client.get('/dashboards')).body.pages.map((p: { name: string }) => p.name),
+    ).not.toContain('B-Seite');
+    for (const n of bNotes.body.items)
+      expect((await a.client.post(`/notifications/${n.id}/read`)).status).toBe(204);
+    expect((await b.client.get('/notifications')).body.unread).toBe(bNotes.body.unread);
+    // Fremde Firma als Filter- oder Verweisziel hilft nicht
+    const filtered = await a.client.get(
+      `/admin/companies?filters=${encodeURIComponent(JSON.stringify([{ field: 'name', op: 'contains', value: 'Firma B' }]))}`,
+    );
+    expect(filtered.body.items).toEqual([]);
+    expect(
+      (await a.client.get(`/activity?entityType=company&entityId=${b.companyId}`)).status,
+    ).toBe(404);
+  });
+
+  it('Datenbank: neue Tabellen ohne Kontext leer; Benachrichtigungen nur für den eigenen Benutzer', async () => {
+    const db = createPrismaClient(process.env.DATABASE_URL);
+    expect(await db.searchDocument.count()).toBe(0);
+    expect(await db.notification.count()).toBe(0);
+    expect(await db.dashboard.count()).toBe(0);
+    expect(await db.savedView.count()).toBe(0);
+    expect(await db.customFieldDefinition.count()).toBe(0);
+    expect(await db.outboxEvent.count()).toBe(0);
+    const someoneElse = '00000000-0000-7000-8000-000000000000';
+    const visible = await withTenant(db, { accountId: b.accountId, userId: someoneElse }, (tx) =>
+      tx.notification.count(),
+    );
+    expect(visible).toBe(0);
+    await expect(
+      withTenant(db, { accountId: a.accountId, userId: null }, (tx) =>
+        tx.outboxEvent.updateMany({ data: { type: 'x' } }),
+      ),
+    ).rejects.toThrow();
     await db.$disconnect();
   });
 });

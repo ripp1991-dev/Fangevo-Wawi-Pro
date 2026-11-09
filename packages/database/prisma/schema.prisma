@@ -143,6 +143,8 @@ model Company {
   updatedAt  DateTime  @updatedAt @map("updated_at")
   updatedBy  String?   @map("updated_by") @db.Uuid
   version    Int       @default(1)
+  /// Werte der kundeneigenen Felder (siehe CustomFieldDefinition), Schlüssel = Feld-Key
+  customFields Json    @default("{}") @map("custom_fields")
 
   account Account         @relation(fields: [accountId], references: [id], onDelete: Restrict)
   access  CompanyAccess[]
@@ -316,4 +318,146 @@ model AuditLog {
 
   @@index([accountId, createdAt(sort: Desc)])
   @@map("audit_logs")
+}
+
+// ───────────── Phase 2: Ereignisse, Benachrichtigungen, Werkzeuge ─────────────
+
+/// Fachliches Ereignis (Outbox). Wird in derselben Transaktion wie die Änderung geschrieben.
+model OutboxEvent {
+  id          String   @id @db.Uuid
+  accountId   String   @map("account_id") @db.Uuid
+  type        String
+  entityType  String?  @map("entity_type")
+  entityId    String?  @map("entity_id")
+  actorUserId String?  @map("actor_user_id") @db.Uuid
+  payload     Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([accountId, createdAt])
+  @@map("outbox_events")
+}
+
+/// Zustellwarteschlange für den Verteiler. Global (ohne Inhalt), damit der Worker
+/// offene Ereignisse finden kann, ohne die Mandantentrennung zu umgehen.
+model OutboxPending {
+  eventId     String    @id @map("event_id") @db.Uuid
+  accountId   String    @map("account_id") @db.Uuid
+  availableAt DateTime  @default(now()) @map("available_at")
+  lockedUntil DateTime? @map("locked_until")
+  attempts    Int       @default(0)
+  lastError   String?   @map("last_error")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([availableAt])
+  @@map("outbox_pending")
+}
+
+model Notification {
+  id        String    @id @db.Uuid
+  accountId String    @map("account_id") @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  type      String
+  title     String
+  body      String?
+  link      String?
+  /// Verhindert Doppelzustellung (z. B. Ereignis-ID + Empfänger)
+  dedupeKey String    @map("dedupe_key")
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@unique([accountId, userId, dedupeKey])
+  @@index([accountId, userId, createdAt(sort: Desc)])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  accountId String  @map("account_id") @db.Uuid
+  userId    String  @map("user_id") @db.Uuid
+  type      String
+  inApp     Boolean @map("in_app")
+
+  @@id([accountId, userId, type])
+  @@map("notification_preferences")
+}
+
+/// Gespeicherte Tabellenansicht (persönlich oder für den Account freigegeben)
+model SavedView {
+  id        String   @id @db.Uuid
+  accountId String   @map("account_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  tableKey  String   @map("table_key")
+  name      String
+  state     Json
+  shared    Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([accountId, tableKey])
+  @@map("saved_views")
+}
+
+/// Kundeneigenes Feld für einen Datensatztyp (z. B. Firma)
+model CustomFieldDefinition {
+  id              String    @id @db.Uuid
+  accountId       String    @map("account_id") @db.Uuid
+  entityType      String    @map("entity_type")
+  key             String
+  label           String
+  type            String
+  options         Json?
+  required        Boolean   @default(false)
+  position        Int       @default(0)
+  referenceEntity String?   @map("reference_entity")
+  archivedAt      DateTime? @map("archived_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@unique([accountId, entityType, key])
+  @@map("custom_field_definitions")
+}
+
+/// Einstellungen: user_id gesetzt = persönlich, user_id leer = Standard für den Account
+model Preference {
+  id        String   @id @db.Uuid
+  accountId String   @map("account_id") @db.Uuid
+  userId    String?  @map("user_id") @db.Uuid
+  key       String
+  value     Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([accountId, key])
+  @@map("preferences")
+}
+
+/// Dashboard-Seite: user_id gesetzt = persönlich, user_id leer = Vorlage für den Account
+model Dashboard {
+  id        String   @id @db.Uuid
+  accountId String   @map("account_id") @db.Uuid
+  userId    String?  @map("user_id") @db.Uuid
+  name      String
+  position  Int      @default(0)
+  widgets   Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([accountId, userId])
+  @@map("dashboards")
+}
+
+/// Suchindex für die globale Suche
+model SearchDocument {
+  accountId  String   @map("account_id") @db.Uuid
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id") @db.Uuid
+  companyId  String?  @map("company_id") @db.Uuid
+  permission String
+  title      String
+  subtitle   String?
+  body       String?
+  url        String
+  archived   Boolean  @default(false)
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@id([accountId, entityType, entityId])
+  @@map("search_documents")
 }

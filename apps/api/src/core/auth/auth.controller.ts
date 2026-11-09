@@ -46,6 +46,7 @@ import {
 } from '../http/context';
 import { ApiZodBody, uuidParam, zodPipe } from '../http/zod';
 import { MembersService } from '../members/members.service';
+import { SearchService } from '../search/search.service';
 import { AuthService, type ClientInfo } from './auth.service';
 import { MfaService } from './mfa.service';
 import { SESSION_COOKIE, SessionService } from './session.service';
@@ -68,6 +69,7 @@ export class AuthController {
     @Inject(MembersService) private readonly members: MembersService,
     @Inject(Database) private readonly db: Database,
     @Inject(AuditService) private readonly audit: AuditService,
+    @Inject(SearchService) private readonly search: SearchService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
@@ -271,7 +273,24 @@ export class AuthController {
     @Auth() a: AuthContext,
     @Body(zodPipe(updateProfileSchema)) body: z.infer<typeof updateProfileSchema>,
   ) {
-    await this.db.global.user.update({ where: { id: a.user.id }, data: { name: body.name } });
+    const user = await this.db.global.user.update({
+      where: { id: a.user.id },
+      data: { name: body.name },
+    });
+    // Suchindex in allen Accounts des Benutzers aktualisieren
+    for (const acc of await this.access.listAccounts(a.user.id)) {
+      await this.db.tenant({ accountId: acc.id, userId: a.user.id }, async (tx) => {
+        const m = await tx.membership.findFirst({
+          where: { accountId: acc.id, userId: a.user.id },
+        });
+        if (m)
+          await this.search.indexMember(tx, acc.id, {
+            id: m.id,
+            disabled: m.status === 'DISABLED',
+            user,
+          });
+      });
+    }
     return { status: 'ok' };
   }
 

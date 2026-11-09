@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { uuidv7, type Tx } from '@fangevo/database';
 import { canAdd } from '@fangevo/licensing';
 import { type InviteUserInput, type UpdateMemberAccessInput } from '@fangevo/shared';
+import { rolePermissions } from '../access/access.service';
 import { assertCanGrant } from '../access/escalation';
 import { AuditService } from '../audit/audit.service';
 import { SessionService } from '../auth/session.service';
@@ -9,6 +10,7 @@ import { Database } from '../database/database.service';
 import { AppError, Errors } from '../http/errors';
 import { type TenantContext } from '../http/context';
 import { MailService } from '../mail/mail.service';
+import { SearchService } from '../search/search.service';
 import { hashPassword, hashToken, randomToken } from '../security/crypto';
 
 const INVITE_TTL_MS = 7 * 86400_000;
@@ -20,6 +22,7 @@ export class MembersService {
     @Inject(AuditService) private readonly audit: AuditService,
     @Inject(MailService) private readonly mail: MailService,
     @Inject(SessionService) private readonly sessions: SessionService,
+    @Inject(SearchService) private readonly search: SearchService,
   ) {}
 
   private run<T>(t: TenantContext, fn: (tx: Tx) => Promise<T>): Promise<T> {
@@ -283,6 +286,15 @@ export class MembersService {
         await tx.companyAccess.createMany({
           data: companies.map((c) => ({ accountId, membershipId, companyId: c.id })),
         });
+      const joined = await this.db.global.user.findUniqueOrThrow({
+        where: { id: userId },
+        select: { name: true, email: true },
+      });
+      await this.search.indexMember(tx, accountId, {
+        id: membershipId,
+        disabled: false,
+        user: joined,
+      });
       await this.audit.record(tx, {
         accountId,
         userId,
@@ -406,6 +418,15 @@ export class MembersService {
         throw new AppError(403, 'LICENSE_LIMIT_REACHED', 'Benutzerlimit der Lizenz erreicht');
       }
       await tx.membership.update({ where: { id: membershipId }, data: { status } });
+      const u = await this.db.global.user.findUniqueOrThrow({
+        where: { id: m.userId },
+        select: { name: true, email: true },
+      });
+      await this.search.indexMember(tx, t.account.id, {
+        id: membershipId,
+        disabled: status === 'DISABLED',
+        user: u,
+      });
       await this.audit.record(tx, {
         accountId: t.account.id,
         userId: t.user.id,

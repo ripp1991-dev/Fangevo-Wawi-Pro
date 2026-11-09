@@ -22,6 +22,8 @@ export const companyInputSchema = z.object({
     .optional()
     .nullable(),
   phone: z.string().trim().max(40).optional().nullable(),
+  /** Werte der eigenen Felder; Prüfung gegen die Felddefinitionen erfolgt serverseitig. */
+  customFields: z.record(z.string().max(40), z.unknown()).optional(),
 });
 export type CompanyInput = z.infer<typeof companyInputSchema>;
 

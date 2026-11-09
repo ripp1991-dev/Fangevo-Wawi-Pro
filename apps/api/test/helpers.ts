@@ -156,3 +156,15 @@ export function ownerDb(): PrismaClient {
 export function asTenant<T>(accountId: string, fn: (tx: Tx) => Promise<T>): Promise<T> {
   return withTenant(ownerDb(), { accountId, userId: null }, fn);
 }
+
+/** Stellt alle offenen Ereignisse zu (statt auf den Hintergrund-Worker zu warten). */
+export async function drainEvents(app: NestFastifyApplication): Promise<void> {
+  const { EventDispatcher } = await import('../src/core/events/dispatcher.service');
+  const d = app.get(EventDispatcher);
+  for (let i = 0; i < 50 && (await d.runOnce(200)) > 0; i++);
+}
+
+export async function roleIdByName(c: Client, name: string): Promise<string> {
+  const r = await c.get('/admin/roles');
+  return r.body.find((x: { name: string }) => x.name === name).id;
+}

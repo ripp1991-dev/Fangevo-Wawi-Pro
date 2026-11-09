@@ -1,9 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { uuidv7, type Tx } from '@fangevo/database';
 import { type RoleInput } from '@fangevo/shared';
+import { rolePermissions } from '../access/access.service';
 import { assertCanGrant } from '../access/escalation';
 import { AuditService } from '../audit/audit.service';
 import { Database } from '../database/database.service';
+import { SearchService } from '../search/search.service';
 import { AppError, Errors } from '../http/errors';
 import { type TenantContext } from '../http/context';
 
@@ -12,6 +14,7 @@ export class RolesService {
   constructor(
     @Inject(Database) private readonly db: Database,
     @Inject(AuditService) private readonly audit: AuditService,
+    @Inject(SearchService) private readonly search: SearchService,
   ) {}
 
   private run<T>(t: TenantContext, fn: (tx: Tx) => Promise<T>): Promise<T> {
@@ -29,7 +32,7 @@ export class RolesService {
         name: r.name,
         description: r.description,
         system: r.systemKey !== null,
-        permissions: r.permissions.map((p) => p.permission),
+        permissions: rolePermissions(r),
         memberCount: r._count.members,
       }));
     });
@@ -46,6 +49,11 @@ export class RolesService {
           name: input.name,
           description: input.description ?? null,
         },
+      });
+      await this.search.indexRole(tx, t.account.id, {
+        id,
+        name: input.name,
+        description: input.description ?? null,
       });
       await this.setPermissions(tx, t.account.id, id, input.permissions);
       await this.audit.record(tx, {
@@ -81,6 +89,11 @@ export class RolesService {
         where: { id },
         data: { name: input.name, description: input.description ?? null },
       });
+      await this.search.indexRole(tx, t.account.id, {
+        id,
+        name: input.name,
+        description: input.description ?? null,
+      });
       await tx.rolePermission.deleteMany({ where: { roleId: id } });
       await this.setPermissions(tx, t.account.id, id, input.permissions);
       await this.audit.record(tx, {
@@ -109,6 +122,7 @@ export class RolesService {
         role.permissions.map((p) => p.permission),
       );
       await tx.role.delete({ where: { id } });
+      await this.search.remove(tx, t.account.id, 'role', id);
       await this.audit.record(tx, {
         accountId: t.account.id,
         userId: t.user.id,

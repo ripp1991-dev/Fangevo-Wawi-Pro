@@ -9,7 +9,9 @@
     "start": "node dist/main.js",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "openapi": "tsx scripts/export-openapi.ts"
+    "openapi": "tsx scripts/export-openapi.ts",
+    "worker": "dotenv -e ../../.env -- tsx src/worker.ts",
+    "start:worker": "node dist/worker.js"
   },
   "dependencies": {
     "@fangevo/database": "workspace:*",

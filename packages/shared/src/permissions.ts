@@ -12,7 +12,11 @@ export const PERMISSIONS = {
   'roles.manage': { module: 'core', label: 'Rollen anlegen, bearbeiten und löschen' },
   'audit.read': { module: 'core', label: 'Audit-Log ansehen' },
   'license.read': { module: 'core', label: 'Lizenz und Limits ansehen' },
-  'account.manage': { module: 'core', label: 'Account-Einstellungen bearbeiten' },
+  'account.manage': {
+    module: 'core',
+    label: 'Account-Einstellungen und Standard-Ansichten bearbeiten',
+  },
+  'custom_fields.manage': { module: 'core', label: 'Eigene Felder anlegen und bearbeiten' },
 } as const satisfies Record<string, { module: string; label: string }>;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -27,7 +31,10 @@ export function permissionModule(permission: Permission): string {
   return PERMISSIONS[permission].module;
 }
 
-/** Systemrollen, die bei jedem neuen Account angelegt werden. */
+/**
+ * Systemrollen, die bei jedem neuen Account angelegt werden. Ihre Rechte werden zur Laufzeit
+ * aus dieser Definition gelesen, damit neue Rechte automatisch bei allen Accounts wirken.
+ */
 export const SYSTEM_ROLES = {
   administrator: {
     name: 'Administrator',
