@@ -19,7 +19,7 @@ export const CUSTOMER_FIELDS: FieldSpec = {
   email: { kind: 'string', sortable: true },
   phone: { kind: 'string' },
   vatId: { kind: 'string', sortable: true },
-  customerGroupId: { kind: 'string' },
+  customerGroupId: { kind: 'enum' },
   paymentTermsDays: { kind: 'number', sortable: true },
   blocked: { kind: 'boolean', sortable: true },
   createdAt: { kind: 'date', sortable: true },

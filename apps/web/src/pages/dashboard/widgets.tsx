@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { ArrowRight, Building2, Mail, ShieldCheck, Users } from 'lucide-react';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
-import { type WidgetType } from '@fangevo/shared';
+import { ORDER_STATUSES, type OrderStatus, type WidgetType } from '@fangevo/shared';
 import { Badge, Spinner } from '@fangevo/ui';
 import { ActivityList } from '../../components/activity-list';
 import { NotificationList, notificationsQuery } from '../../components/notification-bell';
@@ -233,6 +233,105 @@ function LowStock() {
   );
 }
 
+function Revenue() {
+  const q = useQuery({
+    queryKey: ['revenue-stats'],
+    queryFn: () =>
+      http.get<{
+        today: { net: string };
+        week: { net: string };
+        month: { net: string };
+        openInvoices: { count: number; totalGross: string };
+      }>('/documents/stats'),
+  });
+  if (!q.data) return <Spinner />;
+  const eur = (v: string) =>
+    Number(v).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+  const cells = [
+    { label: 'Heute', value: eur(q.data.today.net) },
+    { label: 'Diese Woche', value: eur(q.data.week.net) },
+    { label: 'Dieser Monat', value: eur(q.data.month.net) },
+    {
+      label: `Offene Rechnungen (${q.data.openInvoices.count})`,
+      value: eur(q.data.openInvoices.totalGross),
+    },
+  ];
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {cells.map((c) => (
+        <div key={c.label}>
+          <p className="text-xs text-muted">{c.label}</p>
+          <p className="text-lg font-semibold tabular-nums">{c.value}</p>
+        </div>
+      ))}
+      <p className="col-span-full text-xs text-muted">
+        Netto, aus festgeschriebenen Rechnungen abzüglich Gutschriften und Stornos.
+      </p>
+    </div>
+  );
+}
+
+interface OrderStats {
+  open: { status: string; count: number; totalGross: string }[];
+  openCount: number;
+  topSellers: { articleId: string; number: string; name: string; quantity: string; net: string }[];
+}
+const orderStatsQuery = {
+  queryKey: ['order-stats'],
+  queryFn: () => http.get<OrderStats>('/orders/stats'),
+};
+
+function OpenOrders() {
+  const q = useQuery(orderStatsQuery);
+  if (!q.data) return <Spinner />;
+  if (!q.data.openCount)
+    return <p className="py-6 text-center text-sm text-muted">Keine offenen Aufträge</p>;
+  return (
+    <div className="space-y-2 text-sm">
+      <p>
+        <Link to="/orders" className="text-2xl font-semibold hover:underline">
+          {q.data.openCount}
+        </Link>{' '}
+        offene Aufträge
+      </p>
+      <ul className="divide-y divide-border">
+        {q.data.open.map((g) => (
+          <li key={g.status} className="flex justify-between gap-2 py-1">
+            <span>{ORDER_STATUSES[g.status as OrderStatus] ?? g.status}</span>
+            <span className="tabular-nums text-muted">{g.count}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function TopSellers() {
+  const q = useQuery(orderStatsQuery);
+  if (!q.data) return <Spinner />;
+  if (!q.data.topSellers.length)
+    return (
+      <p className="py-6 text-center text-sm text-muted">
+        Noch keine Verkäufe in den letzten 30 Tagen
+      </p>
+    );
+  return (
+    <ol className="divide-y divide-border text-sm">
+      {q.data.topSellers.map((a, i) => (
+        <li key={a.articleId} className="flex items-center justify-between gap-2 py-1.5">
+          <Link to="/articles" search={{ id: a.articleId }} className="truncate hover:underline">
+            {i + 1}. {a.number} · {a.name}
+          </Link>
+          <span className="shrink-0 tabular-nums text-muted">
+            {Number(a.quantity).toLocaleString('de-DE')} ·{' '}
+            {Number(a.net).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 function Activity({ config }: WidgetProps) {
   return <ActivityList limit={Number(config.limit ?? 8)} compact />;
 }
@@ -245,6 +344,9 @@ export const WIDGET_COMPONENTS: Record<WidgetType, (p: WidgetProps) => ReactNode
   team: Team,
   companies: Companies,
   low_stock: LowStock,
+  revenue: Revenue,
+  open_orders: OpenOrders,
+  top_sellers: TopSellers,
   note: Note,
 };
 

@@ -1,6 +1,6 @@
 # FangEvo Wawi Pro – Entwicklungsplan
 
-**Stand:** 2026-11-09 · **Status:** Phase 0, 1, 2 und 3a abgeschlossen · nächster Schritt: Phase 3b (Aufträge, Belege, Einkauf)
+**Stand:** 2026-11-09 · **Status:** Phase 0, 1, 2, 3a und 3b abgeschlossen · nächster Schritt: E-Rechnung (nach Steuerberater-Prüfung) bzw. Planung Phase 4
 Grundlage: [Master Playbook v1.0](docs/product/MASTER_PLAYBOOK_v1.0.md) · Technik: [ADR-001](docs/decisions/ADR-001_TECHNOLOGIE_EMPFEHLUNG.md)
 
 ---
@@ -213,9 +213,17 @@ Reihenfolge: Artikel → Kunden → Lieferanten → Lager/Bestandsjournal → Au
 
 Offen bzw. bewusst später: Produktbilder (Dateispeicher folgt mit Phase 3b), Bestände je Charge/Seriennummer (Phase 4, FangEvo Lager), Import der JTL-Daten (Phase 5, Import-Assistent; die Testdaten werden vorher geprüft).
 
-#### Phase 3b (nächster Schritt)
+#### Status Phase 3b (2026-11-09): abgeschlossen
 
-Aufträge (Statusregeln, Reservierung), Belege (Angebot, Auftragsbestätigung, Lieferschein, Rechnung, Gutschrift, Storno; PDF; GoBD-Festschreibung; E-Mail-Versand), Einkauf (Bestellvorschläge, Bestellungen, Wareneingang), Startseite mit Umsatz und offenen Aufträgen, Lasttest mit 100.000 Artikeln.
+| AP             | Status | Nachweis                                                                                                                                                                           |
+| -------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 3.6 Aufträge   | ✅     | Preisermittlung (Gruppe, Staffel, Verkaufspreis, Gruppenrabatt), Statusmaschine mit Verlauf, Reservierung nach Anlage-Reihenfolge, Versand bucht Bestand (auch Sets), Storno       |
+| 3.7 Belege     | ✅     | Angebot, AB, Lieferschein, Rechnung, Gutschrift, Stornorechnung; Festschreiben mit lückenloser Nummer, PDF mit Prüfsumme, DB-Schutz (GoBD), E-Mail mit Anhang, Zahlungen (ADR-008) |
+| 3.8 Einkauf    | ✅     | Bestellvorschläge, Bestellungen mit PDF und E-Mail, Teil-Wareneingang mit Lagerplatz/Charge/MHD                                                                                    |
+| 3.9 Startseite | ✅     | Widgets Umsatz, Offene Aufträge, Topseller                                                                                                                                         |
+| 3.10 Lasttest  | ✅     | `perf:wawi` mit 100.000 Artikeln, 20.000 Kunden, 50.000 Aufträgen (Ergebnisse in TESTING.md)                                                                                       |
+
+Bewusst später: E-Rechnung (XRechnung/ZUGFeRD) und Steuer-Sonderfälle (Reverse-Charge, innergemeinschaftliche Lieferung, Kleinunternehmer) nach Prüfung durch den Steuerberater; Verkauf von Artikeln mit Chargen-/Seriennummernpflicht (Auswahl beim Versand, Phase 4); Produktbilder und Dateispeicher (mit Phase 4/5); Prioritäten zwischen Aufträgen bei knappem Bestand (Phase 4, FangEvo Pack); Mahnwesen (Phase 5, Finanzen).
 
 ### Phase 4–8
 

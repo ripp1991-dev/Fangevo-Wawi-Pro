@@ -54,7 +54,19 @@ export interface NumberSequence {
 }
 
 export interface MasterData {
-  settings: { allowNegativeStock: boolean; currency: string } | null;
+  settings: {
+    allowNegativeStock: boolean;
+    currency: string;
+    taxNumber: string | null;
+    managingDirector: string | null;
+    registerCourt: string | null;
+    registerNumber: string | null;
+    bankName: string | null;
+    iban: string | null;
+    bic: string | null;
+    documentFooter: string | null;
+    logoDataUrl: string | null;
+  } | null;
   taxRates: TaxRate[];
   customerGroups: CustomerGroup[];
   categories: Category[];

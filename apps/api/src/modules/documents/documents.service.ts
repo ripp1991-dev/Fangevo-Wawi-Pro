@@ -27,7 +27,7 @@ export const DOCUMENT_FIELDS: FieldSpec = {
   type: { kind: 'enum', sortable: true },
   number: { kind: 'string', sortable: true },
   status: { kind: 'enum', sortable: true },
-  orderId: { kind: 'string' },
+  orderId: { kind: 'enum' },
   issueDate: { kind: 'date', sortable: true },
   dueDate: { kind: 'date', sortable: true },
   totalNet: { kind: 'number', sortable: true },

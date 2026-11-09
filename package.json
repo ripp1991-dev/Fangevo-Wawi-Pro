@@ -17,7 +17,7 @@
     "db:migrate:dev": "pnpm --filter @fangevo/database migrate:dev",
     "db:generate": "pnpm --filter @fangevo/database generate",
     "db:test:migrate": "pnpm --filter @fangevo/database test:migrate",
-    "test:e2e": "node tests/e2e/core-flow.mjs && node tests/e2e/phase2-flow.mjs && node tests/e2e/phase3a-flow.mjs"
+    "test:e2e": "node tests/e2e/core-flow.mjs && node tests/e2e/phase2-flow.mjs && node tests/e2e/phase3a-flow.mjs && node tests/e2e/phase3b-flow.mjs"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",

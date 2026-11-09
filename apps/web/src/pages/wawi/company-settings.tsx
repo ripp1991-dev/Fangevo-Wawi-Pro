@@ -21,7 +21,7 @@ import {
   TR,
   Table,
 } from '@fangevo/ui';
-import { errorMessage, http } from '../../lib/api';
+import { ApiError, errorMessage, http } from '../../lib/api';
 import { categoryPaths, toInput, useMasterData, type MasterData } from '../../lib/master-data';
 import { useSession } from '../../lib/session';
 
@@ -48,6 +48,7 @@ export function CompanySettingsPage() {
         <Categories md={md.data} />
         <Sequences md={md.data} />
         <General md={md.data} />
+        <DocumentSettings md={md.data} />
       </div>
     </>
   );
@@ -621,6 +622,141 @@ function General({ md }: { md: MasterData }) {
           run(() => http.put('/company/settings', { allowNegativeStock: e.target.checked }))
         }
       />
+    </Section>
+  );
+}
+
+const DOC_FIELDS = [
+  {
+    key: 'taxNumber',
+    label: 'Steuernummer',
+    hint: 'Steuernummer oder USt-IdNr. ist auf Rechnungen Pflicht',
+  },
+  { key: 'managingDirector', label: 'Geschäftsführung' },
+  { key: 'registerCourt', label: 'Registergericht', hint: 'z. B. Amtsgericht Flensburg' },
+  { key: 'registerNumber', label: 'Registernummer', hint: 'z. B. HRB 12345' },
+  { key: 'bankName', label: 'Bank' },
+  { key: 'iban', label: 'IBAN' },
+  { key: 'bic', label: 'BIC' },
+] as const;
+
+/** Angaben, die auf Belegen (Rechnungen, Bestellungen …) gedruckt werden. */
+function DocumentSettings({ md }: { md: MasterData }) {
+  const qc = useQueryClient();
+  const st = md.settings;
+  const [v, setV] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      [...DOC_FIELDS.map((f) => f.key), 'documentFooter'].map((k) => [
+        k,
+        (st?.[k as keyof NonNullable<typeof st>] as string | null) ?? '',
+      ]),
+    ),
+  );
+  const [logo, setLogo] = useState<string | null>(st?.logoDataUrl ?? null);
+  const [err, setErr] = useState<string | null>(null);
+  const [fieldErr, setFieldErr] = useState<Record<string, string>>({});
+  const [saved, setSaved] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const save = async () => {
+    setBusy(true);
+    setErr(null);
+    setFieldErr({});
+    setSaved(false);
+    try {
+      await http.put('/company/settings', {
+        allowNegativeStock: !!st?.allowNegativeStock,
+        ...v,
+        logoDataUrl: logo,
+      });
+      await qc.invalidateQueries({ queryKey: ['master-data'] });
+      setSaved(true);
+    } catch (e) {
+      setErr(errorMessage(e));
+      if (e instanceof ApiError) setFieldErr(e.fieldErrors);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const pickLogo = (file: File | undefined) => {
+    if (!file) return;
+    if (!['image/png', 'image/jpeg'].includes(file.type)) {
+      setErr('Bitte ein PNG- oder JPEG-Bild wählen.');
+      return;
+    }
+    if (file.size > 200_000) {
+      setErr('Das Logo darf höchstens 200 KB groß sein.');
+      return;
+    }
+    const r = new FileReader();
+    r.onload = () => setLogo(String(r.result));
+    r.readAsDataURL(file);
+  };
+  return (
+    <Section
+      title="Angaben auf Belegen"
+      description="Erscheinen in Kopf und Fußzeile von Rechnungen und anderen Belegen. Firmenname, Anschrift und USt-IdNr. pflegen Sie unter Administration › Firmen."
+      err={err}
+    >
+      <div className="grid gap-3 sm:grid-cols-2">
+        {DOC_FIELDS.map((f) => (
+          <Field
+            key={f.key}
+            label={f.label}
+            hint={'hint' in f ? f.hint : undefined}
+            error={fieldErr[f.key]}
+          >
+            {(p) => (
+              <Input
+                {...p}
+                value={v[f.key] ?? ''}
+                onChange={(e) => setV({ ...v, [f.key]: e.target.value })}
+              />
+            )}
+          </Field>
+        ))}
+        <div className="sm:col-span-2">
+          <Field label="Zusatztext in der Fußzeile" error={fieldErr.documentFooter}>
+            {(p) => (
+              <Input
+                {...p}
+                value={v.documentFooter ?? ''}
+                onChange={(e) => setV({ ...v, documentFooter: e.target.value })}
+              />
+            )}
+          </Field>
+        </div>
+        <div className="space-y-2 sm:col-span-2">
+          <p className="text-sm font-medium">Logo (PNG oder JPEG, max. 200 KB)</p>
+          {logo && (
+            <img
+              src={logo}
+              alt="Logo"
+              className="max-h-16 rounded border border-border bg-white p-1"
+            />
+          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="file"
+              accept="image/png,image/jpeg"
+              aria-label="Logo auswählen"
+              className="text-sm"
+              onChange={(e) => pickLogo(e.target.files?.[0])}
+            />
+            {logo && (
+              <Button size="sm" variant="ghost" onClick={() => setLogo(null)}>
+                Logo entfernen
+              </Button>
+            )}
+          </div>
+          {fieldErr.logoDataUrl && <p className="text-sm text-danger">{fieldErr.logoDataUrl}</p>}
+        </div>
+      </div>
+      <div className="mt-4 flex items-center gap-3">
+        <Button loading={busy} onClick={save}>
+          Speichern
+        </Button>
+        {saved && <span className="text-sm text-success">Gespeichert</span>}
+      </div>
     </Section>
   );
 }

@@ -28,7 +28,7 @@ type PurchaseInput = z.infer<typeof purchaseOrderInputSchema>;
 export const PURCHASE_FIELDS: FieldSpec = {
   number: { kind: 'string', sortable: true },
   status: { kind: 'enum', sortable: true },
-  supplierId: { kind: 'string' },
+  supplierId: { kind: 'enum' },
   expectedDate: { kind: 'date', sortable: true },
   orderedAt: { kind: 'date', sortable: true },
   totalNet: { kind: 'number', sortable: true },
@@ -132,15 +132,24 @@ export class PurchasingService {
             purchasePriceNet: string | null;
           }[]
         >`
-        WITH s AS (
+        WITH st AS (
+          SELECT article_id, SUM(quantity) AS q FROM stock_levels
+          WHERE company_id = ${c.companyId}::uuid GROUP BY article_id
+        ), rs AS (
+          SELECT article_id, SUM(quantity) AS q FROM stock_reservations
+          WHERE company_id = ${c.companyId}::uuid GROUP BY article_id
+        ), inc AS (
+          SELECT pl.article_id, SUM(pl.quantity - pl.received_quantity) AS q
+          FROM purchase_order_lines pl JOIN purchase_orders po ON po.id = pl.purchase_order_id
+          WHERE pl.company_id = ${c.companyId}::uuid AND po.status IN ('draft','ordered','partially_received')
+          GROUP BY pl.article_id
+        ), s AS (
           SELECT a.id, a.number, a.name, a.unit, a.min_stock,
-            COALESCE((SELECT SUM(quantity) FROM stock_levels l WHERE l.company_id = a.company_id AND l.article_id = a.id), 0) AS stock,
-            COALESCE((SELECT SUM(quantity) FROM stock_reservations r WHERE r.company_id = a.company_id AND r.article_id = a.id), 0) AS reserved,
-            COALESCE((SELECT SUM(pl.quantity - pl.received_quantity) FROM purchase_order_lines pl
-                      JOIN purchase_orders po ON po.id = pl.purchase_order_id
-                      WHERE pl.company_id = a.company_id AND pl.article_id = a.id
-                        AND po.status IN ('draft','ordered','partially_received')), 0) AS incoming
+            COALESCE(st.q, 0) AS stock, COALESCE(rs.q, 0) AS reserved, COALESCE(inc.q, 0) AS incoming
           FROM articles a
+          LEFT JOIN st ON st.article_id = a.id
+          LEFT JOIN rs ON rs.article_id = a.id
+          LEFT JOIN inc ON inc.article_id = a.id
           WHERE a.company_id = ${c.companyId}::uuid AND a.archived_at IS NULL AND a.active AND a.stock_tracked
             AND a.kind IN ('standard','variant') AND a.min_stock > 0
         )

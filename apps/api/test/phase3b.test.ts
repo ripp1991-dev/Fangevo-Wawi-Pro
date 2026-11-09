@@ -438,7 +438,7 @@ describe('Einkauf', () => {
   });
 
   it('Vorschlag, Bestellung, Teil-Wareneingang, Überlieferung abgelehnt, PDF', async () => {
-    const { client, hl } = await setup({ plan: 'business' });
+    const { client } = await setup({ plan: 'business' });
     const sup = (await client.post('/suppliers', { name: 'Großhandel Nord' })).body;
     const a = await article(client, { name: 'Blinker', minStock: '10', purchasePriceNet: '2' });
     expect(

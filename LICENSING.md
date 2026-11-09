@@ -38,6 +38,10 @@ Neues Recht `custom_fields.manage` (Modul Core). Systemrollen erhalten neue Rech
 
 Die Module **Artikel, Kunden, Lieferanten und Lager** sind verfügbar (`available: true`) und im Paket Starter enthalten. Ohne gebuchtes Modul antwortet die API mit `MODULE_NOT_LICENSED`; Menüpunkte und Rechte des Moduls sind dann wirkungslos.
 
+## Hinweis Phase 3b
+
+Die Module **Aufträge** und **Dokumente** (Belege) sind verfügbar und im Paket Starter enthalten. **Einkauf** ist verfügbar und ab Paket Business enthalten. Weil Systemrollen alle Rechte im Code haben, können Administratoren die Rolle „Administrator“ auch dann weitergeben, wenn Rechte noch nicht gebuchter Module darin stecken; diese Rechte wirken erst mit der Buchung. Wer eine eigene Rolle ohne diese Rechte hat, kann sie nicht vergeben.
+
 ## Status und Zugriff
 
 | Status                  | Zugriff                                                                                                             |

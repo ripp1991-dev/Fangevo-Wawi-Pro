@@ -2,7 +2,7 @@
 
 Modulare, mandantenfähige SaaS-Warenwirtschaft (ERP / E-Commerce) für kleine, mittlere und große Handelsunternehmen.
 
-> **Status:** Phase 1 (technisches Fundament) und Phase 2 (Dashboard, Tabellen, eigene Felder, Suche, Benachrichtigungen, Verlauf) sind umgesetzt. Fachmodule (Artikel, Aufträge, Lager …) folgen ab Phase 3. Details: [Entwicklungsplan](DEVELOPMENT_ROADMAP.md).
+> **Status:** Phase 1 (Fundament), Phase 2 (Dashboard und Werkzeuge) und Phase 3 (Warenwirtschaft: Artikel, Kunden, Lieferanten, Lager, Aufträge, Belege mit PDF, Einkauf) sind umgesetzt. Details: [Entwicklungsplan](DEVELOPMENT_ROADMAP.md).
 
 ## Schnellstart (lokale Entwicklung)
 
@@ -35,6 +35,7 @@ Zwei Prozesse aus demselben Build: `node apps/api/dist/main.js` (API) und `node 
 | `pnpm test:e2e`                         | Browser-Test des Kernprozesses (siehe [TESTING.md](TESTING.md))                         |
 | `pnpm build`                            | Produktions-Build von API und Web                                                       |
 | `pnpm --filter @fangevo/api perf:lists` | Lasttest der Listen mit 100.000 Datensätzen (Testdatenbank)                             |
+| `pnpm --filter @fangevo/api perf:wawi`  | Lasttest Warenwirtschaft (100.000 Artikel, 50.000 Aufträge; Testdatenbank)              |
 
 ## Aufbau
 

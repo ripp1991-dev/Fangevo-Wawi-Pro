@@ -27,7 +27,7 @@ import { InventoryService } from '../inventory/inventory.service';
 export const ORDER_FIELDS: FieldSpec = {
   number: { kind: 'string', sortable: true },
   status: { kind: 'enum', sortable: true },
-  customerId: { kind: 'string' },
+  customerId: { kind: 'enum' },
   externalNumber: { kind: 'string', sortable: true },
   orderDate: { kind: 'date', sortable: true },
   totalNet: { kind: 'number', sortable: true },

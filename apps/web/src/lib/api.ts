@@ -16,6 +16,9 @@ let activeCompanyId: string | null = null;
 export function setActiveCompany(id: string | null): void {
   activeCompanyId = id;
 }
+export function getActiveCompany(): string | null {
+  return activeCompanyId;
+}
 
 const FALLBACK: Partial<Record<ErrorCode, string>> = {
   RATE_LIMITED: 'Zu viele Versuche. Bitte warten Sie einen Moment.',

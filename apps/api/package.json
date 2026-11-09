@@ -12,7 +12,8 @@
     "openapi": "tsx scripts/export-openapi.ts",
     "worker": "dotenv -e ../../.env -- tsx src/worker.ts",
     "start:worker": "node dist/worker.js",
-    "perf:lists": "tsx scripts/perf-lists.ts"
+    "perf:lists": "tsx scripts/perf-lists.ts",
+    "perf:wawi": "tsx scripts/perf-wawi.ts"
   },
   "dependencies": {
     "@fangevo/database": "workspace:*",

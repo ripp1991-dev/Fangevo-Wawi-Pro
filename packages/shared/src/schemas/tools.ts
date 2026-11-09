@@ -82,6 +82,9 @@ export const TABLE_KEYS = [
   'suppliers',
   'stock',
   'movements',
+  'orders',
+  'documents',
+  'purchase_orders',
 ] as const;
 export const savedViewInputSchema = z.object({
   tableKey: z.enum(TABLE_KEYS),

@@ -101,3 +101,22 @@ Alle mit `account_id` **und** `company_id`, Policy `company_isolation` (Account 
 | `stock_levels`                                   | aktueller Bestand je Artikel/Lager/Lagerplatz (eindeutig über Ausdrucks-Index `stock_levels_slot`)                        |
 
 Zusätzliche Prüfregeln in der Datenbank: Steuersatz 0–100 %, gültige Artikel-/Kunden-/Buchungsarten, Preise ≥ 0, Buchungsmenge ≠ 0. Von Hand gepflegte Indizes: `stock_levels_slot`, `articles_name_trgm`, `customers_search_trgm`.
+
+## Tabellen (Phase 3b, firmenbezogen)
+
+Migration `20261109121149_phase3b_orders_documents_purchasing`. Ebenfalls mit `account_id` und `company_id` sowie Policy `company_isolation`.
+
+| Tabelle                                   | Inhalt                                                                                                                                                  |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sales_orders`, `sales_order_lines`       | Aufträge mit Kundendaten zum Bestellzeitpunkt (`customer_snapshot`), Status, Summen; Positionen mit Preis, Rabatt, Steuersatz, Beträgen                 |
+| `order_status_history`                    | Statusverlauf (**unveränderlich**)                                                                                                                      |
+| `stock_reservations`                      | Reservierter Bestand je Auftragsposition und Lager (Sets als Komponenten). Verfügbar = Bestand − Reservierungen älterer Aufträge                        |
+| `documents`                               | Belege: Art, Nummer (erst beim Festschreiben, eindeutig je Firma und Art), Empfänger, Positionen und Steueraufstellung als JSON, Summen, Zahlungsstatus |
+| `document_files`                          | PDF eines festgeschriebenen Belegs mit SHA-256 (**unveränderlich**)                                                                                     |
+| `payments`                                | Zahlungseingänge (**unveränderlich**; Korrektur per Gegenbuchung)                                                                                       |
+| `purchase_orders`, `purchase_order_lines` | Bestellungen an Lieferanten mit bestellter und gelieferter Menge                                                                                        |
+| `goods_receipts`                          | Wareneingänge (**unveränderlich**); die Bestandsbuchung steht im Bestandsjournal                                                                        |
+
+Schutz in der Datenbank: Trigger `app_protect_finalized_document` erlaubt bei festgeschriebenen Belegen nur Änderungen an `payment_status`, `sent_at` und `updated_at` und verbietet das Löschen. Für die unveränderlichen Tabellen hat die App-Rolle nur `SELECT, INSERT`. Prüfregeln: gültige Status und Belegarten, Mengen > 0, festgeschriebene Belege haben Nummer und Zeitpunkt. Neue Nummernkreise (`order`, `offer`, `order_confirmation`, `delivery_note`, `invoice`, `credit_note`, `cancellation`, `purchase_order`) werden auch für bestehende Firmen beim nächsten Zugriff ergänzt.
+
+Firmeneinstellungen haben neue Spalten für Angaben auf Belegen (`tax_number`, `managing_director`, `register_court`, `register_number`, `bank_name`, `iban`, `bic`, `document_footer`, `logo_data_url`).

@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.4.0] – 2026-11-09 – Phase 3b: Aufträge, Belege, Einkauf
+
+### Hinzugefügt
+
+- **Aufträge:** Anlage mit Kunde, Artikeln und Freitextpositionen; Preise ermittelt der Server (Kundengruppenpreis vor Staffelpreis vor Verkaufspreis, Gruppenrabatt, Varianten erben vom Vaterartikel); Versandkosten; Summen je Steuersatz. Kontrollierte Statuswechsel mit Verlauf. Bestand wird ab Anlage reserviert (ältere Aufträge zuerst); Fehlmengen werden angezeigt. „Versenden“ bucht den Bestand über das Bestandsjournal ab (Sets über ihre Komponenten, mehrere Lagerplätze). Storno gibt Reservierungen frei. Gesperrte Kunden, Vaterartikel und inaktive Artikel werden abgelehnt.
+- **Belege:** Angebot, Auftragsbestätigung, Lieferschein, Rechnung aus dem Auftrag; Gutschrift (ganz oder je Position) und Stornorechnung. Erst Entwurf, beim Festschreiben lückenlose Nummer und PDF mit Pflichtangaben (§ 14 UStG) und Steuer je Satz. Das PDF wird mit SHA-256-Prüfsumme unveränderlich gespeichert; festgeschriebene Belege, Zahlungen und PDFs sind per Datenbank-Trigger geschützt (GoBD). Versand per E-Mail mit PDF-Anhang. Zahlungen mit Zahlungsstatus (offen, teilweise, bezahlt, storniert).
+- **Einkauf:** Bestellvorschläge (Bestand − Reservierungen + offene Bestellungen unter Mindestbestand, bevorzugter/günstigster Lieferant, Mindestbestellmenge), Bestellungen mit Lieferanten-Artikelnummer und PDF, Versand per E-Mail, Wareneingang auch teilweise (mit Lagerplatz, Charge, MHD), Überlieferung wird abgelehnt.
+- **Firmeneinstellungen:** Angaben auf Belegen (Steuernummer, Geschäftsführung, Register, Bank mit IBAN-Prüfung, Fußzeile, Logo). Nummernkreise für Aufträge, alle Belegarten und Bestellungen (auch für bestehende Firmen ergänzt).
+- **Dashboard-Widgets:** Umsatz (heute, Woche, Monat, offene Rechnungen), Offene Aufträge, Topseller.
+- Neue Rechte `orders.read/manage`, `documents.read/manage`, `purchasing.read/manage`; Rolle „Mitarbeiter“ darf die neuen Bereiche ansehen.
+- Module Aufträge, Dokumente und Einkauf sind im Katalog freigeschaltet (Einkauf ab Paket Business).
+- Lasttest Warenwirtschaft mit 100.000 Artikeln, 20.000 Kunden und 50.000 Aufträgen (`pnpm --filter @fangevo/api perf:wawi`).
+- 4. Browser-E2E-Ablauf (Auftrag → Versand → Rechnung → Zahlung → Umsatz-Widget).
+
+### Geändert
+
+- Verlauf zeigt deutsche Texte für alle Aktionen der Warenwirtschaft.
+- ID-Felder in Listenfiltern werden exakt verglichen (vorher Textvergleich, der bei UUID-Spalten fehlschlagen konnte).
+
+### Behoben (während der Entwicklung gefunden)
+
+- Administratoren konnten die Rolle „Administrator“ nicht mehr weitergeben, sobald sie Rechte eines nicht gebuchten Moduls enthielt. Maßstab ist jetzt der eigene Rechteumfang ohne Lizenzfilter; Rechteausweitung bleibt ausgeschlossen (Test vorhanden).
+- Browser-Test aus Phase 1 erwartete noch die alten Mitarbeiter-Rechte; versehentlich eingecheckte Redis-Dateien (`dump.rdb`) entfernt.
+
 ## [0.3.0] – 2026-11-09 – Phase 3a: Warenwirtschaft – Stammdaten und Lager
 
 ### Hinzugefügt
