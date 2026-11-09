@@ -75,6 +75,9 @@ export const PERMISSIONS = {
     module: 'multichannel',
     label: 'Verkaufskanäle einrichten und Artikel je Kanal pflegen',
   },
+  'webhooks.manage': { module: 'api', label: 'Webhooks einrichten und Zustellungen ansehen' },
+  'workflows.read': { module: 'automation', label: 'Regeln und Ausführungsprotokoll ansehen' },
+  'workflows.manage': { module: 'automation', label: 'Regeln anlegen, ändern und aktivieren' },
 } as const satisfies Record<string, { module: string; label: string }>;
 
 export type Permission = keyof typeof PERMISSIONS;

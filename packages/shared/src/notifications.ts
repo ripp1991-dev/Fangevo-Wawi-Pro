@@ -23,6 +23,14 @@ export const NOTIFICATION_TYPES = {
     label: 'Anmeldung von neuem Gerät',
     description: 'Zusätzlich immer per E-Mail',
   },
+  'workflow.notice': {
+    label: 'Hinweise aus Regeln (Automatisierung)',
+    description: 'Wenn eine Regel Mitarbeiter benachrichtigt',
+  },
+  'webhook.disabled': {
+    label: 'Webhook abgeschaltet',
+    description: 'Nach dauerhaften Zustellfehlern, für Personen, die Webhooks verwalten',
+  },
 } as const;
 
 export type NotificationType = keyof typeof NOTIFICATION_TYPES;

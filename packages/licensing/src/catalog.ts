@@ -22,7 +22,7 @@ export const MODULES = {
   multichannel: { name: 'Multichannel', phase: 5, available: true },
   finance: { name: 'Finanzen', phase: 5, available: false },
   api: { name: 'Öffentliche API', phase: 5, available: true },
-  automation: { name: 'Automatisierung', phase: 6, available: false },
+  automation: { name: 'Automatisierung', phase: 6, available: true },
   crm: { name: 'CRM', phase: 6, available: false },
   analytics: { name: 'Analytics', phase: 6, available: false },
   marketplace: { name: 'Marketplace', phase: 7, available: false },

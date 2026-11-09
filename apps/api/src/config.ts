@@ -27,12 +27,15 @@ const schema = z.object({
   RATE_LIMIT_DISABLED: z.stringbool().default(false),
   /** Ereignis-Verteiler im API-Prozess starten (Entwicklung). In Produktion läuft er als eigener Worker. */
   EVENT_DISPATCH_INLINE: z.stringbool().optional(),
+  /** Webhooks an private/interne Adressen erlauben (nur Entwicklung/Tests) */
+  WEBHOOK_ALLOW_PRIVATE: z.stringbool().optional(),
   LOG_LEVEL: z.string().default('info'),
 });
 
 export type AppConfig = z.infer<typeof schema> & {
   mailTransport: 'smtp' | 'log' | 'memory';
   isProd: boolean;
+  webhookAllowPrivate: boolean;
   dispatchInline: boolean;
 };
 
@@ -59,6 +62,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     mailTransport: c.MAIL_TRANSPORT ?? (c.SMTP_HOST ? 'smtp' : 'log'),
     dispatchInline: c.EVENT_DISPATCH_INLINE ?? c.NODE_ENV === 'development',
     isProd: c.NODE_ENV === 'production',
+    webhookAllowPrivate: c.WEBHOOK_ALLOW_PRIVATE ?? c.NODE_ENV !== 'production',
   };
 }
 

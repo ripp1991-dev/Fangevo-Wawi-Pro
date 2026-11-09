@@ -9,3 +9,4 @@ export * from './schemas/master-data';
 export * from './schemas/sales';
 export * from './schemas/logistics';
 export * from './schemas/import';
+export * from './schemas/automation';

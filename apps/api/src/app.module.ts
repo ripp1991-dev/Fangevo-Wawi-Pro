@@ -36,6 +36,16 @@ import { ApiKeysController } from './core/apikeys/api-keys.controller';
 import { ApiKeysService } from './core/apikeys/api-keys.service';
 import { ChannelsController } from './modules/channels/channels.controller';
 import { ChannelsService } from './modules/channels/channels.service';
+import {
+  WebhooksController,
+  WorkflowsController,
+} from './modules/automation/automation.controller';
+import { WebhooksService } from './modules/automation/webhooks.service';
+import {
+  WorkflowRunHandler,
+  WorkflowScheduleHandler,
+  WorkflowsService,
+} from './modules/automation/workflows.service';
 import { ImportController } from './modules/import/import.controller';
 import { ImportService } from './modules/import/import.service';
 import { MasterDataService } from './modules/settings/master-data.service';
@@ -146,6 +156,9 @@ export class AppModule {
         ImportController,
         ApiKeysController,
         ChannelsController,
+        // Phase 6: Automatisierung
+        WebhooksController,
+        WorkflowsController,
       ],
       providers: [
         { provide: APP_CONFIG, useValue: config },
@@ -168,8 +181,12 @@ export class AppModule {
         NotificationHandler,
         {
           provide: EVENT_HANDLERS,
-          useFactory: (n: NotificationHandler) => [n],
-          inject: [NotificationHandler],
+          useFactory: (n: NotificationHandler, w: WebhooksService, f: WorkflowsService) => [
+            n,
+            w,
+            f,
+          ],
+          inject: [NotificationHandler, WebhooksService, WorkflowsService],
         },
         EventDispatcher,
         CompanyDb,
@@ -188,10 +205,19 @@ export class AppModule {
         ImportService,
         ApiKeysService,
         ChannelsService,
+        WebhooksService,
+        WorkflowsService,
+        WorkflowRunHandler,
+        WorkflowScheduleHandler,
         {
           provide: JOB_HANDLERS,
-          useFactory: (i: ImportService) => [i],
-          inject: [ImportService],
+          useFactory: (
+            i: ImportService,
+            w: WebhooksService,
+            r: WorkflowRunHandler,
+            s: WorkflowScheduleHandler,
+          ) => [i, w, r, s],
+          inject: [ImportService, WebhooksService, WorkflowRunHandler, WorkflowScheduleHandler],
         },
         JobQueue,
         { provide: APP_FILTER, useClass: ProblemFilter },
