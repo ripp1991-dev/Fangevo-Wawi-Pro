@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { type EntitlementSnapshot } from '@fangevo/licensing';
-import { ALL_PERMISSIONS } from '@fangevo/shared';
+import { ALL_PERMISSIONS, permissionModule } from '@fangevo/shared';
 import { effectivePermissions } from './access.service';
 
 const ent: EntitlementSnapshot = {
@@ -15,7 +15,7 @@ const ent: EntitlementSnapshot = {
 };
 
 describe('effectivePermissions', () => {
-  it('Inhaber hat alle Rechte lizenzierter Module', () => {
+  it('Inhaber hat alle Rechte, aber nur lizenzierter Module', () => {
     expect(
       effectivePermissions({
         isOwner: true,
@@ -23,7 +23,7 @@ describe('effectivePermissions', () => {
         directPermissions: [],
         entitlement: ent,
       }).size,
-    ).toBe(ALL_PERMISSIONS.length);
+    ).toBe(ALL_PERMISSIONS.filter((p) => permissionModule(p) === 'core').length);
   });
   it('vereinigt Rollen- und Einzelrechte und verwirft Unbekanntes', () => {
     const p = effectivePermissions({

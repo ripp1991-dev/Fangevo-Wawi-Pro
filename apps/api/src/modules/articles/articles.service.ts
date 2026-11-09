@@ -192,7 +192,9 @@ export class ArticlesService {
         message: 'Vaterartikel brauchen Variantenmerkmale (z. B. Größe: S, M, L)',
       });
     const groups = [
-      ...new Set(input.prices.map((p) => p.customerGroupId).filter((g): g is string => !!g)),
+      ...new Set(
+        (input.prices ?? []).map((p) => p.customerGroupId).filter((g): g is string => !!g),
+      ),
     ];
     if (
       groups.length &&
@@ -204,27 +206,16 @@ export class ArticlesService {
     return taxRateId!;
   }
 
+  /** Wurden Preise geschickt, die vom gespeicherten Stand abweichen? Nicht geschickte Preise zählen nicht. */
   private pricesChanged(
     input: ArticleInput,
-    before?: ArticleRow & {
-      prices?: {
-        customerGroupId: string | null;
-        minQuantity: Prisma.Decimal;
-        priceNet: Prisma.Decimal;
-      }[];
-    },
+    before?: ArticleRow,
+    beforePrices: {
+      customerGroupId: string | null;
+      minQuantity: Prisma.Decimal;
+      priceNet: Prisma.Decimal;
+    }[] = [],
   ): boolean {
-    if (!before)
-      return (
-        !dec(input.purchasePriceNet).isZero() ||
-        !dec(input.salePriceNet).isZero() ||
-        input.prices.length > 0
-      );
-    if (
-      !dec(input.purchasePriceNet).equals(before.purchasePriceNet) ||
-      !dec(input.salePriceNet).equals(before.salePriceNet)
-    )
-      return true;
     const norm = (
       l: {
         customerGroupId?: string | null;
@@ -241,7 +232,13 @@ export class ArticlesService {
           ])
           .sort(),
       );
-    return norm(input.prices) !== norm(before.prices ?? []);
+    const differs = (v: string | undefined, old: Prisma.Decimal | undefined) =>
+      v !== undefined && !dec(v).equals(old ?? dec(0));
+    return (
+      differs(input.purchasePriceNet, before?.purchasePriceNet) ||
+      differs(input.salePriceNet, before?.salePriceNet) ||
+      (input.prices !== undefined && norm(input.prices) !== norm(beforePrices))
+    );
   }
 
   private async writeChildren(
@@ -251,10 +248,12 @@ export class ArticlesService {
     input: ArticleInput,
   ): Promise<void> {
     const base = { accountId: c.account.id, companyId: c.companyId };
-    await tx.articlePrice.deleteMany({ where: { articleId } });
-    if (input.prices.length)
+    const prices = input.prices;
+    if (prices !== undefined && c.account.permissions.has('articles.prices'))
+      await tx.articlePrice.deleteMany({ where: { articleId } });
+    if (prices?.length && c.account.permissions.has('articles.prices'))
       await tx.articlePrice.createMany({
-        data: input.prices.map((p) => ({
+        data: prices.map((p) => ({
           ...base,
           id: uuidv7(),
           articleId,
@@ -384,7 +383,7 @@ export class ArticlesService {
       };
       const canPrices = c.account.permissions.has('articles.prices');
       const beforePrices = await tx.articlePrice.findMany({ where: { articleId: id } });
-      if (!canPrices && this.pricesChanged(input, { ...before, prices: beforePrices }))
+      if (!canPrices && this.pricesChanged(input, before, beforePrices))
         throw new AppError(
           403,
           'PERMISSION_DENIED',
@@ -422,22 +421,7 @@ export class ArticlesService {
           'CONFLICT',
           'Der Artikel wurde zwischenzeitlich geändert. Bitte neu laden.',
         );
-      if (canPrices || !this.pricesChanged(input, { ...before, prices: beforePrices })) {
-        if (canPrices) await this.writeChildren(tx, c, id, kindInput);
-        else {
-          await tx.setComponent.deleteMany({ where: { setArticleId: id } });
-          if (kindInput.setComponents.length)
-            await tx.setComponent.createMany({
-              data: kindInput.setComponents.map((s) => ({
-                accountId: c.account.id,
-                companyId: c.companyId,
-                setArticleId: id,
-                componentArticleId: s.articleId,
-                quantity: dec(s.quantity),
-              })),
-            });
-        }
-      }
+      await this.writeChildren(tx, c, id, kindInput);
       const after = await tx.article.findUniqueOrThrow({ where: { id } });
       await this.index(tx, after);
       await this.audit.record(tx, {
@@ -489,11 +473,12 @@ export class ArticlesService {
       const parent = await tx.article.findUnique({ where: { id: parentId } });
       if (!parent || parent.kind !== 'parent')
         throw new AppError(422, 'VALIDATION_FAILED', 'Nur Vaterartikel haben Varianten');
-      const attrs = (parent.variantAttributes ?? {}) as Record<string, string[]>;
-      const keys = Object.keys(attrs);
+      // Merkmale als geordnete Liste: die Reihenfolge bestimmt den Variantennamen, z. B. "(L, braun)"
+      const attrs = (parent.variantAttributes ?? []) as { name: string; values: string[] }[];
+      const keys = attrs.map((a) => a.name);
       let combos: Record<string, string>[] = [{}];
-      for (const k of keys)
-        combos = combos.flatMap((cmb) => attrs[k]!.map((v) => ({ ...cmb, [k]: v })));
+      for (const a of attrs)
+        combos = combos.flatMap((cmb) => a.values.map((v) => ({ ...cmb, [a.name]: v })));
       if (combos.length > 500)
         throw new AppError(
           422,

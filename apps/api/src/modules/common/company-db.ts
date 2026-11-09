@@ -35,24 +35,25 @@ export class CompanyDb {
   private readonly initialized = new Set<string>();
   constructor(@Inject(Database) private readonly db: Database) {}
 
-  run<T>(t: TenantContext, fn: (tx: Tx, c: CompanyContext) => Promise<T>): Promise<T> {
+  async run<T>(t: TenantContext, fn: (tx: Tx, c: CompanyContext) => Promise<T>): Promise<T> {
     const c = requireCompany(t);
-    return this.db.tenant(
-      { accountId: c.account.id, userId: c.user.id, companyId: c.companyId },
-      async (tx) => {
-        if (!this.initialized.has(c.companyId)) {
-          await this.ensureDefaults(tx, c.account.id, c.companyId);
-          this.initialized.add(c.companyId);
-        }
-        return fn(tx, c);
-      },
-    );
+    const ctx = { accountId: c.account.id, userId: c.user.id, companyId: c.companyId };
+    if (!this.initialized.has(c.companyId)) {
+      // Eigene Transaktion: Standardwerte bleiben auch erhalten, wenn die eigentliche Anfrage scheitert.
+      await this.db.tenant(ctx, (tx) => this.ensureDefaults(tx, c.account.id, c.companyId));
+      this.initialized.add(c.companyId);
+    }
+    return this.db.tenant(ctx, (tx) => fn(tx, c));
   }
 
   /** Standardwerte einer Firma (idempotent). Steuersätze sind Vorschläge und frei änderbar. */
   async ensureDefaults(tx: Tx, accountId: string, companyId: string): Promise<void> {
-    if (await tx.companySettings.findUnique({ where: { companyId } })) return;
-    await tx.companySettings.create({ data: { companyId, accountId } });
+    // Sperre über den Primärschlüssel: Bei gleichzeitigen ersten Zugriffen legt genau einer die Werte an.
+    const created = await tx.companySettings.createMany({
+      data: [{ companyId, accountId }],
+      skipDuplicates: true,
+    });
+    if (created.count === 0) return;
     const base = { accountId, companyId };
     await tx.taxRate.createMany({
       data: [

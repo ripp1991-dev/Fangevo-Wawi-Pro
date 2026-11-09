@@ -38,6 +38,16 @@ import { PreferencesController } from './core/preferences/preferences.controller
 import { SearchController } from './core/search/search.controller';
 import { SearchService } from './core/search/search.service';
 import { ViewsController } from './core/views/views.controller';
+import { ArticlesController } from './modules/articles/articles.controller';
+import { ArticlesService } from './modules/articles/articles.service';
+import { CompanyDb } from './modules/common/company-db';
+import { CustomersController } from './modules/customers/customers.controller';
+import { CustomersService } from './modules/customers/customers.service';
+import { InventoryController } from './modules/inventory/inventory.controller';
+import { InventoryService } from './modules/inventory/inventory.service';
+import { SettingsController } from './modules/settings/settings.controller';
+import { SuppliersController } from './modules/suppliers/suppliers.controller';
+import { SuppliersService } from './modules/suppliers/suppliers.service';
 
 /**
  * FangEvo Core (Phase 1). Fachmodule (Artikel, Aufträge, …) werden ab Phase 3
@@ -91,6 +101,12 @@ export class AppModule {
         ViewsController,
         PreferencesController,
         DashboardsController,
+        // Phase 3a: Warenwirtschaft
+        SettingsController,
+        ArticlesController,
+        CustomersController,
+        SuppliersController,
+        InventoryController,
       ],
       providers: [
         { provide: APP_CONFIG, useValue: config },
@@ -117,6 +133,11 @@ export class AppModule {
           inject: [NotificationHandler],
         },
         EventDispatcher,
+        CompanyDb,
+        ArticlesService,
+        CustomersService,
+        SuppliersService,
+        InventoryService,
         { provide: APP_FILTER, useClass: ProblemFilter },
         // Reihenfolge wichtig: zuerst Rate-Limit, dann Zugriffskontrolle
         { provide: APP_GUARD, useClass: RateLimitGuard },

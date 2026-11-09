@@ -2,7 +2,13 @@ import { Body, Controller, Get, Inject, Param, Post, Put, Query } from '@nestjs/
 import { ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
 import { customerInputSchema, listQuerySchema } from '@fangevo/shared';
-import { RequirePermission, RequiresCompany, RequiresModule, Tenant, type TenantContext } from '../../core/http/context';
+import {
+  RequirePermission,
+  RequiresCompany,
+  RequiresModule,
+  Tenant,
+  type TenantContext,
+} from '../../core/http/context';
 import { ApiZodBody, uuidParam, zodPipe } from '../../core/http/zod';
 import { CustomersService } from './customers.service';
 
@@ -17,7 +23,10 @@ export class CustomersController {
 
   @Get()
   @RequirePermission('customers.read')
-  list(@Tenant() t: TenantContext, @Query(zodPipe(listQuerySchema)) q: z.infer<typeof listQuerySchema>) {
+  list(
+    @Tenant() t: TenantContext,
+    @Query(zodPipe(listQuerySchema)) q: z.infer<typeof listQuerySchema>,
+  ) {
     return this.customers.list(t, q);
   }
 
@@ -30,13 +39,20 @@ export class CustomersController {
   @Post()
   @RequirePermission('customers.manage')
   @ApiZodBody(customerInputSchema)
-  create(@Tenant() t: TenantContext, @Body(zodPipe(customerInputSchema)) b: z.infer<typeof customerInputSchema>) {
+  create(
+    @Tenant() t: TenantContext,
+    @Body(zodPipe(customerInputSchema)) b: z.infer<typeof customerInputSchema>,
+  ) {
     return this.customers.create(t, b);
   }
 
   @Put(':id')
   @RequirePermission('customers.manage')
-  update(@Tenant() t: TenantContext, @Param('id', uuidParam) id: string, @Body(zodPipe(updateSchema)) b: z.infer<typeof updateSchema>) {
+  update(
+    @Tenant() t: TenantContext,
+    @Param('id', uuidParam) id: string,
+    @Body(zodPipe(updateSchema)) b: z.infer<typeof updateSchema>,
+  ) {
     const { version, ...input } = b;
     return this.customers.update(t, id, input, version);
   }

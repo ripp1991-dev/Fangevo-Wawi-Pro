@@ -135,8 +135,9 @@ export const articleInputSchema = z.object({
   categoryId: uuid.optional().nullable(),
   unit: z.string().trim().min(1).max(20).default('Stück'),
   taxRateId: uuid.optional().nullable(),
-  purchasePriceNet: money.default('0'),
-  salePriceNet: money.default('0'),
+  /** Preise optional: nicht geschickt = unverändert lassen (wichtig für Personen ohne Preisrecht). */
+  purchasePriceNet: money.optional(),
+  salePriceNet: money.optional(),
   weightKg: decimalString({ min: 0, label: 'Gewicht' }).optional().nullable(),
   minStock: decimalString({ min: 0, label: 'Mindestbestand' }).default('0'),
   stockTracked: z.boolean().default(true),
@@ -144,17 +145,21 @@ export const articleInputSchema = z.object({
   trackSerials: z.boolean().default(false),
   trackBestBefore: z.boolean().default(false),
   active: z.boolean().default(true),
-  prices: z.array(articlePriceSchema).max(100).default([]),
+  prices: z.array(articlePriceSchema).max(100).optional(),
   setComponents: z
     .array(z.object({ articleId: uuid, quantity: positiveQuantity }))
     .max(200)
     .default([]),
-  /** Nur Vaterartikel: Merkmale und Ausprägungen, z. B. {"Größe":["S","M"],"Farbe":["rot"]} */
+  /** Nur Vaterartikel: Merkmale in fester Reihenfolge, z. B. [{"name":"Größe","values":["S","M"]}] */
   variantAttributes: z
-    .record(
-      z.string().trim().min(1).max(40),
-      z.array(z.string().trim().min(1).max(40)).min(1).max(50),
+    .array(
+      z.object({
+        name: z.string().trim().min(1).max(40),
+        values: z.array(z.string().trim().min(1).max(40)).min(1).max(50),
+      }),
     )
+    .min(1)
+    .max(5)
     .optional()
     .nullable(),
   customFields: z.record(z.string().max(40), z.unknown()).optional(),
