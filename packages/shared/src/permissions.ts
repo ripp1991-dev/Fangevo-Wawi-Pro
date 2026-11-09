@@ -36,6 +36,21 @@ export const PERMISSIONS = {
     module: 'inventory',
     label: 'Bestände buchen (Zugang, Abgang, Umlagerung, Korrektur)',
   },
+  'orders.read': { module: 'orders', label: 'Aufträge ansehen' },
+  'orders.manage': {
+    module: 'orders',
+    label: 'Aufträge anlegen, bearbeiten, Status ändern und versenden',
+  },
+  'documents.read': { module: 'documents', label: 'Belege ansehen und herunterladen' },
+  'documents.manage': {
+    module: 'documents',
+    label: 'Belege erstellen, festschreiben, versenden und Zahlungen erfassen',
+  },
+  'purchasing.read': { module: 'purchasing', label: 'Einkauf ansehen' },
+  'purchasing.manage': {
+    module: 'purchasing',
+    label: 'Bestellungen anlegen, versenden und Wareneingang buchen',
+  },
 } as const satisfies Record<string, { module: string; label: string }>;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -69,6 +84,9 @@ export const SYSTEM_ROLES = {
       'customers.read',
       'suppliers.read',
       'inventory.read',
+      'orders.read',
+      'documents.read',
+      'purchasing.read',
     ] as Permission[],
   },
 } as const;

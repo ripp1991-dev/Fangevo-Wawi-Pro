@@ -78,6 +78,14 @@ export const NUMBER_SEQUENCE_KEYS = {
   article: 'Artikelnummer',
   customer: 'Kundennummer',
   supplier: 'Lieferantennummer',
+  order: 'Auftragsnummer',
+  offer: 'Angebotsnummer',
+  order_confirmation: 'Auftragsbestätigung',
+  delivery_note: 'Lieferscheinnummer',
+  invoice: 'Rechnungsnummer',
+  credit_note: 'Gutschriftnummer',
+  cancellation: 'Stornorechnungsnummer',
+  purchase_order: 'Bestellnummer (Einkauf)',
 } as const;
 export type NumberSequenceKey = keyof typeof NUMBER_SEQUENCE_KEYS;
 
@@ -92,7 +100,50 @@ export const numberSequenceInputSchema = z.object({
   padding: z.number().int().min(1).max(12),
 });
 
-export const companySettingsInputSchema = z.object({ allowNegativeStock: z.boolean() });
+/** Prüft eine IBAN über die Prüfziffer (Modulo 97, ISO 13616). */
+export function isValidIban(value: string): boolean {
+  const iban = value.replace(/\s+/g, '').toUpperCase();
+  if (!/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(iban)) return false;
+  const rearranged = iban.slice(4) + iban.slice(0, 4);
+  let remainder = 0;
+  for (const ch of rearranged) {
+    const digits = /\d/.test(ch) ? ch : String(ch.charCodeAt(0) - 55);
+    for (const d of digits) remainder = (remainder * 10 + Number(d)) % 97;
+  }
+  return remainder === 1;
+}
+
+const optionalText = (max: number) => z.string().trim().max(max).nullable().optional();
+
+export const companySettingsInputSchema = z.object({
+  allowNegativeStock: z.boolean(),
+  taxNumber: optionalText(40),
+  managingDirector: optionalText(200),
+  registerCourt: optionalText(120),
+  registerNumber: optionalText(60),
+  bankName: optionalText(120),
+  iban: z
+    .string()
+    .trim()
+    .transform((v) => v.replace(/\s+/g, '').toUpperCase())
+    .refine((v) => v === '' || isValidIban(v), 'IBAN ist ungültig')
+    .nullable()
+    .optional(),
+  bic: z
+    .string()
+    .trim()
+    .regex(/^([A-Z0-9]{8}|[A-Z0-9]{11})?$/i, 'BIC ist ungültig')
+    .nullable()
+    .optional(),
+  documentFooter: optionalText(1000),
+  /** Logo als data:-URL (PNG oder JPEG), höchstens ca. 200 KB. */
+  logoDataUrl: z
+    .string()
+    .max(280_000, 'Logo ist zu groß (max. 200 KB)')
+    .regex(/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/, 'Nur PNG oder JPEG')
+    .nullable()
+    .optional(),
+});
 
 // ───── Artikel ─────
 export const ARTICLE_KINDS = {

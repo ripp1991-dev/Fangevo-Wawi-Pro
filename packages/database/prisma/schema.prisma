@@ -472,6 +472,16 @@ model CompanySettings {
   accountId          String   @map("account_id") @db.Uuid
   allowNegativeStock Boolean  @default(false) @map("allow_negative_stock")
   currency           String   @default("EUR") @db.Char(3)
+  // Angaben für Belege (§ 14 UStG: Steuernummer oder USt-IdNr. Pflicht auf Rechnungen)
+  taxNumber          String?  @map("tax_number")
+  managingDirector   String?  @map("managing_director")
+  registerCourt      String?  @map("register_court")
+  registerNumber     String?  @map("register_number")
+  bankName           String?  @map("bank_name")
+  iban               String?
+  bic                String?
+  documentFooter     String?  @map("document_footer")
+  logoDataUrl        String?  @map("logo_data_url")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
   @@map("company_settings")
@@ -812,4 +822,225 @@ model StockLevel {
 
   @@index([companyId, articleId])
   @@map("stock_levels")
+}
+
+// ───────────── Phase 3b: Aufträge, Belege, Einkauf ─────────────
+
+model SalesOrder {
+  id               String    @id @db.Uuid
+  accountId        String    @map("account_id") @db.Uuid
+  companyId        String    @map("company_id") @db.Uuid
+  number           String
+  /// new | unchecked | in_progress | awaiting_payment | awaiting_stock | picking | packing | ready_to_ship | shipped | completed | cancelled
+  status           String    @default("new")
+  customerId       String    @map("customer_id") @db.Uuid
+  /// Kundendaten zum Zeitpunkt der Bestellung (Name, Adressen, USt-IdNr.)
+  customerSnapshot Json      @map("customer_snapshot")
+  priceDisplay     String    @default("gross") @map("price_display")
+  warehouseId      String    @map("warehouse_id") @db.Uuid
+  orderDate        DateTime  @default(now()) @map("order_date")
+  externalNumber   String?   @map("external_number")
+  paymentMethod    String?   @map("payment_method")
+  shippingMethod   String?   @map("shipping_method")
+  shippingNet      Decimal   @default(0) @map("shipping_net") @db.Decimal(19, 4)
+  shippingTaxRate  Decimal   @default(19) @map("shipping_tax_rate") @db.Decimal(5, 2)
+  totalNet         Decimal   @default(0) @map("total_net") @db.Decimal(19, 4)
+  totalTax         Decimal   @default(0) @map("total_tax") @db.Decimal(19, 4)
+  totalGross       Decimal   @default(0) @map("total_gross") @db.Decimal(19, 4)
+  notes            String?
+  cancelReason     String?   @map("cancel_reason")
+  shippedAt        DateTime? @map("shipped_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  createdBy        String?   @map("created_by") @db.Uuid
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  updatedBy        String?   @map("updated_by") @db.Uuid
+  version          Int       @default(1)
+
+  @@unique([companyId, number])
+  @@index([companyId, status])
+  @@index([companyId, customerId])
+  @@map("sales_orders")
+}
+
+model SalesOrderLine {
+  id              String   @id @db.Uuid
+  accountId       String   @map("account_id") @db.Uuid
+  companyId       String   @map("company_id") @db.Uuid
+  orderId         String   @map("order_id") @db.Uuid
+  position        Int
+  articleId       String?  @map("article_id") @db.Uuid
+  articleNumber   String?  @map("article_number")
+  name            String
+  unit            String   @default("Stück")
+  quantity        Decimal  @db.Decimal(19, 4)
+  unitPriceNet    Decimal  @map("unit_price_net") @db.Decimal(19, 4)
+  discountPercent Decimal  @default(0) @map("discount_percent") @db.Decimal(5, 2)
+  taxRate         Decimal  @map("tax_rate") @db.Decimal(5, 2)
+  lineNet         Decimal  @map("line_net") @db.Decimal(19, 4)
+  lineTax         Decimal  @map("line_tax") @db.Decimal(19, 4)
+  lineGross       Decimal  @map("line_gross") @db.Decimal(19, 4)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([orderId])
+  @@map("sales_order_lines")
+}
+
+/// Statusverlauf eines Auftrags (unveränderlich)
+model OrderStatusHistory {
+  id         String   @id @db.Uuid
+  accountId  String   @map("account_id") @db.Uuid
+  companyId  String   @map("company_id") @db.Uuid
+  orderId    String   @map("order_id") @db.Uuid
+  fromStatus String?  @map("from_status")
+  toStatus   String   @map("to_status")
+  note       String?
+  createdBy  String?  @map("created_by") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([orderId])
+  @@map("order_status_history")
+}
+
+/// Reservierter Bestand für Auftragspositionen (verfügbar = Bestand − Reservierungen)
+model StockReservation {
+  id          String   @id @db.Uuid
+  accountId   String   @map("account_id") @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  articleId   String   @map("article_id") @db.Uuid
+  warehouseId String   @map("warehouse_id") @db.Uuid
+  orderId     String   @map("order_id") @db.Uuid
+  orderLineId String   @map("order_line_id") @db.Uuid
+  quantity    Decimal  @db.Decimal(19, 4)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([companyId, articleId, warehouseId])
+  @@index([orderId])
+  @@map("stock_reservations")
+}
+
+/// Belege: Angebot, Auftragsbestätigung, Lieferschein, Rechnung, Gutschrift, Stornorechnung, Bestellung
+model Document {
+  id               String    @id @db.Uuid
+  accountId        String    @map("account_id") @db.Uuid
+  companyId        String    @map("company_id") @db.Uuid
+  /// offer | order_confirmation | delivery_note | invoice | credit_note | cancellation | purchase_order
+  type             String
+  /// Nummer wird erst beim Festschreiben vergeben (lückenlos)
+  number           String?
+  /// draft | finalized
+  status           String    @default("draft")
+  orderId          String?   @map("order_id") @db.Uuid
+  purchaseOrderId  String?   @map("purchase_order_id") @db.Uuid
+  relatedId        String?   @map("related_id") @db.Uuid
+  recipient        Json
+  lines            Json
+  taxSummary       Json      @map("tax_summary")
+  totalNet         Decimal   @map("total_net") @db.Decimal(19, 4)
+  totalTax         Decimal   @map("total_tax") @db.Decimal(19, 4)
+  totalGross       Decimal   @map("total_gross") @db.Decimal(19, 4)
+  issueDate        DateTime  @map("issue_date") @db.Date
+  serviceDate      DateTime? @map("service_date") @db.Date
+  dueDate          DateTime? @map("due_date") @db.Date
+  notes            String?
+  /// Rechnungen: unpaid | partially_paid | paid | cancelled
+  paymentStatus    String?   @map("payment_status")
+  finalizedAt      DateTime? @map("finalized_at")
+  finalizedBy      String?   @map("finalized_by") @db.Uuid
+  pdfSha256        String?   @map("pdf_sha256")
+  sentAt           DateTime? @map("sent_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  createdBy        String?   @map("created_by") @db.Uuid
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@unique([companyId, type, number])
+  @@index([companyId, type, issueDate])
+  @@index([orderId])
+  @@map("documents")
+}
+
+/// PDF eines festgeschriebenen Belegs (unveränderlich, GoBD)
+model DocumentFile {
+  documentId String   @id @map("document_id") @db.Uuid
+  accountId  String   @map("account_id") @db.Uuid
+  companyId  String   @map("company_id") @db.Uuid
+  content    Bytes
+  sha256     String
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("document_files")
+}
+
+/// Zahlungseingänge zu Rechnungen (unveränderlich; Korrektur durch Gegenbuchung)
+model Payment {
+  id         String   @id @db.Uuid
+  accountId  String   @map("account_id") @db.Uuid
+  companyId  String   @map("company_id") @db.Uuid
+  documentId String   @map("document_id") @db.Uuid
+  amount     Decimal  @db.Decimal(19, 4)
+  paidOn     DateTime @map("paid_on") @db.Date
+  method     String?
+  reference  String?
+  createdBy  String?  @map("created_by") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([documentId])
+  @@map("payments")
+}
+
+model PurchaseOrder {
+  id           String    @id @db.Uuid
+  accountId    String    @map("account_id") @db.Uuid
+  companyId    String    @map("company_id") @db.Uuid
+  number       String
+  /// draft | ordered | partially_received | received | cancelled
+  status       String    @default("draft")
+  supplierId   String    @map("supplier_id") @db.Uuid
+  warehouseId  String    @map("warehouse_id") @db.Uuid
+  expectedDate DateTime? @map("expected_date") @db.Date
+  orderedAt    DateTime? @map("ordered_at")
+  totalNet     Decimal   @default(0) @map("total_net") @db.Decimal(19, 4)
+  notes        String?
+  createdAt    DateTime  @default(now()) @map("created_at")
+  createdBy    String?   @map("created_by") @db.Uuid
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  version      Int       @default(1)
+
+  @@unique([companyId, number])
+  @@index([companyId, status])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderLine {
+  id               String   @id @db.Uuid
+  accountId        String   @map("account_id") @db.Uuid
+  companyId        String   @map("company_id") @db.Uuid
+  purchaseOrderId  String   @map("purchase_order_id") @db.Uuid
+  position         Int
+  articleId        String   @map("article_id") @db.Uuid
+  articleNumber    String   @map("article_number")
+  supplierSku      String?  @map("supplier_sku")
+  name             String
+  unit             String
+  quantity         Decimal  @db.Decimal(19, 4)
+  receivedQuantity Decimal  @default(0) @map("received_quantity") @db.Decimal(19, 4)
+  unitPriceNet     Decimal  @map("unit_price_net") @db.Decimal(19, 4)
+  lineNet          Decimal  @map("line_net") @db.Decimal(19, 4)
+
+  @@index([purchaseOrderId])
+  @@map("purchase_order_lines")
+}
+
+/// Wareneingang (unveränderlich); die Bestandsbuchung steht im Bestandsjournal
+model GoodsReceipt {
+  id              String   @id @db.Uuid
+  accountId       String   @map("account_id") @db.Uuid
+  companyId       String   @map("company_id") @db.Uuid
+  purchaseOrderId String   @map("purchase_order_id") @db.Uuid
+  lines           Json
+  note            String?
+  createdBy       String?  @map("created_by") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([purchaseOrderId])
+  @@map("goods_receipts")
 }
