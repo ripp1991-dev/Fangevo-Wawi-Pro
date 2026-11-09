@@ -118,3 +118,14 @@ Worker / EventDispatcher ──► holt outbox_pending (SKIP LOCKED) ──► T
 - `WebhooksService` ist Ereignis-Handler (erzeugt Zustellungen) und Job-Handler (`webhook_delivery`).
 - `WorkflowsService` ist Ereignis-Handler (legt Läufe an); `WorkflowRunHandler`/`WorkflowScheduleHandler` führen im Hintergrund aus; `startScheduler()` prüft jede Minute die Fälligkeiten.
 - Aktionen laufen über `OrdersService`, `NotificationsService`, `MailService`, `WebhooksService`.
+
+## Phase 7: Kommerzialisierung
+
+```
+Kunde (Portal/Marketplace) ─┐
+Plattform-Verwaltung ───────┼─► subscriptions + subscription_addons ─► computeEntitlement ─► entitlements
+Abrechnungslauf (Worker) ───┘            │                                                   (Zugriffskontrolle)
+                                         └─► platform_invoices (PDF, unveränderlich) ─► E-Mail
+```
+
+Der Abrechnungslauf läuft im Worker (alle 15 Minuten) und ist durch eine Zeilensperre je Abo mehrfach startbar. Support-Tickets bleiben beim Account; der Support arbeitet über einen globalen Index. Zahlungsanbieter sind bewusst noch nicht angebunden (ADR-012).

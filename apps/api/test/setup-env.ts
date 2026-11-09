@@ -9,3 +9,6 @@ process.env.MAIL_TRANSPORT = 'memory';
 process.env.RATE_LIMIT_DISABLED ??= 'true';
 process.env.WEB_ORIGIN = 'http://localhost:5173';
 process.env.APP_ENCRYPTION_KEY = Buffer.alloc(32, 1).toString('base64');
+// Eindeutig je Testlauf, da die Testdatenbank nicht geleert wird
+process.env.PLATFORM_ADMIN_EMAILS = `plattform-${Date.now().toString(36)}@example.test`;
+process.env.SUPPORT_EMAIL = 'support@fangevo.test';

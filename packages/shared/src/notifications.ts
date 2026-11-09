@@ -31,6 +31,14 @@ export const NOTIFICATION_TYPES = {
     label: 'Webhook abgeschaltet',
     description: 'Nach dauerhaften Zustellfehlern, für Personen, die Webhooks verwalten',
   },
+  'support.reply': {
+    label: 'Antwort vom FangEvo-Support',
+    description: 'Für die Person, die die Anfrage gestellt hat',
+  },
+  'billing.invoice': {
+    label: 'Neue Rechnung von FangEvo',
+    description: 'Für Personen, die das Abo verwalten',
+  },
 } as const;
 
 export type NotificationType = keyof typeof NOTIFICATION_TYPES;

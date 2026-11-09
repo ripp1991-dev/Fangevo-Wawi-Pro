@@ -89,3 +89,10 @@ Bekannte Grenzen (bewusst, folgen später):
 | -------- | -------------------------------------- | ------------------------------- | ---------------- |
 | Webhooks | `modules/automation/webhooks.service`  | `/automation` (Reiter Webhooks) | phase6.test, E2E |
 | Regeln   | `modules/automation/workflows.service` | `/automation`                   | phase6.test, E2E |
+
+## Phase 7 im Detail
+
+- **Abo & Rechnungen** (`modules/billing`): `BillingService` mit Kundenportal, Marketplace, Abrechnungslauf (`startScheduler`, `processAccount`) und `syncEntitlement`. Regeln als reine Funktionen in `packages/licensing/src/billing.ts`.
+- **Support** (`modules/support`): Anfragen, Verlauf, E-Mails, Antwort des Supports.
+- **Plattform-Verwaltung** (`modules/platform`): `PlatformAdminGuard` (E-Mail-Freigabe + 2FA), Accounts, Lizenz, Rechnungen, Support-Postfach.
+- Oberfläche: `/admin/billing`, `/marketplace`, `/support`, `/platform` (nur für FangEvo-Mitarbeiter sichtbar).

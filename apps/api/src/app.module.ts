@@ -83,6 +83,12 @@ import { ScanService } from './modules/logistics/scan.service';
 import { SettingsController } from './modules/settings/settings.controller';
 import { SuppliersController } from './modules/suppliers/suppliers.controller';
 import { SuppliersService } from './modules/suppliers/suppliers.service';
+import { BillingController, MarketplaceController } from './modules/billing/billing.controller';
+import { BillingService } from './modules/billing/billing.service';
+import { SupportController } from './modules/support/support.controller';
+import { SupportService } from './modules/support/support.service';
+import { PlatformAdminGuard, PlatformController } from './modules/platform/platform.controller';
+import { PlatformService } from './modules/platform/platform.service';
 
 /**
  * FangEvo Core (Phase 1). Fachmodule (Artikel, Aufträge, …) werden ab Phase 3
@@ -159,6 +165,11 @@ export class AppModule {
         // Phase 6: Automatisierung
         WebhooksController,
         WorkflowsController,
+        // Phase 7: Kommerzialisierung
+        BillingController,
+        MarketplaceController,
+        SupportController,
+        PlatformController,
       ],
       providers: [
         { provide: APP_CONFIG, useValue: config },
@@ -220,6 +231,10 @@ export class AppModule {
           inject: [ImportService, WebhooksService, WorkflowRunHandler, WorkflowScheduleHandler],
         },
         JobQueue,
+        BillingService,
+        SupportService,
+        PlatformService,
+        PlatformAdminGuard,
         { provide: APP_FILTER, useClass: ProblemFilter },
         // Reihenfolge wichtig: zuerst Rate-Limit, dann Zugriffskontrolle
         { provide: APP_GUARD, useClass: RateLimitGuard },

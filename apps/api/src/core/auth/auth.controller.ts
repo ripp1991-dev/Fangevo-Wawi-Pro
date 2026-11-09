@@ -187,6 +187,8 @@ export class AuthController {
     return {
       user: a.user,
       mfaPending: false,
+      /** Zugang zur Plattform-Verwaltung (FangEvo-Mitarbeiter); 2FA wird dort zusätzlich geprüft */
+      platformAdmin: this.config.isPlatformAdmin(a.user.email),
       accounts,
       account: acc && {
         id: acc.id,

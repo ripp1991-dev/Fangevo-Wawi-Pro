@@ -32,6 +32,12 @@ export type {
   SalesChannel,
   Webhook,
   WorkflowRule,
+  Subscription,
+  SubscriptionAddon,
+  PlatformInvoice,
+  PlatformAccount,
+  SupportTicket,
+  SupportMessage,
 } from '@prisma/client';
 export { createPrismaClient } from './client';
 export { withTenant, type Tx, type DbContext } from './tenant';

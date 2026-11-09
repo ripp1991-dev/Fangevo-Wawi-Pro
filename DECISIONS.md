@@ -13,3 +13,5 @@
 | [ADR-009](docs/decisions/ADR-009_LOGISTIK.md)                       | Logistik: Bestand je Charge/Seriennummer, Pack-Prüfung, Versanddienstleister als Adapter                             | angenommen                                         |
 | [ADR-010](docs/decisions/ADR-010_IMPORT_API_KANAELE.md)             | Import über Prüflauf und Hintergrundaufgaben, API-Schlüssel, Verkaufskanäle als Connector-Rahmen                     | angenommen                                         |
 | [ADR-011](docs/decisions/ADR-011_AUTOMATISIERUNG.md)                | Webhooks (signiert, Wiederholungen, SSRF-Schutz) und Regeln mit Versionen, Protokoll, Schleifenschutz, Zeitsteuerung | angenommen                                         |
+
+| [ADR-012](docs/decisions/ADR-012_KOMMERZIALISIERUNG.md) | Abo als Quelle der Lizenz, Rechnungen von FangEvo (Überweisung), Marketplace, Support, Plattform-Verwaltung mit 2FA | angenommen (Preise/Steuer vorläufig) |

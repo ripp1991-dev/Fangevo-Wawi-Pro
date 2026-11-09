@@ -16,6 +16,11 @@ export const PERMISSIONS = {
     module: 'core',
     label: 'Account-Einstellungen und Standard-Ansichten bearbeiten',
   },
+  'billing.manage': {
+    module: 'core',
+    label: 'Abo, Zusatzmodule und FangEvo-Rechnungen verwalten',
+  },
+  'support.manage': { module: 'core', label: 'Support-Anfragen stellen und ansehen' },
   'custom_fields.manage': { module: 'core', label: 'Eigene Felder anlegen und bearbeiten' },
   'company_settings.manage': {
     module: 'core',

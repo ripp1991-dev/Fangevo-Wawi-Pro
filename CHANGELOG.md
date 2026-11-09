@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.8.0] – 2026-11-09 – Phase 7: Kommerzialisierung
+
+### Hinzugefügt
+
+- **Abo & Rechnungen (Kundenportal):** Paket wählen (monatlich oder jährlich mit 2 Monaten gratis), Abo aus der Testphase starten, Paket wechseln (Hochstufen sofort mit anteiliger Rechnung, Herabstufen zum Laufzeitende), Kündigung zum Laufzeitende und Rücknahme, Rechnungsdaten, Rechnungen als PDF. Die Lizenz wird automatisch aus Abo und Zusatzmodulen berechnet.
+- **Rechnungen von FangEvo:** fortlaufende Nummern, PDF (§ 14 UStG) mit Prüfsumme, unveränderlich, Versand per E-Mail, Zahlart Rechnung/Überweisung; Abrechnungslauf im Hintergrund (Verlängerung, Testende, Kündigungsende, Zahlungsverzug – Lesemodus erst nach 30 Tagen).
+- **Marketplace:** alle Module mit Beschreibung, Version und vorläufigem Preis; Zusatzmodule 14 Tage testen, danach kostenpflichtig, jederzeit kündbar.
+- **Support:** Anfragen mit Kategorie, Priorität und Verlauf; E-Mail an den Support, Benachrichtigung und E-Mail bei Antwort.
+- **Plattform-Verwaltung** für FangEvo-Mitarbeiter (E-Mail-Freigabe + Zwei-Faktor Pflicht): Accounts, Lizenz ändern ohne Rechnung, sperren, Testphase verlängern, Rechnungen als bezahlt markieren, Support-Postfach, Abrechnungslauf.
+- Neue Rechte `billing.manage`, `support.manage`; Benachrichtigungen „Antwort vom Support“ und „Neue Rechnung“; Marketplace in jedem Paket.
+- 8. Browser-E2E-Ablauf (Marketplace → Abo → Support → Plattform).
+
+### Geändert
+
+- Lizenz-Werkzeug `license:set` ändert jetzt das Abo und berechnet die Lizenz daraus (wie die Plattform-Verwaltung).
+- Hinweise zu Testphase und Lesemodus verlinken auf „Abo & Rechnungen“.
+
+### Offen
+
+- Zahlungsanbieter (Stripe/Mollie) nach Entscheidung von FangEvo und mit Zugangsdaten; Preise, Umsatzsteuer (OSS) und Rechnungstexte fachlich bestätigen; Stornorechnungen für Plattform-Rechnungen.
+
 ## [0.7.0] – 2026-11-09 – Phase 6: Automatisierung
 
 ### Hinzugefügt
@@ -10,7 +31,7 @@
 - Neue Rechte `webhooks.manage`, `workflows.read/manage`; Modul Automatisierung freigeschaltet (ab Professional); Benachrichtigungsarten „Hinweise aus Regeln“ und „Webhook abgeschaltet“.
 - 7. Browser-E2E-Ablauf (Regel greift, Webhook signiert zugestellt).
 
-– 2026-11-09 – Phase 5: Import und Multichannel
+## [0.6.0] – 2026-11-09 – Phase 5: Import und Multichannel
 
 ### Hinzugefügt
 
@@ -22,7 +43,7 @@
 - Neue Rechte `import.execute`, `api_keys.manage`, `channels.read/manage`; Module Import (ab Business), Öffentliche API und Multichannel (ab Professional) freigeschaltet.
 - 6. Browser-E2E-Ablauf (Import → API-Schlüssel → Kanal → Shop-Bestellung).
 
-– 2026-11-09 – Phase 4: Logistik
+## [0.5.0] – 2026-11-09 – Phase 4: Logistik
 
 ### Hinzugefügt
 
@@ -41,7 +62,7 @@
 - Lagerbestände zeigen Charge, Seriennummer, MHD und die Reservierungen je Lager (statt einer stets leeren Spalte je Lagerplatz).
 - Picklisten übernehmen neue Aufträge automatisch in „In Bearbeitung“.
 
-– 2026-11-09 – Phase 3b: Aufträge, Belege, Einkauf
+## [0.4.0] – 2026-11-09 – Phase 3b: Aufträge, Belege, Einkauf
 
 ### Hinzugefügt
 

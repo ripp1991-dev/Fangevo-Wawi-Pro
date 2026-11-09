@@ -101,3 +101,10 @@ Bitte nicht öffentlich als Issue melden, sondern direkt an das FangEvo-Team.
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Webhooks | HMAC-SHA256-Signatur mit Zeitstempel; Schlüssel AES-256-GCM-verschlüsselt, nur einmal angezeigt; keine Weiterleitungen; 10 s Zeitlimit; private/interne Ziele in Produktion gesperrt (`WEBHOOK_ALLOW_PRIVATE` nur für Entwicklung); Abschalten nach Dauerfehlern |
 | Regeln   | Laufen mit den aktuellen Rechten der zuletzt speichernden Person; Versenden/Stornieren als Aktion ausgeschlossen; nur gültige Statuswechsel; Versionen unveränderlich (Trigger); Schutz vor Endlosschleifen                                                      |
+
+## Ergänzungen Phase 7
+
+- **Plattform-Verwaltung** (`/api/v1/platform/*`) nur für freigegebene E-Mail-Adressen/Domains (`PLATFORM_ADMIN_EMAILS`) **und** mit aktiver Zwei-Faktor-Anmeldung; kein Zugriff mit API-Schlüsseln. Kundendaten werden nur gezielt je Account im Mandantenkontext gelesen (RLS bleibt aktiv); Übersichten kommen aus globalen Verzeichnissen ohne Geschäftsdaten (`platform_accounts`, `support_ticket_index`). Jede Änderung wird im Audit-Log des Kunden mit `platform:<E-Mail>` protokolliert.
+- **Rechnungen** sind per Datenbank-Trigger unveränderlich (nur Status/Zahlungsdatum) und nicht löschbar; PDF mit SHA-256-Prüfsumme.
+- Neue Rechte `billing.manage` und `support.manage` gehören zum Core und können **nicht** an API-Schlüssel vergeben werden. Abo und Support bleiben im Lesemodus erreichbar.
+- Keine Zahlungsdaten im System: Zahlart ist Überweisung. Support-Formular weist darauf hin, keine Passwörter oder Zahlungsdaten zu senden.

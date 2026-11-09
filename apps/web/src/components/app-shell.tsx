@@ -11,6 +11,7 @@ import {
   PanelLeft,
   Star,
   X,
+  Shield,
 } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 import { Alert, Badge, Button, Checkbox, Dialog, Select, cn } from '@fangevo/ui';
@@ -319,6 +320,14 @@ function LicenseBanner(): ReactNode {
         <Alert tone="warning" title="Nur-Lese-Modus">
           Ihr Account ist gesperrt oder die Lizenz ist abgelaufen. Sie können alle Daten weiterhin
           ansehen und exportieren, aber nichts ändern. Ihre Daten bleiben vollständig erhalten.
+          {acc.permissions.includes('billing.manage') && (
+            <>
+              {' '}
+              <Link to="/admin/billing" className="font-medium underline">
+                Abo aktivieren oder Rechnungen ansehen
+              </Link>
+            </>
+          )}
         </Alert>
       </div>
     );
@@ -328,6 +337,14 @@ function LicenseBanner(): ReactNode {
     return (
       <div className="border-b border-border bg-primary/5 px-4 py-2 text-center text-sm text-fg lg:px-8">
         Testzeitraum: noch <strong>{Math.max(days, 0)} Tage</strong>.
+        {acc.permissions.includes('billing.manage') && (
+          <>
+            {' '}
+            <Link to="/admin/billing" className="font-medium text-primary underline">
+              Jetzt Abo wählen
+            </Link>
+          </>
+        )}
       </div>
     );
   }
@@ -432,6 +449,14 @@ function UserMenu() {
         >
           <KeyRound className="size-4" /> Profil & Sicherheit
         </Link>
+        {s.platformAdmin && (
+          <Link
+            to="/platform"
+            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-fg/80 hover:bg-surface-2"
+          >
+            <Shield className="size-4" /> Plattform-Verwaltung
+          </Link>
+        )}
         <button
           className="flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-fg/80 hover:bg-surface-2"
           onClick={async () => {

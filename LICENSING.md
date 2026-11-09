@@ -63,9 +63,27 @@ Picklisten und die mobile Scan-Seite gehören zum Modul **Lager** (alle Pakete).
 | `PAST_DUE`              | voll. Eine fehlgeschlagene Zahlung sperrt nicht sofort                                                              |
 | `SUSPENDED`, `CANCELED` | **nur lesen**: Daten bleiben vollständig erhalten und exportierbar, Abmelden und Kontoeinstellungen bleiben möglich |
 
-## Lizenz ändern (bis Phase 7)
+## Abo und Lizenz (ab Phase 7)
 
-Nur FangEvo-intern über das Plattform-Werkzeug (schreibt die Historie mit):
+Die Lizenz wird aus dem **Abo** berechnet (ADR-012). Kunden ändern ihr Abo selbst unter **Administration → Abo & Rechnungen** und buchen Zusatzmodule im **Marketplace**:
+
+| Vorgang                 | Wirkung                                                                                |
+| ----------------------- | -------------------------------------------------------------------------------------- |
+| Testphase               | 14 Tage, Paket frei wählbar, keine Rechnung                                            |
+| Abo starten             | sofort aktiv, erste Rechnung (Überweisung, 14 Tage Zahlungsziel)                       |
+| Hochstufen              | sofort, anteilige Rechnung bis Laufzeitende                                            |
+| Herabstufen / Intervall | zum Laufzeitende                                                                       |
+| Zusatzmodul buchen      | erstes Mal 14 Tage Test, danach kostenpflichtig (anteilig), Kündigung zum Laufzeitende |
+| Kündigen                | zum Laufzeitende (Test: zum Testende), danach nur lesen, Rücknahme bis dahin möglich   |
+| Rechnung überfällig     | `PAST_DUE` (voll nutzbar); nach mehr als 30 Tagen `SUSPENDED` (nur lesen)              |
+
+Preise (vorläufig): Starter 199 €, Business 299 €, Professional 499 € netto/Monat, Jahr = 10 Monate; Enterprise individuell. Zusatzmodule: Einkauf 49 €, FangEvo Pack 49 €, Versand 29 €, Retouren 29 €, Import 39 €, Multichannel 79 €, Öffentliche API 49 €, Automatisierung 79 €.
+
+FangEvo-Mitarbeiter ändern Lizenzen ohne Rechnung in der **Plattform-Verwaltung** (Benutzermenü, nur mit Freigabe in `PLATFORM_ADMIN_EMAILS` und Zwei-Faktor-Anmeldung).
+
+## Lizenz ändern per Kommandozeile
+
+Nur FangEvo-intern über das Plattform-Werkzeug. Es ändert das Abo, berechnet die Lizenz neu und schreibt die Historie mit. Es erstellt keine Rechnung:
 
 ```bash
 pnpm --filter @fangevo/database license:set -- --account <account-id> --plan business --status ACTIVE --max-companies 5

@@ -263,7 +263,20 @@ Der grafische Editor folgt später (Playbook 16); die Regeln werden zunächst in
 
 Ergebnis Phase 6: alle Arbeitspakete umgesetzt und getestet (phase6.test, E2E `phase6-flow.mjs`). Offen: grafischer Editor mit Verzweigungen und Verzögerungen, weitere Aktionen nach Bedarf, CRM und Analytics.
 
-### Phase 7–8
+### Phase 7 – Kommerzialisierung (gestartet 2026-11-09)
+
+| AP                       | Inhalt                                                                                                                                                                                                                                      |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 7.1 Abonnements          | Abo je Account (Paket, monatlich/jährlich, Laufzeit), Paketwechsel (Hochstufen sofort, Herabstufen zum Laufzeitende), Kündigung zum Laufzeitende und Rücknahme, Rechnungsdaten. Lizenz wird automatisch aus Abo und Zusatzmodulen berechnet |
+| 7.2 Abrechnung           | Monats-/Jahresrechnungen von FangEvo an Kunden als PDF (fortlaufende Nummer), Zahlungsart „Rechnung/Überweisung“; Abrechnungslauf im Hintergrund. **Stripe/Mollie erst nach Entscheidung von FangEvo und mit Zugangsdaten**                 |
+| 7.3 Marketplace          | Modulübersicht mit Beschreibung, Preis (vorläufig), Version, im Paket enthalten oder zubuchbar, 14 Tage Testversion, Aktivieren, Kündigen                                                                                                   |
+| 7.4 Kundenportal         | Seite „Abo & Rechnungen“: Paket, Laufzeit, Zusatzmodule, Rechnungen herunterladen, Rechnungsdaten, Kündigung                                                                                                                                |
+| 7.5 Support              | Tickets mit Verlauf, Kategorien, Priorität, Status; E-Mail an den Support und Benachrichtigung bei Antwort                                                                                                                                  |
+| 7.6 Plattform-Verwaltung | Für FangEvo-Mitarbeiter (E-Mail-Freigabe in der Konfiguration + Zwei-Faktor Pflicht): Accounts, Lizenzen, Rechnungen als bezahlt markieren, Support-Postfach                                                                                |
+
+Ergebnis Phase 7: alle Arbeitspakete umgesetzt und getestet (phase7.test, billing.test, E2E `phase7-flow.mjs`), ADR-012. **Offen (braucht FangEvo):** Entscheidung und Zugangsdaten für einen Zahlungsanbieter (Stripe/Mollie, Lastschrift/Karte), endgültige Preise, steuerliche Prüfung (OSS, Reverse Charge, Rechnungstexte) durch den Steuerberater, Absenderdaten für Rechnungen (`PLATFORM_ISSUER_*`). Technisch offen: Stornorechnungen für Plattform-Rechnungen.
+
+### Phase 8
 
 Wie im Playbook. Sie werden vor Beginn jeweils in Arbeitspakete wie in Phase 1 zerlegt und zur Freigabe vorgelegt.
 

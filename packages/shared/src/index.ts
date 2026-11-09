@@ -10,3 +10,4 @@ export * from './schemas/sales';
 export * from './schemas/logistics';
 export * from './schemas/import';
 export * from './schemas/automation';
+export * from './schemas/commercial';

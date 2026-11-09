@@ -16,6 +16,10 @@ import { AccountPage } from './pages/admin/account';
 import { AuditPage } from './pages/admin/audit';
 import { CompaniesPage } from './pages/admin/companies';
 import { LicensePage } from './pages/admin/license';
+import { BillingPage } from './pages/admin/billing';
+import { MarketplacePage } from './pages/admin/marketplace';
+import { SupportPage } from './pages/admin/support';
+import { PlatformPage } from './pages/admin/platform';
 import { MembersPage } from './pages/admin/members';
 import { RolesPage } from './pages/admin/roles';
 import { LoginPage } from './pages/auth/login';
@@ -157,6 +161,10 @@ const routeTree = root.addChildren([
     page('/admin/audit', AuditPage, 'audit.read'),
     page('/admin/custom-fields', CustomFieldsPage, 'custom_fields.manage'),
     page('/admin/license', LicensePage, 'license.read'),
+    page('/admin/billing', BillingPage, 'billing.manage'),
+    page('/marketplace', MarketplacePage, 'license.read'),
+    page('/support', SupportPage, 'support.manage'),
+    page('/platform', PlatformPage),
     page('/admin/account', AccountPage, 'account.manage'),
     createRoute({ getParentRoute: () => app, path: '/settings/security', component: SecurityPage }),
   ]),

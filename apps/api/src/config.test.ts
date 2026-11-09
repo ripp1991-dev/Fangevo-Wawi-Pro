@@ -25,4 +25,15 @@ describe('Konfiguration', () => {
       /APP_ENCRYPTION_KEY/,
     );
   });
+  it('Plattform-Mitarbeiter: einzelne Adressen oder ganze Domain', () => {
+    const c = loadConfig({
+      ...base,
+      PLATFORM_ADMIN_EMAILS: ' Anna@FangEvo.de , @support.fangevo.de',
+    });
+    expect(c.isPlatformAdmin('anna@fangevo.de')).toBe(true);
+    expect(c.isPlatformAdmin('ben@fangevo.de')).toBe(false);
+    expect(c.isPlatformAdmin('ben@support.fangevo.de')).toBe(true);
+    expect(c.isPlatformAdmin('ben@evil-support.fangevo.de')).toBe(false);
+    expect(loadConfig(base).isPlatformAdmin('anna@fangevo.de')).toBe(false);
+  });
 });
