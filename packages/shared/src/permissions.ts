@@ -17,6 +17,25 @@ export const PERMISSIONS = {
     label: 'Account-Einstellungen und Standard-Ansichten bearbeiten',
   },
   'custom_fields.manage': { module: 'core', label: 'Eigene Felder anlegen und bearbeiten' },
+  'company_settings.manage': {
+    module: 'core',
+    label: 'Firmeneinstellungen: Steuersätze, Nummernkreise, Kundengruppen, Kategorien, Lager',
+  },
+  'articles.read': { module: 'articles', label: 'Artikel ansehen' },
+  'articles.manage': { module: 'articles', label: 'Artikel anlegen, bearbeiten und archivieren' },
+  'articles.prices': { module: 'articles', label: 'Einkaufspreise sehen und Preise ändern' },
+  'customers.read': { module: 'customers', label: 'Kunden ansehen' },
+  'customers.manage': { module: 'customers', label: 'Kunden anlegen, bearbeiten und sperren' },
+  'suppliers.read': { module: 'suppliers', label: 'Lieferanten ansehen' },
+  'suppliers.manage': {
+    module: 'suppliers',
+    label: 'Lieferanten und Lieferanten-Artikel bearbeiten',
+  },
+  'inventory.read': { module: 'inventory', label: 'Lagerbestände ansehen' },
+  'inventory.manage': {
+    module: 'inventory',
+    label: 'Bestände buchen (Zugang, Abgang, Umlagerung, Korrektur)',
+  },
 } as const satisfies Record<string, { module: string; label: string }>;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -44,6 +63,12 @@ export const SYSTEM_ROLES = {
   employee: {
     name: 'Mitarbeiter',
     description: 'Grundzugriff ohne Administrationsrechte',
-    permissions: ['companies.read'] as Permission[],
+    permissions: [
+      'companies.read',
+      'articles.read',
+      'customers.read',
+      'suppliers.read',
+      'inventory.read',
+    ] as Permission[],
   },
 } as const;

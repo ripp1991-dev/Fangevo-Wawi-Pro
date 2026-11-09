@@ -5,3 +5,4 @@ export * from './widgets';
 export * from './schemas/auth';
 export * from './schemas/admin';
 export * from './schemas/tools';
+export * from './schemas/master-data';

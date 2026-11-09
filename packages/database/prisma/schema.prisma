@@ -461,3 +461,355 @@ model SearchDocument {
   @@id([accountId, entityType, entityId])
   @@map("search_documents")
 }
+
+// ───────────── Phase 3a: Warenwirtschaft – Stammdaten und Lager ─────────────
+// Alle Tabellen sind firmenbezogen: account_id + company_id, RLS prüft beides
+// (app.account_id und app.company_id). Geldbeträge: numeric(19,4), nie Gleitkomma.
+
+/// Einstellungen je Firma
+model CompanySettings {
+  companyId          String   @id @map("company_id") @db.Uuid
+  accountId          String   @map("account_id") @db.Uuid
+  allowNegativeStock Boolean  @default(false) @map("allow_negative_stock")
+  currency           String   @default("EUR") @db.Char(3)
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@map("company_settings")
+}
+
+/// Steuersätze, frei anlegbar je Firma (z. B. 19 %, 7 %, 0 %)
+model TaxRate {
+  id         String    @id @db.Uuid
+  accountId  String    @map("account_id") @db.Uuid
+  companyId  String    @map("company_id") @db.Uuid
+  name       String
+  rate       Decimal   @db.Decimal(5, 2)
+  isDefault  Boolean   @default(false) @map("is_default")
+  archivedAt DateTime? @map("archived_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  @@index([companyId])
+  @@map("tax_rates")
+}
+
+/// Lückenlose Nummernkreise je Firma (z. B. Artikel, Kunden, Lieferanten)
+model NumberSequence {
+  accountId String @map("account_id") @db.Uuid
+  companyId String @map("company_id") @db.Uuid
+  key       String
+  prefix    String @default("")
+  nextValue Int    @default(1) @map("next_value")
+  padding   Int    @default(5)
+
+  @@id([companyId, key])
+  @@map("number_sequences")
+}
+
+model Category {
+  id         String    @id @db.Uuid
+  accountId  String    @map("account_id") @db.Uuid
+  companyId  String    @map("company_id") @db.Uuid
+  parentId   String?   @map("parent_id") @db.Uuid
+  name       String
+  position   Int       @default(0)
+  archivedAt DateTime? @map("archived_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  @@index([companyId, parentId])
+  @@map("categories")
+}
+
+model Manufacturer {
+  id         String    @id @db.Uuid
+  accountId  String    @map("account_id") @db.Uuid
+  companyId  String    @map("company_id") @db.Uuid
+  name       String
+  archivedAt DateTime? @map("archived_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@unique([companyId, name])
+  @@map("manufacturers")
+}
+
+model CustomerGroup {
+  id              String    @id @db.Uuid
+  accountId       String    @map("account_id") @db.Uuid
+  companyId       String    @map("company_id") @db.Uuid
+  name            String
+  /// Preisanzeige für diese Gruppe: "gross" (brutto, z. B. Privatkunden) oder "net"
+  priceDisplay    String    @default("gross") @map("price_display")
+  discountPercent Decimal   @default(0) @map("discount_percent") @db.Decimal(5, 2)
+  isDefault       Boolean   @default(false) @map("is_default")
+  archivedAt      DateTime? @map("archived_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@unique([companyId, name])
+  @@map("customer_groups")
+}
+
+model Article {
+  id                  String    @id @db.Uuid
+  accountId           String    @map("account_id") @db.Uuid
+  companyId           String    @map("company_id") @db.Uuid
+  number              String
+  /// standard | parent (Vaterartikel) | variant (Kindartikel) | set (Stückliste)
+  kind                String    @default("standard")
+  parentId            String?   @map("parent_id") @db.Uuid
+  /// Bei Vaterartikeln: Variantenmerkmale {"Größe":["S","M"]}; bei Kindartikeln: Ausprägung {"Größe":"M"}
+  variantAttributes   Json?     @map("variant_attributes")
+  name                String
+  shortDescription    String?   @map("short_description")
+  description         String?
+  gtin                String?
+  manufacturerId      String?   @map("manufacturer_id") @db.Uuid
+  brand               String?
+  categoryId          String?   @map("category_id") @db.Uuid
+  unit                String    @default("Stück")
+  taxRateId           String    @map("tax_rate_id") @db.Uuid
+  purchasePriceNet    Decimal   @default(0) @map("purchase_price_net") @db.Decimal(19, 4)
+  salePriceNet        Decimal   @default(0) @map("sale_price_net") @db.Decimal(19, 4)
+  weightKg            Decimal?  @map("weight_kg") @db.Decimal(12, 4)
+  minStock            Decimal   @default(0) @map("min_stock") @db.Decimal(19, 4)
+  stockTracked        Boolean   @default(true) @map("stock_tracked")
+  trackBatches        Boolean   @default(false) @map("track_batches")
+  trackSerials        Boolean   @default(false) @map("track_serials")
+  trackBestBefore     Boolean   @default(false) @map("track_best_before")
+  active              Boolean   @default(true)
+  customFields        Json      @default("{}") @map("custom_fields")
+  archivedAt          DateTime? @map("archived_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  createdBy           String?   @map("created_by") @db.Uuid
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  updatedBy           String?   @map("updated_by") @db.Uuid
+  version             Int       @default(1)
+
+  @@unique([companyId, number])
+  @@index([companyId, name])
+  @@index([companyId, gtin])
+  @@index([companyId, parentId])
+  @@map("articles")
+}
+
+/// Staffel- und Kundengruppenpreise (netto). customer_group_id leer = für alle.
+model ArticlePrice {
+  id              String  @id @db.Uuid
+  accountId       String  @map("account_id") @db.Uuid
+  companyId       String  @map("company_id") @db.Uuid
+  articleId       String  @map("article_id") @db.Uuid
+  customerGroupId String? @map("customer_group_id") @db.Uuid
+  minQuantity     Decimal @default(1) @map("min_quantity") @db.Decimal(19, 4)
+  priceNet        Decimal @map("price_net") @db.Decimal(19, 4)
+
+  @@index([articleId])
+  @@map("article_prices")
+}
+
+/// Bestandteile eines Sets (Stückliste)
+model SetComponent {
+  accountId          String  @map("account_id") @db.Uuid
+  companyId          String  @map("company_id") @db.Uuid
+  setArticleId       String  @map("set_article_id") @db.Uuid
+  componentArticleId String  @map("component_article_id") @db.Uuid
+  quantity           Decimal @db.Decimal(19, 4)
+
+  @@id([setArticleId, componentArticleId])
+  @@map("set_components")
+}
+
+model Customer {
+  id                 String    @id @db.Uuid
+  accountId          String    @map("account_id") @db.Uuid
+  companyId          String    @map("company_id") @db.Uuid
+  number             String
+  /// private | business
+  type               String    @default("private")
+  companyName        String?   @map("company_name")
+  salutation         String?
+  firstName          String?   @map("first_name")
+  lastName           String?   @map("last_name")
+  email              String?
+  phone              String?
+  vatId              String?   @map("vat_id")
+  customerGroupId    String?   @map("customer_group_id") @db.Uuid
+  paymentTermsDays   Int       @default(14) @map("payment_terms_days")
+  blocked            Boolean   @default(false)
+  blockedReason      String?   @map("blocked_reason")
+  notes              String?
+  customFields       Json      @default("{}") @map("custom_fields")
+  archivedAt         DateTime? @map("archived_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  createdBy          String?   @map("created_by") @db.Uuid
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  updatedBy          String?   @map("updated_by") @db.Uuid
+  version            Int       @default(1)
+
+  @@unique([companyId, number])
+  @@index([companyId, lastName])
+  @@index([companyId, companyName])
+  @@map("customers")
+}
+
+/// Adressen von Kunden und Lieferanten (owner_type: customer | supplier)
+model Address {
+  id         String   @id @db.Uuid
+  accountId  String   @map("account_id") @db.Uuid
+  companyId  String   @map("company_id") @db.Uuid
+  ownerType  String   @map("owner_type")
+  ownerId    String   @map("owner_id") @db.Uuid
+  /// billing | shipping
+  kind       String
+  isDefault  Boolean  @default(false) @map("is_default")
+  name       String?
+  name2      String?
+  street     String?
+  postalCode String?  @map("postal_code")
+  city       String?
+  country    String   @default("DE") @db.Char(2)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([ownerType, ownerId])
+  @@map("addresses")
+}
+
+/// Ansprechpartner von Kunden und Lieferanten
+model Contact {
+  id        String   @id @db.Uuid
+  accountId String   @map("account_id") @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  ownerType String   @map("owner_type")
+  ownerId   String   @map("owner_id") @db.Uuid
+  name      String
+  role      String?
+  email     String?
+  phone     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([ownerType, ownerId])
+  @@map("contacts")
+}
+
+model Supplier {
+  id                  String    @id @db.Uuid
+  accountId           String    @map("account_id") @db.Uuid
+  companyId           String    @map("company_id") @db.Uuid
+  number              String
+  name                String
+  email               String?
+  phone               String?
+  website             String?
+  vatId               String?   @map("vat_id")
+  customerNumber      String?   @map("customer_number")
+  paymentTermsDays    Int       @default(30) @map("payment_terms_days")
+  defaultDeliveryDays Int?      @map("default_delivery_days")
+  notes               String?
+  customFields        Json      @default("{}") @map("custom_fields")
+  archivedAt          DateTime? @map("archived_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  createdBy           String?   @map("created_by") @db.Uuid
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  updatedBy           String?   @map("updated_by") @db.Uuid
+  version             Int       @default(1)
+
+  @@unique([companyId, number])
+  @@index([companyId, name])
+  @@map("suppliers")
+}
+
+/// Lieferanten-Artikel: Bezugsquelle eines Artikels
+model SupplierArticle {
+  id               String   @id @db.Uuid
+  accountId        String   @map("account_id") @db.Uuid
+  companyId        String   @map("company_id") @db.Uuid
+  supplierId       String   @map("supplier_id") @db.Uuid
+  articleId        String   @map("article_id") @db.Uuid
+  supplierSku      String?  @map("supplier_sku")
+  purchasePriceNet Decimal  @map("purchase_price_net") @db.Decimal(19, 4)
+  deliveryDays     Int?     @map("delivery_days")
+  minOrderQuantity Decimal  @default(1) @map("min_order_quantity") @db.Decimal(19, 4)
+  isPreferred      Boolean  @default(false) @map("is_preferred")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@unique([supplierId, articleId])
+  @@index([articleId])
+  @@map("supplier_articles")
+}
+
+model Warehouse {
+  id         String    @id @db.Uuid
+  accountId  String    @map("account_id") @db.Uuid
+  companyId  String    @map("company_id") @db.Uuid
+  code       String
+  name       String
+  street     String?
+  postalCode String?   @map("postal_code")
+  city       String?
+  country    String    @default("DE") @db.Char(2)
+  isDefault  Boolean   @default(false) @map("is_default")
+  archivedAt DateTime? @map("archived_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  @@unique([companyId, code])
+  @@map("warehouses")
+}
+
+model StorageLocation {
+  id          String    @id @db.Uuid
+  accountId   String    @map("account_id") @db.Uuid
+  companyId   String    @map("company_id") @db.Uuid
+  warehouseId String    @map("warehouse_id") @db.Uuid
+  code        String
+  description String?
+  archivedAt  DateTime? @map("archived_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@unique([warehouseId, code])
+  @@map("storage_locations")
+}
+
+/// Bestandsjournal: unveränderlich. Jede Bestandsänderung ist genau eine Buchung.
+model StockMovement {
+  id            String    @id @db.Uuid
+  accountId     String    @map("account_id") @db.Uuid
+  companyId     String    @map("company_id") @db.Uuid
+  articleId     String    @map("article_id") @db.Uuid
+  warehouseId   String    @map("warehouse_id") @db.Uuid
+  locationId    String?   @map("location_id") @db.Uuid
+  /// receipt | issue | transfer_out | transfer_in | correction
+  type          String
+  quantity      Decimal   @db.Decimal(19, 4)
+  /// Bestand an diesem Ort nach der Buchung
+  balanceAfter  Decimal   @map("balance_after") @db.Decimal(19, 4)
+  batch         String?
+  serialNumber  String?   @map("serial_number")
+  bestBefore    DateTime? @map("best_before") @db.Date
+  referenceType String?   @map("reference_type")
+  referenceId   String?   @map("reference_id")
+  transferId    String?   @map("transfer_id") @db.Uuid
+  note          String?
+  createdBy     String?   @map("created_by") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@index([companyId, articleId, createdAt(sort: Desc)])
+  @@map("stock_movements")
+}
+
+/// Aktueller Bestand je Artikel und Lager(platz); wird nur zusammen mit dem Journal geändert.
+model StockLevel {
+  id          String   @id @db.Uuid
+  accountId   String   @map("account_id") @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  articleId   String   @map("article_id") @db.Uuid
+  warehouseId String   @map("warehouse_id") @db.Uuid
+  locationId  String?  @map("location_id") @db.Uuid
+  quantity    Decimal  @default(0) @db.Decimal(19, 4)
+  reserved    Decimal  @default(0) @db.Decimal(19, 4)
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([companyId, articleId])
+  @@map("stock_levels")
+}

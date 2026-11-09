@@ -12,3 +12,7 @@ playwright-report/
 test-results/
 *.tsbuildinfo
 tests/e2e/screenshots/
+
+# JTL-Exporte (eigene Geschäftsdaten) nie ins Repository
+data/jtl-export/
+*.jtl.csv
