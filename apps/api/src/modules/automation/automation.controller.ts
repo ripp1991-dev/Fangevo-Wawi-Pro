@@ -1,6 +1,6 @@
 import { Body, Controller, Get, HttpCode, Inject, Param, Post, Put, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { z } from 'zod';
+import { type z } from 'zod';
 import {
   CONDITION_FIELDS,
   CONDITION_OPS,

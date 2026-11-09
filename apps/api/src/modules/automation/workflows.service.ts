@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { type z } from 'zod';
-import { Prisma, uuidv7, type Tx, type WorkflowRule } from '@fangevo/database';
+import { type Prisma, uuidv7, type Tx, type WorkflowRule } from '@fangevo/database';
 import {
   canTransition,
   CONDITION_FIELDS,

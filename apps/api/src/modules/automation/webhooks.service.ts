@@ -3,7 +3,7 @@ import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { type z } from 'zod';
-import { Prisma, uuidv7, type Tx, type Webhook } from '@fangevo/database';
+import { type Prisma, uuidv7, type Tx, type Webhook } from '@fangevo/database';
 import { WEBHOOK_EVENTS, type webhookInputSchema } from '@fangevo/shared';
 import { APP_CONFIG, type AppConfig } from '../../config';
 import { AuditService } from '../../core/audit/audit.service';
