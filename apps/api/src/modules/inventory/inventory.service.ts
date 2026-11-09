@@ -316,9 +316,20 @@ export class InventoryService {
           select: { id: true, code: true },
         }),
       ]);
+      // Reservierungen gelten je Artikel und Lager (nicht je Lagerplatz)
+      const res = rows.length
+        ? await tx.stockReservation.groupBy({
+            by: ['articleId', 'warehouseId'],
+            where: { articleId: { in: [...new Set(rows.map((r) => r.articleId))] } },
+            _sum: { quantity: true },
+          })
+        : [];
       return rows.map((r) => ({
         ...r,
-        available: dec(r.quantity).minus(r.reserved).toString(),
+        reservedInWarehouse: (
+          res.find((x) => x.articleId === r.articleId && x.warehouseId === r.warehouseId)?._sum
+            .quantity ?? dec(0)
+        ).toString(),
         article: articles.find((a) => a.id === r.articleId) ?? null,
         warehouse: warehouses.find((w) => w.id === r.warehouseId) ?? null,
         location: r.locationId ? (locations.find((l) => l.id === r.locationId) ?? null) : null,

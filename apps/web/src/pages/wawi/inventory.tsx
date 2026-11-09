@@ -7,7 +7,7 @@ import { type Column } from '../../components/table/types';
 import { Tabs } from '../../components/tabs';
 import { useSubmit } from '../../components/use-form';
 import { http } from '../../lib/api';
-import { formatDateTime } from '../../lib/format';
+import { formatDate, formatDateTime } from '../../lib/format';
 import { formatQty, useMasterData, type MasterData } from '../../lib/master-data';
 import { useCan, useSession } from '../../lib/session';
 import { type ArticleRow } from './articles';
@@ -18,15 +18,17 @@ interface Level {
   warehouseId: string;
   locationId: string | null;
   quantity: string;
-  reserved: string;
-  available: string;
+  reservedInWarehouse: string;
+  batch: string | null;
+  serialNumber: string | null;
+  bestBefore: string | null;
   article: { number: string; name: string; unit: string; minStock: string } | null;
   warehouse: { code: string; name: string } | null;
   location: { code: string } | null;
 }
 interface Movement {
   id: string;
-  type: 'receipt' | 'issue' | 'transfer_out' | 'transfer_in' | 'correction';
+  type: 'receipt' | 'issue' | 'transfer_out' | 'transfer_in' | 'correction' | 'return';
   quantity: string;
   balanceAfter: string;
   batch: string | null;
@@ -44,6 +46,7 @@ const TYPES: Record<Movement['type'], string> = {
   transfer_out: 'Umlagerung (ab)',
   transfer_in: 'Umlagerung (zu)',
   correction: 'Korrektur / Inventur',
+  return: 'Retoure',
 };
 
 export function InventoryPage() {
@@ -146,22 +149,38 @@ function Levels() {
       ),
     },
     {
-      id: 'reserved',
-      header: 'Reserviert',
-      kind: 'number',
+      id: 'batch',
+      header: 'Charge',
+      kind: 'string',
       sortable: true,
       width: 110,
-      value: (r) => Number(r.reserved),
-      text: (r) => formatQty(r.reserved),
+      value: (r) => r.batch ?? '',
     },
     {
-      id: 'available',
-      header: 'Verfügbar',
-      kind: 'number',
+      id: 'serialNumber',
+      header: 'Seriennr.',
+      kind: 'string',
+      sortable: true,
+      width: 120,
+      value: (r) => r.serialNumber ?? '',
+    },
+    {
+      id: 'bestBefore',
+      header: 'MHD',
+      kind: 'date',
       sortable: true,
       width: 110,
-      value: (r) => Number(r.available),
-      text: (r) => formatQty(r.available),
+      value: (r) => r.bestBefore,
+      cell: (r) => (r.bestBefore ? formatDate(r.bestBefore) : ''),
+    },
+    {
+      id: 'reserved',
+      header: 'Reserviert (Lager)',
+      kind: 'number',
+      sortable: true,
+      width: 140,
+      value: (r) => Number(r.reservedInWarehouse),
+      text: (r) => formatQty(r.reservedInWarehouse),
     },
   ];
   return (
@@ -438,6 +457,8 @@ function BookingDialog({
           toWarehouseId: v.toWarehouseId,
           toLocationId: v.toLocationId || null,
           quantity: v.quantity,
+          batch: v.batch || null,
+          serialNumber: v.serialNumber || null,
         });
       if (kind === 'correction')
         return http.post<Record<string, string>>('/inventory/corrections', {
@@ -445,6 +466,9 @@ function BookingDialog({
           warehouseId: v.warehouseId,
           locationId: v.locationId || null,
           countedQuantity: v.quantity,
+          batch: v.batch || null,
+          serialNumber: v.serialNumber || null,
+          bestBefore: v.bestBefore || null,
         });
       return http.post<Record<string, string>>('/inventory/bookings', {
         ...base,
@@ -533,45 +557,40 @@ function BookingDialog({
             />
           )}
         </Field>
-        {(kind === 'receipt' || kind === 'issue') &&
-          article &&
-          (article.trackBatches || article.trackSerials || article.trackBestBefore) && (
-            <div className="grid gap-3 sm:grid-cols-3">
-              {article.trackBatches && (
-                <Field label="Charge *" error={f.fieldErrors.batch}>
-                  {(p) => (
-                    <Input {...p} value={v.batch} onChange={(e) => set('batch', e.target.value)} />
-                  )}
-                </Field>
-              )}
-              {article.trackSerials && (
-                <Field label="Seriennummer *" error={f.fieldErrors.serialNumber}>
-                  {(p) => (
-                    <Input
-                      {...p}
-                      value={v.serialNumber}
-                      onChange={(e) => set('serialNumber', e.target.value)}
-                    />
-                  )}
-                </Field>
-              )}
-              {article.trackBestBefore && (
-                <Field
-                  label={kind === 'receipt' ? 'MHD *' : 'MHD'}
-                  error={f.fieldErrors.bestBefore}
-                >
-                  {(p) => (
-                    <Input
-                      {...p}
-                      type="date"
-                      value={v.bestBefore}
-                      onChange={(e) => set('bestBefore', e.target.value)}
-                    />
-                  )}
-                </Field>
-              )}
-            </div>
-          )}
+        {article && (article.trackBatches || article.trackSerials || article.trackBestBefore) && (
+          <div className="grid gap-3 sm:grid-cols-3">
+            {article.trackBatches && (
+              <Field label="Charge *" error={f.fieldErrors.batch}>
+                {(p) => (
+                  <Input {...p} value={v.batch} onChange={(e) => set('batch', e.target.value)} />
+                )}
+              </Field>
+            )}
+            {article.trackSerials && (
+              <Field label="Seriennummer *" error={f.fieldErrors.serialNumber}>
+                {(p) => (
+                  <Input
+                    {...p}
+                    value={v.serialNumber}
+                    onChange={(e) => set('serialNumber', e.target.value)}
+                  />
+                )}
+              </Field>
+            )}
+            {article.trackBestBefore && (
+              <Field label={kind === 'receipt' ? 'MHD *' : 'MHD'} error={f.fieldErrors.bestBefore}>
+                {(p) => (
+                  <Input
+                    {...p}
+                    type="date"
+                    value={v.bestBefore}
+                    onChange={(e) => set('bestBefore', e.target.value)}
+                  />
+                )}
+              </Field>
+            )}
+          </div>
+        )}
         <Field label="Notiz">
           {(p) => (
             <Input

@@ -10,3 +10,4 @@
 | [ADR-006](docs/decisions/ADR-006_EREIGNISSE_OUTBOX.md)              | Fachliche Ereignisse über eine Outbox in PostgreSQL, eigener Worker-Prozess                               | angenommen                                         |
 | [ADR-007](docs/decisions/ADR-007_FIRMENTRENNUNG_BESTANDSJOURNAL.md) | Firmentrennung per RLS (Account + Firma) und unveränderliches Bestandsjournal                             | angenommen                                         |
 | [ADR-008](docs/decisions/ADR-008_BELEGE_RESERVIERUNG.md)            | Belege mit Festschreiben (GoBD), PDF in der Datenbank mit Prüfsumme, Reservierung nach Anlage-Reihenfolge | angenommen                                         |
+| [ADR-009](docs/decisions/ADR-009_LOGISTIK.md)                       | Logistik: Bestand je Charge/Seriennummer, Pack-Prüfung, Versanddienstleister als Adapter                  | angenommen                                         |

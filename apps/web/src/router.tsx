@@ -36,6 +36,10 @@ import { DocumentsPage } from './pages/wawi/documents';
 import { InventoryPage } from './pages/wawi/inventory';
 import { OrdersPage } from './pages/wawi/orders';
 import { PurchasingPage } from './pages/wawi/purchasing';
+import { PackingPage } from './pages/wawi/packing';
+import { PickingPage } from './pages/wawi/picking';
+import { ReturnsPage } from './pages/wawi/returns';
+import { ScanPage } from './pages/wawi/scan';
 import { SuppliersPage } from './pages/wawi/suppliers';
 import { SecurityPage } from './pages/settings/security';
 
@@ -131,6 +135,10 @@ const routeTree = root.addChildren([
     page('/orders', OrdersPage, 'orders.read'),
     page('/documents', DocumentsPage, 'documents.read'),
     page('/purchasing', PurchasingPage, 'purchasing.read'),
+    page('/picking', PickingPage, 'picking.execute'),
+    page('/packing', PackingPage, 'packing.execute'),
+    page('/returns', ReturnsPage, 'returns.read'),
+    page('/scan', ScanPage, 'inventory.read'),
     page('/articles', ArticlesPage, 'articles.read'),
     page('/customers', CustomersPage, 'customers.read'),
     page('/suppliers', SuppliersPage, 'suppliers.read'),

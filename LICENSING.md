@@ -42,6 +42,10 @@ Die Module **Artikel, Kunden, Lieferanten und Lager** sind verfügbar (`availabl
 
 Die Module **Aufträge** und **Dokumente** (Belege) sind verfügbar und im Paket Starter enthalten. **Einkauf** ist verfügbar und ab Paket Business enthalten. Weil Systemrollen alle Rechte im Code haben, können Administratoren die Rolle „Administrator“ auch dann weitergeben, wenn Rechte noch nicht gebuchter Module darin stecken; diese Rechte wirken erst mit der Buchung. Wer eine eigene Rolle ohne diese Rechte hat, kann sie nicht vergeben.
 
+## Hinweis Phase 4
+
+Picklisten und die mobile Scan-Seite gehören zum Modul **Lager** (alle Pakete). **FangEvo Pack**, **Versand** und **Retouren** sind ab Paket **Business** enthalten.
+
 ## Status und Zugriff
 
 | Status                  | Zugriff                                                                                                             |

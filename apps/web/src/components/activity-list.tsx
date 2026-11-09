@@ -94,6 +94,18 @@ export const ACTION_LABELS: Record<string, string> = {
   'purchase_order.sent': 'hat eine Bestellung per E-Mail versendet',
   'purchase_order.received': 'hat einen Wareneingang gebucht',
   'purchase_order.cancelled': 'hat eine Bestellung storniert',
+  'article.barcode_added': 'hat einen Barcode hinzugefügt',
+  'article.barcode_removed': 'hat einen Barcode entfernt',
+  'pick_list.created': 'hat eine Pickliste erstellt',
+  'pick_list.completed': 'hat eine Pickliste abgeschlossen',
+  'pick_list.cancelled': 'hat eine Pickliste storniert',
+  'packing_station.created': 'hat einen Packplatz angelegt',
+  'packing_station.updated': 'hat einen Packplatz geändert',
+  'shipment.created': 'hat eine Sendung erstellt',
+  'shipment.tracking_set': 'hat eine Trackingnummer eingetragen',
+  'return.created': 'hat eine Retoure angelegt',
+  'return.received': 'hat den Eingang einer Retoure gebucht',
+  'return.cancelled': 'hat eine Retoure storniert',
 };
 
 const FIELD_LABELS: Record<string, string> = {
