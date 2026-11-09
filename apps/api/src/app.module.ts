@@ -1,0 +1,97 @@
+import { type DynamicModule, Logger, Module } from '@nestjs/common';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { LoggerModule } from 'nestjs-pino';
+import { APP_CONFIG, type AppConfig } from './config';
+import { AccessGuard } from './core/access/access.guard';
+import { AccessService } from './core/access/access.service';
+import { AccountController } from './core/accounts/account.controller';
+import { ProvisioningService } from './core/accounts/provisioning.service';
+import { AuditController } from './core/audit/audit.controller';
+import { AuditService } from './core/audit/audit.service';
+import { AuthController } from './core/auth/auth.controller';
+import { AuthService } from './core/auth/auth.service';
+import { MfaService } from './core/auth/mfa.service';
+import { SessionService } from './core/auth/session.service';
+import { CompaniesController } from './core/companies/companies.controller';
+import { CompaniesService } from './core/companies/companies.service';
+import { Database } from './core/database/database.service';
+import { RedisService } from './core/database/redis.service';
+import { HealthController } from './core/health/health.controller';
+import { ProblemFilter } from './core/http/problem.filter';
+import { LicenseController } from './core/licensing/license.controller';
+import { MailService } from './core/mail/mail.service';
+import { MembersController } from './core/members/members.controller';
+import { MembersService } from './core/members/members.service';
+import { RolesController } from './core/roles/roles.controller';
+import { RolesService } from './core/roles/roles.service';
+import { RateLimitGuard } from './core/security/rate-limit.guard';
+
+/**
+ * FangEvo Core (Phase 1). Fachmodule (Artikel, Aufträge, …) werden ab Phase 3
+ * als eigene Nest-Module unter modules/ ergänzt und hier importiert.
+ */
+@Module({})
+export class AppModule {
+  static forRoot(config: AppConfig): DynamicModule {
+    return {
+      module: AppModule,
+      imports: [
+        LoggerModule.forRoot({
+          pinoHttp: {
+            level: config.NODE_ENV === 'test' ? 'silent' : config.LOG_LEVEL,
+            transport:
+              config.isProd || config.NODE_ENV === 'test'
+                ? undefined
+                : { target: 'pino/file', options: { destination: 1 } },
+            redact: {
+              paths: [
+                'req.headers.cookie',
+                'req.headers.authorization',
+                'res.headers["set-cookie"]',
+                '*.password',
+                '*.newPassword',
+                '*.currentPassword',
+                '*.token',
+                '*.code',
+              ],
+              censor: '[entfernt]',
+            },
+            customProps: (req) => ({
+              userId: (req as { fangevo?: { user?: { id?: string } } }).fangevo?.user?.id,
+            }),
+          },
+        }),
+      ],
+      controllers: [
+        HealthController,
+        AuthController,
+        AccountController,
+        CompaniesController,
+        MembersController,
+        RolesController,
+        AuditController,
+        LicenseController,
+      ],
+      providers: [
+        { provide: APP_CONFIG, useValue: config },
+        { provide: Logger, useValue: new Logger('FangEvo') },
+        Database,
+        RedisService,
+        MailService,
+        AuditService,
+        SessionService,
+        AccessService,
+        MfaService,
+        ProvisioningService,
+        AuthService,
+        CompaniesService,
+        MembersService,
+        RolesService,
+        { provide: APP_FILTER, useClass: ProblemFilter },
+        // Reihenfolge wichtig: zuerst Rate-Limit, dann Zugriffskontrolle
+        { provide: APP_GUARD, useClass: RateLimitGuard },
+        { provide: APP_GUARD, useClass: AccessGuard },
+      ],
+    };
+  }
+}

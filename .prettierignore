@@ -1,0 +1,4 @@
+pnpm-lock.yaml
+**/migrations/**/*.sql
+docs/product/MASTER_PLAYBOOK_v1.0.md
+apps/web/src/routeTree.gen.ts
