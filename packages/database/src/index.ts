@@ -27,6 +27,9 @@ export type {
   PickList,
   Shipment,
   Return,
+  ImportJob,
+  ApiKey,
+  SalesChannel,
 } from '@prisma/client';
 export { createPrismaClient } from './client';
 export { withTenant, type Tx, type DbContext } from './tenant';

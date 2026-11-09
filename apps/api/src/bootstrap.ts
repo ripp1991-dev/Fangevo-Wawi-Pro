@@ -20,6 +20,14 @@ export async function createApp(config: AppConfig): Promise<NestFastifyApplicati
     { bufferLogs: true },
   );
   app.useLogger(app.get(PinoLogger));
+  // Datei-Uploads (Import) dürfen größer sein als normale Anfragen (1 MB)
+  app
+    .getHttpAdapter()
+    .getInstance()
+    .addHook('onRoute', (route) => {
+      if (route.method === 'POST' && route.url === '/api/v1/imports')
+        route.bodyLimit = 15 * 1024 * 1024;
+    });
   app.setGlobalPrefix('api/v1', { exclude: ['health'] });
 
   await app.register(cookie);

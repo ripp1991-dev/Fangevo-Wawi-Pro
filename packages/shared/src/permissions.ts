@@ -65,6 +65,16 @@ export const PERMISSIONS = {
     module: 'returns',
     label: 'Retouren anlegen, Wareneingang buchen und Gutschriften auslösen',
   },
+  'import.execute': {
+    module: 'import',
+    label: 'Daten importieren und exportieren (FangEvo Import)',
+  },
+  'api_keys.manage': { module: 'api', label: 'API-Schlüssel anlegen und sperren' },
+  'channels.read': { module: 'multichannel', label: 'Verkaufskanäle ansehen' },
+  'channels.manage': {
+    module: 'multichannel',
+    label: 'Verkaufskanäle einrichten und Artikel je Kanal pflegen',
+  },
 } as const satisfies Record<string, { module: string; label: string }>;
 
 export type Permission = keyof typeof PERMISSIONS;

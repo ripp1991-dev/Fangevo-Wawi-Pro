@@ -31,6 +31,10 @@ import { CustomFieldsService } from './core/customfields/custom-fields.service';
 import { DashboardsController } from './core/dashboards/dashboards.controller';
 import { EventDispatcher } from './core/events/dispatcher.service';
 import { EVENT_HANDLERS } from './core/events/event-types';
+import { JOB_HANDLERS, JobQueue } from './core/jobs/job-queue.service';
+import { ImportController } from './modules/import/import.controller';
+import { ImportService } from './modules/import/import.service';
+import { MasterDataService } from './modules/settings/master-data.service';
 import { NotificationHandler } from './core/notifications/notification.handler';
 import { NotificationsController } from './core/notifications/notifications.controller';
 import { NotificationsService } from './core/notifications/notifications.service';
@@ -134,6 +138,8 @@ export class AppModule {
         PickListsController,
         PackingController,
         ReturnsController,
+        // Phase 5: Import, API, Multichannel
+        ImportController,
       ],
       providers: [
         { provide: APP_CONFIG, useValue: config },
@@ -172,6 +178,14 @@ export class AppModule {
         PickingService,
         PackingService,
         ReturnsService,
+        MasterDataService,
+        ImportService,
+        {
+          provide: JOB_HANDLERS,
+          useFactory: (i: ImportService) => [i],
+          inject: [ImportService],
+        },
+        JobQueue,
         { provide: APP_FILTER, useClass: ProblemFilter },
         // Reihenfolge wichtig: zuerst Rate-Limit, dann Zugriffskontrolle
         { provide: APP_GUARD, useClass: RateLimitGuard },

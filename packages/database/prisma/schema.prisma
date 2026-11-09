@@ -854,6 +854,8 @@ model SalesOrder {
   notes            String?
   cancelReason     String?   @map("cancel_reason")
   shippedAt        DateTime? @map("shipped_at")
+  /// Phase 5: Verkaufskanal, über den der Auftrag kam (leer = manuell)
+  channelId        String?   @map("channel_id") @db.Uuid
   createdAt        DateTime  @default(now()) @map("created_at")
   createdBy        String?   @map("created_by") @db.Uuid
   updatedAt        DateTime  @updatedAt @map("updated_at")
@@ -1185,4 +1187,179 @@ model ReturnLine {
 
   @@index([returnId])
   @@map("return_lines")
+}
+
+// ───────────── Phase 5: Import, API, Multichannel ─────────────
+
+/// Globale Warteschlange für Hintergrundaufgaben (nur IDs, keine Fachdaten; ohne RLS wie outbox_pending)
+model JobQueue {
+  id          String    @id @db.Uuid
+  /// import | channel_sync | …
+  kind        String
+  accountId   String    @map("account_id") @db.Uuid
+  companyId   String?   @map("company_id") @db.Uuid
+  userId      String?   @map("user_id") @db.Uuid
+  refId       String    @map("ref_id") @db.Uuid
+  availableAt DateTime  @default(now()) @map("available_at")
+  lockedUntil DateTime? @map("locked_until")
+  attempts    Int       @default(0)
+  lastError   String?   @map("last_error")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([availableAt])
+  @@map("job_queue")
+}
+
+model ImportJob {
+  id            String    @id @db.Uuid
+  accountId     String    @map("account_id") @db.Uuid
+  companyId     String    @map("company_id") @db.Uuid
+  entity        String
+  /// uploaded | validated | queued | running | done | failed | rolled_back
+  status        String    @default("uploaded")
+  fileName      String    @map("file_name")
+  headers       Json
+  rows          Json
+  config        Json?
+  totalRows     Int       @default(0) @map("total_rows")
+  processedRows Int       @default(0) @map("processed_rows")
+  okRows        Int       @default(0) @map("ok_rows")
+  errorRows     Int       @default(0) @map("error_rows")
+  /// [{row, message}] (höchstens 1000)
+  errors        Json      @default("[]")
+  dryRun        Json?     @map("dry_run")
+  createdBy     String?   @map("created_by") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at")
+  startedAt     DateTime? @map("started_at")
+  finishedAt    DateTime? @map("finished_at")
+
+  @@index([companyId, createdAt])
+  @@map("import_jobs")
+}
+
+/// Was ein Import angelegt oder geändert hat (für Historie und Rückgängig)
+model ImportJobRecord {
+  id         String @id @db.Uuid
+  accountId  String @map("account_id") @db.Uuid
+  companyId  String @map("company_id") @db.Uuid
+  jobId      String @map("job_id") @db.Uuid
+  rowNumber  Int    @map("row_number")
+  entityType String @map("entity_type")
+  entityId   String @map("entity_id") @db.Uuid
+  /// created | updated | booked
+  action     String
+
+  @@index([jobId])
+  @@map("import_job_records")
+}
+
+model ImportTemplate {
+  id        String   @id @db.Uuid
+  accountId String   @map("account_id") @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  entity    String
+  name      String
+  columns   Json
+  config    Json
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([companyId, entity, name])
+  @@map("import_templates")
+}
+
+/// API-Schlüssel einer Firma (nur der Hash wird gespeichert)
+model ApiKey {
+  id          String    @id @db.Uuid
+  accountId   String    @map("account_id") @db.Uuid
+  companyId   String    @map("company_id") @db.Uuid
+  name        String
+  /// erste Zeichen zur Wiedererkennung, z. B. "fe_live_3fA9"
+  prefix      String
+  permissions String[]
+  createdBy   String    @map("created_by") @db.Uuid
+  expiresAt   DateTime? @map("expires_at")
+  revokedAt   DateTime? @map("revoked_at")
+  lastUsedAt  DateTime? @map("last_used_at")
+  lastUsedIp  String?   @map("last_used_ip")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([companyId])
+  @@map("api_keys")
+}
+
+/// Globale Zuordnung Schlüssel-Hash → Account (ohne RLS, ohne Fachdaten)
+model ApiKeyIndex {
+  hash      String @id
+  keyId     String @unique @map("key_id") @db.Uuid
+  accountId String @map("account_id") @db.Uuid
+
+  @@map("api_key_index")
+}
+
+model SalesChannel {
+  id          String    @id @db.Uuid
+  accountId   String    @map("account_id") @db.Uuid
+  companyId   String    @map("company_id") @db.Uuid
+  /// api (eigener Shop über API); weitere Typen erst nach Sandbox-Test
+  type        String
+  name        String
+  active      Boolean   @default(true)
+  config      Json      @default("{}")
+  /// verschlüsselte Zugangsdaten (AES-256-GCM)
+  secretsEnc  String?   @map("secrets_enc")
+  warehouseId String    @map("warehouse_id") @db.Uuid
+  apiKeyId    String?   @map("api_key_id") @db.Uuid
+  status      String    @default("ok")
+  lastSyncAt  DateTime? @map("last_sync_at")
+  lastError   String?   @map("last_error")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  archivedAt  DateTime? @map("archived_at")
+
+  @@unique([companyId, name])
+  @@map("sales_channels")
+}
+
+model ChannelLog {
+  id        String   @id @db.Uuid
+  accountId String   @map("account_id") @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  channelId String   @map("channel_id") @db.Uuid
+  /// info | warning | error
+  level     String
+  message   String
+  data      Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([channelId, createdAt])
+  @@map("channel_logs")
+}
+
+/// Kanalbezogene Artikeldaten (aktiv im Kanal, abweichender Preis)
+model ChannelListing {
+  accountId String   @map("account_id") @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  channelId String   @map("channel_id") @db.Uuid
+  articleId String   @map("article_id") @db.Uuid
+  active    Boolean  @default(true)
+  priceNet  Decimal? @map("price_net") @db.Decimal(19, 4)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@id([channelId, articleId])
+  @@map("channel_listings")
+}
+
+/// Zuordnung externer IDs (z. B. Bestellnummer im Shop) zu internen Datensätzen
+model ExternalRef {
+  id         String   @id @db.Uuid
+  accountId  String   @map("account_id") @db.Uuid
+  companyId  String   @map("company_id") @db.Uuid
+  channelId  String   @map("channel_id") @db.Uuid
+  entityType String   @map("entity_type")
+  externalId String   @map("external_id")
+  internalId String   @map("internal_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([channelId, entityType, externalId])
+  @@index([internalId])
+  @@map("external_refs")
 }
