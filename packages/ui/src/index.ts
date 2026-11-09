@@ -13,3 +13,4 @@ export {
 } from './layout';
 export { Table, THead, TBody, TR, TH, TD } from './table';
 export { Dialog } from './dialog';
+export { Popover } from './popover';

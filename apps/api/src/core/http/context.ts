@@ -13,6 +13,7 @@ export interface AccountContext {
   entitlement: EntitlementSnapshot;
   accessMode: AccessMode;
   allCompanies: boolean;
+  /** Zugängliche aktive Firmen. Nur gefüllt, wenn allCompanies = false. */
   companyIds: string[];
 }
 

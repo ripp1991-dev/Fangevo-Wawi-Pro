@@ -30,6 +30,10 @@ Preise und Modulzuordnung sind **Platzhalter** und müssen kalkuliert werden (`p
 | E. Schnittstellenlizenz       | ⏳ Feld `max_connectors` vorhanden, Prüfung kommt mit den Connectoren (Phase 5)                |
 | F. Individuelle Integration   | ⏳ Phase 7                                                                                     |
 
+## Hinweis Phase 2
+
+Neues Recht `custom_fields.manage` (Modul Core). Systemrollen erhalten neue Rechte automatisch, weil ihre Rechte aus dem Code gelesen werden. Dashboard-Widgets und Menüeinträge erscheinen nur, wenn Recht und Modul vorhanden sind.
+
 ## Status und Zugriff
 
 | Status                  | Zugriff                                                                                                             |

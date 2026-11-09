@@ -1,22 +1,9 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { FileClock } from 'lucide-react';
-import { useState } from 'react';
-import {
-  Alert,
-  Button,
-  Card,
-  EmptyState,
-  PageHeader,
-  Select,
-  Spinner,
-  TBody,
-  TD,
-  TH,
-  THead,
-  TR,
-  Table,
-} from '@fangevo/ui';
-import { errorMessage, http } from '../../lib/api';
+import { Button, PageHeader } from '@fangevo/ui';
+import { ACTION_LABELS, changeSummary } from '../../components/activity-list';
+import { DataTable } from '../../components/table/data-table';
+import { type Column } from '../../components/table/types';
+import { http } from '../../lib/api';
 import { formatDateTime } from '../../lib/format';
 
 interface AuditItem {
@@ -24,130 +11,136 @@ interface AuditItem {
   action: string;
   entityType: string | null;
   entityId: string | null;
-  data: unknown;
+  data: Record<string, unknown> | null;
   ip: string | null;
   createdAt: string;
   user: { name: string; email: string } | null;
 }
 
-const ACTIONS: Record<string, string> = {
-  'account.created': 'Account angelegt',
-  'account.updated': 'Account geändert',
-  'auth.login': 'Anmeldung',
-  'company.created': 'Firma angelegt',
-  'company.updated': 'Firma geändert',
-  'company.archived': 'Firma archiviert',
-  'company.restored': 'Firma wiederhergestellt',
-  'member.invited': 'Person eingeladen',
-  'member.invitation_revoked': 'Einladung widerrufen',
-  'member.joined': 'Person beigetreten',
-  'member.access_changed': 'Rechte geändert',
-  'member.disabled': 'Person gesperrt',
-  'member.enabled': 'Person entsperrt',
-  'role.created': 'Rolle angelegt',
-  'role.updated': 'Rolle geändert',
-  'role.deleted': 'Rolle gelöscht',
-};
+const AREAS = [
+  { value: 'auth', label: 'Anmeldung' },
+  { value: 'company', label: 'Firmen' },
+  { value: 'member', label: 'Benutzer' },
+  { value: 'role', label: 'Rollen' },
+  { value: 'custom_field', label: 'Eigene Felder' },
+  { value: 'account', label: 'Account' },
+  { value: 'dashboard', label: 'Dashboard' },
+  { value: 'security', label: 'Sicherheit' },
+];
+
+const columns: Column<AuditItem>[] = [
+  {
+    id: 'createdAt',
+    header: 'Zeitpunkt',
+    kind: 'date',
+    sortable: true,
+    width: 170,
+    value: (i) => i.createdAt,
+    text: (i) => formatDateTime(i.createdAt),
+  },
+  {
+    id: 'area',
+    header: 'Bereich',
+    kind: 'enum',
+    groupable: true,
+    width: 130,
+    options: AREAS,
+    value: (i) => i.action.split('.')[0],
+    text: (i) => AREAS.find((a) => a.value === i.action.split('.')[0])?.label ?? i.action,
+  },
+  {
+    id: 'action',
+    header: 'Aktion',
+    kind: 'string',
+    sortable: true,
+    width: 260,
+    value: (i) => i.action,
+    text: (i) => ACTION_LABELS[i.action] ?? i.action,
+  },
+  {
+    id: 'user',
+    header: 'Person',
+    kind: 'string',
+    sortable: true,
+    groupable: true,
+    width: 200,
+    value: (i) => i.user?.name ?? 'System',
+    cell: (i) =>
+      i.user ? (
+        <div className="truncate">
+          <p className="truncate">{i.user.name}</p>
+          <p className="truncate text-xs text-muted">{i.user.email}</p>
+        </div>
+      ) : (
+        <span className="text-muted">System</span>
+      ),
+  },
+  {
+    id: 'details',
+    header: 'Details',
+    kind: 'string',
+    filterable: false,
+    width: 320,
+    value: (i) => changeSummary(i.data).join(' · '),
+    cell: (i) => {
+      const c = changeSummary(i.data);
+      return c.length ? (
+        <span title={c.join('\n')}>{c.join(' · ')}</span>
+      ) : i.data ? (
+        <details onClick={(e) => e.stopPropagation()}>
+          <summary className="cursor-pointer text-primary">anzeigen</summary>
+          <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded bg-surface-2 p-2 text-xs">
+            {JSON.stringify(i.data, null, 2)}
+          </pre>
+        </details>
+      ) : (
+        '–'
+      );
+    },
+  },
+  { id: 'ip', header: 'IP', kind: 'string', defaultHidden: true, width: 130, value: (i) => i.ip },
+];
 
 export function AuditPage() {
-  const [filter, setFilter] = useState('');
   const q = useInfiniteQuery({
-    queryKey: ['audit', filter],
+    queryKey: ['audit'],
     initialPageParam: '',
     queryFn: ({ pageParam }) =>
       http.get<{ items: AuditItem[]; nextCursor: string | null }>(
-        `/admin/audit?limit=50${pageParam ? `&cursor=${pageParam}` : ''}${filter ? `&action=${filter}` : ''}`,
+        `/admin/audit?limit=200${pageParam ? `&cursor=${pageParam}` : ''}`,
       ),
-    getNextPageParam: (last) => last.nextCursor ?? undefined,
+    getNextPageParam: (p) => p.nextCursor ?? undefined,
   });
-  const items = q.data?.pages.flatMap((p) => p.items) ?? [];
+  const rows = q.data?.pages.flatMap((p) => p.items);
   return (
     <>
       <PageHeader
         title="Audit-Log"
         description="Lückenloses, unveränderliches Protokoll aller wichtigen Änderungen in diesem Account."
       />
-      <Card>
-        <div className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3">
-          <label htmlFor="audit-filter" className="text-sm text-muted">
-            Bereich
-          </label>
-          <Select
-            id="audit-filter"
-            className="w-56"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-          >
-            <option value="">Alle</option>
-            <option value="auth.">Anmeldungen</option>
-            <option value="company.">Firmen</option>
-            <option value="member.">Benutzer</option>
-            <option value="role.">Rollen</option>
-            <option value="account.">Account</option>
-          </Select>
-        </div>
-        {q.isPending ? (
-          <Spinner />
-        ) : q.isError ? (
-          <div className="p-4">
-            <Alert tone="danger">{errorMessage(q.error)}</Alert>
-          </div>
-        ) : !items.length ? (
-          <EmptyState icon={<FileClock />} title="Keine Einträge" />
-        ) : (
-          <Table>
-            <THead>
-              <tr>
-                <TH>Zeitpunkt</TH>
-                <TH>Aktion</TH>
-                <TH>Person</TH>
-                <TH>Details</TH>
-              </tr>
-            </THead>
-            <TBody>
-              {items.map((i) => (
-                <TR key={i.id}>
-                  <TD className="whitespace-nowrap text-muted">{formatDateTime(i.createdAt)}</TD>
-                  <TD className="font-medium">{ACTIONS[i.action] ?? i.action}</TD>
-                  <TD>
-                    {i.user ? (
-                      <>
-                        {i.user.name}
-                        <p className="text-xs text-muted">{i.user.email}</p>
-                      </>
-                    ) : (
-                      <span className="text-muted">System</span>
-                    )}
-                  </TD>
-                  <TD className="max-w-md">
-                    {i.data ? (
-                      <details>
-                        <summary className="cursor-pointer text-sm text-primary">anzeigen</summary>
-                        <pre className="mt-2 max-h-48 overflow-auto rounded bg-surface-2 p-2 text-xs">
-                          {JSON.stringify(i.data, null, 2)}
-                        </pre>
-                      </details>
-                    ) : (
-                      <span className="text-muted">–</span>
-                    )}
-                  </TD>
-                </TR>
-              ))}
-            </TBody>
-          </Table>
-        )}
-        {q.hasNextPage && (
-          <div className="border-t border-border p-3 text-center">
+      <DataTable<AuditItem>
+        tableKey="audit"
+        mode="client"
+        rows={rows}
+        loading={q.isPending}
+        error={q.error}
+        columns={columns}
+        rowId={(i) => i.id}
+        exportName="audit-log"
+        initial={{ sort: 'createdAt:desc' }}
+        footer={
+          q.hasNextPage && (
             <Button
               variant="secondary"
+              size="sm"
               loading={q.isFetchingNextPage}
               onClick={() => q.fetchNextPage()}
             >
-              Ältere laden
+              Ältere Einträge laden
             </Button>
-          </div>
-        )}
-      </Card>
+          )
+        }
+      />
     </>
   );
 }

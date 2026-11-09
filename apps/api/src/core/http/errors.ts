@@ -10,6 +10,7 @@ export class AppError extends HttpException {
     public readonly errors?: { path: string; message: string }[],
   ) {
     super({ code, detail }, status);
+    this.message = detail ?? code;
   }
 }
 

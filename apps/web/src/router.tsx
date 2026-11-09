@@ -27,7 +27,8 @@ import {
   ResetPasswordPage,
   VerifyEmailPage,
 } from './pages/auth/token-pages';
-import { DashboardPage } from './pages/dashboard';
+import { DashboardPage } from './pages/dashboard/dashboard';
+import { CustomFieldsPage } from './pages/admin/custom-fields';
 import { SecurityPage } from './pages/settings/security';
 
 const root = createRootRouteWithContext<{ queryClient: QueryClient }>()({ component: Outlet });
@@ -123,6 +124,7 @@ const routeTree = root.addChildren([
     page('/admin/members', MembersPage, 'users.read'),
     page('/admin/roles', RolesPage, 'roles.read'),
     page('/admin/audit', AuditPage, 'audit.read'),
+    page('/admin/custom-fields', CustomFieldsPage, 'custom_fields.manage'),
     page('/admin/license', LicensePage, 'license.read'),
     page('/admin/account', AccountPage, 'account.manage'),
     createRoute({ getParentRoute: () => app, path: '/settings/security', component: SecurityPage }),

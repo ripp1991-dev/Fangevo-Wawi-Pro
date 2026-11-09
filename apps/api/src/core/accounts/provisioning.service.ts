@@ -4,6 +4,7 @@ import { DEFAULT_TRIAL_DAYS, PLANS } from '@fangevo/licensing';
 import { SYSTEM_ROLES } from '@fangevo/shared';
 import { AuditService } from '../audit/audit.service';
 import { Database } from '../database/database.service';
+import { SearchService } from '../search/search.service';
 
 /**
  * Legt einen neuen FangEvo-Account vollständig an:
@@ -14,6 +15,7 @@ export class ProvisioningService {
   constructor(
     @Inject(Database) private readonly db: Database,
     @Inject(AuditService) private readonly audit: AuditService,
+    @Inject(SearchService) private readonly search: SearchService,
   ) {}
 
   async createAccount(input: {
@@ -28,10 +30,24 @@ export class ProvisioningService {
       await tx.company.create({
         data: { id: companyId, accountId, name: input.accountName, createdBy: input.ownerUserId },
       });
+      await this.search.indexCompanyBasic(tx, accountId, {
+        id: companyId,
+        name: input.accountName,
+      });
       await this.createSystemRoles(tx, accountId);
+      const membershipId = uuidv7();
+      const owner = await this.db.global.user.findUniqueOrThrow({
+        where: { id: input.ownerUserId },
+        select: { name: true, email: true },
+      });
+      await this.search.indexMember(tx, accountId, {
+        id: membershipId,
+        disabled: false,
+        user: owner,
+      });
       await tx.membership.create({
         data: {
-          id: uuidv7(),
+          id: membershipId,
           accountId,
           userId: input.ownerUserId,
           isOwner: true,
@@ -76,6 +92,11 @@ export class ProvisioningService {
       const id = uuidv7();
       await tx.role.create({
         data: { id, accountId, name: def.name, description: def.description, systemKey: key },
+      });
+      await this.search.indexRole(tx, accountId, {
+        id,
+        name: def.name,
+        description: def.description,
       });
       await tx.rolePermission.createMany({
         data: def.permissions.map((permission) => ({ accountId, roleId: id, permission })),

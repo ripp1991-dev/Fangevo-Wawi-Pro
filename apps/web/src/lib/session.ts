@@ -50,7 +50,10 @@ export function resolveActiveCompany(s: SessionData): string | null {
   } catch {
     /* Speicher nicht verfügbar */
   }
-  const id = acc.companies.find((c) => c.id === stored)?.id ?? acc.companies[0]!.id;
+  const known = acc.companies.find((c) => c.id === stored)?.id;
+  const id = known ?? acc.companies[0]!.id;
+  // Erste Wahl merken, damit neu angelegte Firmen die aktive Firma nicht verschieben
+  if (!known) storeActiveCompany(acc.id, id);
   setActiveCompany(id);
   return id;
 }

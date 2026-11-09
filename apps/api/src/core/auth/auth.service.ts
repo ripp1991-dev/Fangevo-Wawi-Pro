@@ -120,12 +120,14 @@ export class AuthService {
       );
 
     const accountId = await this.pickAccount(user.id, user.lastAccountId);
+    const newDevice = await this.isNewDevice(user.id, client);
     const { token, session } = await this.sessions.create({
       userId: user.id,
       accountId,
       mfaPending: user.mfaEnabled,
       ...client,
     });
+    if (newDevice) await this.reportNewDevice(user, accountId, client);
     await this.audit.security({
       type: user.mfaEnabled ? 'auth.login_password_ok' : 'auth.login',
       userId: user.id,
@@ -150,6 +152,45 @@ export class AuthService {
     await this.audit.security({ type: 'auth.login', userId, ...client });
     const s = await this.db.global.session.findUnique({ where: { id: sessionId } });
     if (s?.accountId) await this.auditLogin(userId, s.accountId, sessionId, client.ip);
+  }
+
+  /** Neues Gerät = es gab schon Anmeldungen, aber noch keine mit diesem Browser. */
+  private async isNewDevice(userId: string, client: ClientInfo): Promise<boolean> {
+    const previous = await this.db.global.session.findMany({
+      where: { userId, mfaPending: false },
+      select: { userAgent: true },
+      take: 200,
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!previous.length) return false;
+    return !previous.some((s) => s.userAgent === (client.userAgent?.slice(0, 300) ?? null));
+  }
+
+  /** Sicherheitshinweis: immer per E-Mail, zusätzlich als Benachrichtigung im aktiven Account. */
+  private async reportNewDevice(
+    user: { id: string; email: string; name: string },
+    accountId: string | null,
+    client: ClientInfo,
+  ): Promise<void> {
+    await this.audit.security({ type: 'auth.new_device', userId: user.id, ...client });
+    await this.mail.send({
+      to: user.email,
+      subject: 'Neue Anmeldung bei FangEvo Wawi Pro',
+      text: `Hallo ${user.name},\n\nIhr Zugang wurde soeben von einem neuen Gerät verwendet:\n${client.userAgent ?? 'Unbekanntes Gerät'} (IP ${client.ip ?? '–'})\n\nWaren Sie das nicht? Ändern Sie sofort Ihr Passwort: ${this.mail.link('/forgot-password', '')}`,
+    });
+    if (accountId) {
+      await this.db.tenant({ accountId, userId: user.id }, (tx) =>
+        this.audit.record(tx, {
+          accountId,
+          userId: user.id,
+          action: 'security.new_device',
+          entityType: 'user',
+          entityId: user.id,
+          data: { userAgent: client.userAgent?.slice(0, 200), ip: client.ip },
+          ip: client.ip,
+        }),
+      );
+    }
   }
 
   private async auditLogin(

@@ -63,3 +63,22 @@ REST unter `/api/v1`, Health-Check unter `/health`. Maschinenlesbar: [`docs/api/
 | `GET /context/company`                                                                                       | Header `X-Company-Id` |
 
 Webhooks, API-Schlüssel und OAuth2 für externe Systeme: Phase 5/6.
+
+## Endpunkte (Phase 2)
+
+| Endpunkt                                                                                      | Recht / Hinweis                                              |
+| --------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `GET /admin/companies?q=&sort=feld:asc&filters=<JSON>&page=&pageSize=&archived=`              | `companies.read`; Antwort `{ items, total, page, pageSize }` |
+| `GET /notifications`, `POST /notifications/:id/read`, `POST /notifications/read-all`          | eigene Benachrichtigungen                                    |
+| `GET/PUT /notifications/preferences`                                                          | eigene Einstellungen (`{ "company.created": false }`)        |
+| `GET /activity?entityType=&entityId=&cursor=&limit=`                                          | Datensatz: dessen Leserecht; gesamt: `audit.read`            |
+| `GET /custom-fields?entityType=company`                                                       | alle Mitglieder                                              |
+| `POST /custom-fields`, `PUT /custom-fields/:id`, `POST …/archive`, `POST …/restore`           | `custom_fields.manage`                                       |
+| `GET /search?q=&limit=`                                                                       | Treffer nur mit passendem Recht und Firmenzugriff            |
+| `GET/POST /views?table=`, `PUT/DELETE /views/:id`                                             | eigene bzw. freigegebene Ansichten; ändern nur Ersteller     |
+| `GET/PUT /preferences/:key`, `PUT /preferences/:key/reset`                                    | persönlich (`nav`)                                           |
+| `PUT /admin/preferences/:key`                                                                 | `account.manage` (Standard für alle)                         |
+| `GET /dashboards`, `POST /dashboards`, `PUT/DELETE /dashboards/:id`, `POST /dashboards/reset` | persönlich                                                   |
+| `POST /admin/dashboards/template`                                                             | `account.manage` (eigene Seiten als Vorlage für alle)        |
+
+**Filter-Format:** `filters=[{"field":"country","op":"eq","value":"AT"},{"field":"cf.region","op":"in","value":["nord","west"]}]`. Operatoren: `eq`, `neq`, `contains`, `in`, `gte`, `lte`, `empty`, `notEmpty` (die letzten beiden noch nicht für eigene Felder). Unbekannte Felder → `422`.

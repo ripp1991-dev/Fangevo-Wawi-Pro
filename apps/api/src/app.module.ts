@@ -25,6 +25,19 @@ import { MembersService } from './core/members/members.service';
 import { RolesController } from './core/roles/roles.controller';
 import { RolesService } from './core/roles/roles.service';
 import { RateLimitGuard } from './core/security/rate-limit.guard';
+import { ActivityController } from './core/activity/activity.controller';
+import { CustomFieldsController } from './core/customfields/custom-fields.controller';
+import { CustomFieldsService } from './core/customfields/custom-fields.service';
+import { DashboardsController } from './core/dashboards/dashboards.controller';
+import { EventDispatcher } from './core/events/dispatcher.service';
+import { EVENT_HANDLERS } from './core/events/event-types';
+import { NotificationHandler } from './core/notifications/notification.handler';
+import { NotificationsController } from './core/notifications/notifications.controller';
+import { NotificationsService } from './core/notifications/notifications.service';
+import { PreferencesController } from './core/preferences/preferences.controller';
+import { SearchController } from './core/search/search.controller';
+import { SearchService } from './core/search/search.service';
+import { ViewsController } from './core/views/views.controller';
 
 /**
  * FangEvo Core (Phase 1). Fachmodule (Artikel, Aufträge, …) werden ab Phase 3
@@ -71,6 +84,13 @@ export class AppModule {
         RolesController,
         AuditController,
         LicenseController,
+        NotificationsController,
+        ActivityController,
+        CustomFieldsController,
+        SearchController,
+        ViewsController,
+        PreferencesController,
+        DashboardsController,
       ],
       providers: [
         { provide: APP_CONFIG, useValue: config },
@@ -87,6 +107,16 @@ export class AppModule {
         CompaniesService,
         MembersService,
         RolesService,
+        CustomFieldsService,
+        SearchService,
+        NotificationsService,
+        NotificationHandler,
+        {
+          provide: EVENT_HANDLERS,
+          useFactory: (n: NotificationHandler) => [n],
+          inject: [NotificationHandler],
+        },
+        EventDispatcher,
         { provide: APP_FILTER, useClass: ProblemFilter },
         // Reihenfolge wichtig: zuerst Rate-Limit, dann Zugriffskontrolle
         { provide: APP_GUARD, useClass: RateLimitGuard },

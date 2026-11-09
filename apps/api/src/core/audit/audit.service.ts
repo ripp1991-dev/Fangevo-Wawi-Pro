@@ -30,7 +30,24 @@ export interface SecurityEventEntry {
 export class AuditService {
   constructor(@Inject(Database) private readonly db: Database) {}
 
+  /**
+   * Schreibt den Audit-Eintrag und das fachliche Ereignis (Outbox) in derselben Transaktion.
+   * Der Ereignis-Verteiler stellt es danach zu (Benachrichtigungen, später Webhooks/Workflows).
+   */
   async record(tx: Tx, e: AuditEntry): Promise<void> {
+    const eventId = uuidv7();
+    await tx.outboxEvent.create({
+      data: {
+        id: eventId,
+        accountId: e.accountId,
+        type: e.action,
+        entityType: e.entityType,
+        entityId: e.entityId,
+        actorUserId: e.userId,
+        payload: (e.data ?? undefined) as object | undefined,
+      },
+    });
+    await tx.outboxPending.create({ data: { eventId, accountId: e.accountId } });
     await tx.auditLog.create({
       data: {
         id: uuidv7(),

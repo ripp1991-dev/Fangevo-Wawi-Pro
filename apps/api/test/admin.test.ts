@@ -47,8 +47,8 @@ describe('Firmen und Firmenlizenz', () => {
     const restore = await client.post(`/admin/companies/${two.id}/restore`);
     expect(restore.body.code).toBe('LICENSE_LIMIT_REACHED');
     // Archivierte Firmen erscheinen nur auf Wunsch
-    expect((await client.get('/admin/companies')).body).toHaveLength(3);
-    expect((await client.get('/admin/companies?archived=true')).body).toHaveLength(4);
+    expect((await client.get('/admin/companies')).body.items).toHaveLength(3);
+    expect((await client.get('/admin/companies?archived=true')).body.total).toBe(4);
     expect(companyId).toBeTruthy();
   });
 
@@ -167,7 +167,7 @@ describe('Benutzer, Einladungen und Rechte', () => {
       companyIds: [owner.companyId],
     });
     const list = await m.client.get('/admin/companies');
-    expect(list.body.map((c: { id: string }) => c.id)).toEqual([owner.companyId]);
+    expect(list.body.items.map((c: { id: string }) => c.id)).toEqual([owner.companyId]);
     expect((await m.client.get(`/admin/companies/${second.id}`)).status).toBe(403);
     const ctx = await m.client.req('GET', '/context/company', undefined, {
       headers: { 'x-company-id': second.id },
@@ -319,7 +319,7 @@ describe('Lizenz-Kern', () => {
         data: { status: 'SUSPENDED' },
       }),
     );
-    expect((await owner.client.get('/admin/companies')).body).toHaveLength(1);
+    expect((await owner.client.get('/admin/companies')).body.items).toHaveLength(1);
     const w = await owner.client.post('/admin/companies', { name: 'X', country: 'DE' });
     expect(w.status).toBe(403);
     expect(w.body.code).toBe('ACCOUNT_SUSPENDED');

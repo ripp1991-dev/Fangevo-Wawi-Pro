@@ -1,9 +1,25 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { ALL_PERMISSIONS, isPermission, permissionModule, type Permission } from '@fangevo/shared';
+import {
+  ALL_PERMISSIONS,
+  SYSTEM_ROLES,
+  isPermission,
+  permissionModule,
+  type Permission,
+} from '@fangevo/shared';
 import { accessMode, hasModule, isModuleKey, type EntitlementSnapshot } from '@fangevo/licensing';
 import { type Entitlement } from '@fangevo/database';
 import { Database } from '../database/database.service';
 import { type AccountContext } from '../http/context';
+
+/** Rechte einer Rolle. Systemrollen kommen aus dem Code (neue Rechte wirken sofort für alle Accounts). */
+export function rolePermissions(role: {
+  systemKey: string | null;
+  permissions: { permission: string }[];
+}): string[] {
+  if (role.systemKey && role.systemKey in SYSTEM_ROLES)
+    return [...SYSTEM_ROLES[role.systemKey as keyof typeof SYSTEM_ROLES].permissions];
+  return role.permissions.map((p) => p.permission);
+}
 
 export function toSnapshot(e: Entitlement): EntitlementSnapshot {
   return {
@@ -61,14 +77,13 @@ export class AccessService {
       if (!ent) return null;
       const allCompanies = m.isOwner || m.allCompanies;
       // Zugängliche, nicht archivierte Firmen (bei "alle Firmen" alle des Accounts)
-      const companies = await tx.company.findMany({
-        where: {
-          accountId,
-          archivedAt: null,
-          ...(allCompanies ? {} : { id: { in: m.companies.map((c) => c.companyId) } }),
-        },
-        select: { id: true },
-      });
+      // Bei "alle Firmen" wird nicht aufgezählt (kann sehr viele sein); geprüft wird je Anfrage.
+      const companies = allCompanies
+        ? []
+        : await tx.company.findMany({
+            where: { accountId, archivedAt: null, id: { in: m.companies.map((c) => c.companyId) } },
+            select: { id: true },
+          });
       const entitlement = toSnapshot(ent);
       return {
         id: accountId,
@@ -77,7 +92,7 @@ export class AccessService {
         isOwner: m.isOwner,
         permissions: effectivePermissions({
           isOwner: m.isOwner,
-          rolePermissions: m.roles.flatMap((r) => r.role.permissions.map((p) => p.permission)),
+          rolePermissions: m.roles.flatMap((r) => rolePermissions(r.role)),
           directPermissions: m.permissions.map((p) => p.permission),
           entitlement,
         }),
@@ -87,6 +102,14 @@ export class AccessService {
         companyIds: companies.map((c) => c.id),
       };
     });
+  }
+
+  /** Prüft, ob eine aktive Firma im Account existiert (für Personen mit Zugriff auf alle Firmen). */
+  async companyExists(userId: string, accountId: string, companyId: string): Promise<boolean> {
+    return this.db.tenant(
+      { accountId, userId },
+      async (tx) => (await tx.company.count({ where: { id: companyId, archivedAt: null } })) > 0,
+    );
   }
 
   /** Accounts, in denen der Benutzer aktives Mitglied ist. */

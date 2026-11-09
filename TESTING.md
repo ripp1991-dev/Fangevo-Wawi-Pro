@@ -1,15 +1,16 @@
 # Tests
 
-## Übersicht (Stand Phase 1)
+## Übersicht (Stand Phase 2)
 
-| Ebene                              | Werkzeug                | Ort                                                                                  | Anzahl   |
-| ---------------------------------- | ----------------------- | ------------------------------------------------------------------------------------ | -------- |
-| Unit                               | Vitest                  | `packages/*/src/*.test.ts`, `apps/api/src/**/*.test.ts`, `apps/web/src/**/*.test.ts` | 25       |
-| Integration (API + echte DB/Redis) | Vitest + Fastify-Inject | `apps/api/test/auth.test.ts`, `admin.test.ts`                                        | 34       |
-| **Mandantentrennung (Pflicht)**    | Vitest                  | `apps/api/test/tenant-isolation.test.ts`                                             | 12       |
-| End-to-End im Browser              | Playwright              | `tests/e2e/core-flow.mjs`                                                            | 1 Ablauf |
+| Ebene                              | Werkzeug                | Ort                                                                                  | Anzahl    |
+| ---------------------------------- | ----------------------- | ------------------------------------------------------------------------------------ | --------- |
+| Unit                               | Vitest                  | `packages/*/src/*.test.ts`, `apps/api/src/**/*.test.ts`, `apps/web/src/**/*.test.ts` | 36        |
+| Integration (API + echte DB/Redis) | Vitest + Fastify-Inject | `apps/api/test/auth.test.ts`, `admin.test.ts`, `phase2.test.ts`                      | 50        |
+| **Mandantentrennung (Pflicht)**    | Vitest                  | `apps/api/test/tenant-isolation.test.ts`                                             | 14        |
+| End-to-End im Browser              | Playwright              | `tests/e2e/core-flow.mjs`, `tests/e2e/phase2-flow.mjs`                               | 2 Abläufe |
+| Last                               | eigenes Skript          | `apps/api/scripts/perf-lists.ts`                                                     | manuell   |
 
-Insgesamt 73 automatisierte Tests + E2E-Ablauf. Kein Merge ohne grüne CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
+Insgesamt 100 automatisierte Tests + 2 E2E-Abläufe. Kein Merge ohne grüne CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
 
 ## Ausführen
 
@@ -42,7 +43,22 @@ Der Ablauf: Registrieren (inkl. Validierungsfehler) → E-Mail bestätigen → A
 
 **Regel:** Jede neue mandantenbezogene Tabelle bzw. Ressource bekommt Tests in dieser Suite.
 
+## Lasttest Listen (Stand 2026-11-09, Cloud-Container, 4 CPU)
+
+100.000 Firmen in einem Account, gemessen über die echte API inkl. Anmeldung, Rechteprüfung und RLS (Median aus 5 Läufen):
+
+| Abfrage                         | Median |
+| ------------------------------- | ------ |
+| Erste Seite, sortiert nach Name | 73 ms  |
+| Seite 1000                      | 107 ms |
+| Sortiert nach Ort               | 66 ms  |
+| Textsuche                       | 183 ms |
+| Filter Land                     | 87 ms  |
+| Filter eigenes Feld             | 120 ms |
+| 1000 Zeilen (Export-Seite)      | 99 ms  |
+
+Ausführen: `pnpm --filter @fangevo/api perf:lists` (nur gegen `*_test`-Datenbanken).
+
 ## Grenzen
 
-- Die E2E-Stufe in der CI ist eingerichtet, lief aber bis zu diesem Stand nur lokal, noch nicht auf GitHub.
 - Last- und Performance-Tests (k6) folgen ab Phase 3.

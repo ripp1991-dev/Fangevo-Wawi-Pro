@@ -62,4 +62,22 @@ Ab Phase 3 tragen fachliche Tabellen zusätzlich `company_id`. Der Firmenkontext
 
 ## Noch nicht umgesetzt (bewusst später)
 
-Hintergrundjobs (BullMQ, ab Phase 3/5), Dateispeicher (S3, ab Phase 3), Outbox-/Domain-Events (Phase 2/6), Caching des Zugriffskontexts (bei Bedarf nach Lasttests), lokaler Hardware-Connector (Phase 4).
+Hintergrundjobs für Importe/PDF/Synchronisation (BullMQ, ab Phase 3/5), Dateispeicher (S3, ab Phase 3), Caching des Zugriffskontexts (bei Bedarf nach Lasttests), lokaler Hardware-Connector (Phase 4).
+
+## Phase 2: Ereignisse und Werkzeuge
+
+```
+Änderung (Service) ──► AuditService.record ──┬─► audit_logs
+                         (eine Transaktion)    ├─► outbox_events (Inhalt, RLS)
+                                               └─► outbox_pending (nur IDs, global)
+Worker / EventDispatcher ──► holt outbox_pending (SKIP LOCKED) ──► Transaktion mit Mandantenkontext
+                         ──► EventHandler (z. B. NotificationHandler) ──► notifications
+```
+
+- **Ereignisse** (ADR-006): Jede auditierte Aktion ist zugleich ein Ereignis. Neue Empfänger implementieren `EventHandler` und werden in `EVENT_HANDLERS` registriert (später Webhooks, Workflows).
+- **Listen:** `buildListArgs` übersetzt `?q=&sort=&filters=&page=&pageSize=` in Prisma-Bedingungen. Erlaubt sind nur Felder aus einer Freigabeliste (`FieldSpec`); eigene Felder mit Präfix `cf.`.
+- **Eigene Felder:** Definitionen in `custom_field_definitions`, Werte als JSONB am Datensatz (`custom_fields`). `CustomFieldsService.validate` prüft Typ, Pflicht, Optionen und Verweise (innerhalb des Mandanten).
+- **Suche:** `search_documents` wird in derselben Transaktion wie die Änderung gepflegt (`SearchService.upsert`). Abfrage: deutscher Volltext + Präfix + Trigramm, gefiltert nach Rechten und Firmenzugriff.
+- **Einstellungen und Dashboards:** persönlicher Wert vor Account-Standard vor eingebautem Standard. Widgets prüfen ihr Recht serverseitig beim Ausliefern.
+- **Zugriffskontext:** Bei „alle Firmen“ werden die Firmen nicht aufgezählt; eine angefragte Firma (`X-Company-Id`) wird gezielt geprüft.
+- **Frontend:** `DataTable` (Tabellen-Baukasten), `CommandPalette` (Strg+K), `NotificationBell` (Abfrage alle 30 s), Menü-Registrierung `lib/navigation.ts`, Dashboard mit `react-grid-layout`.
