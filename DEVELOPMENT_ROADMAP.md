@@ -1,6 +1,6 @@
 # FangEvo Wawi Pro – Entwicklungsplan
 
-**Stand:** 2026-11-09 · **Status:** Phase 0 und Phase 1 abgeschlossen · nächster Schritt: Freigabe Phase 2
+**Stand:** 2026-11-09 · **Status:** Phase 0 und Phase 1 abgeschlossen · Phase 2 geplant, wartet auf Freigabe
 Grundlage: [Master Playbook v1.0](docs/product/MASTER_PLAYBOOK_v1.0.md) · Technik: [ADR-001](docs/decisions/ADR-001_TECHNOLOGIE_EMPFEHLUNG.md)
 
 ---
@@ -151,9 +151,31 @@ Regel: Kein Merge auf `main` ohne grüne Pipeline.
 
 Abweichungen vom Plan: eigene Sitzungs-Authentifizierung statt Better Auth ([ADR-002](docs/decisions/ADR-002_AUTHENTIFIZIERUNG.md)); Vite statt Next.js, von FangEvo bestätigt ([ADR-003](docs/decisions/ADR-003_FRONTEND_VITE.md)); Prisma 6 statt 7 ([ADR-005](docs/decisions/ADR-005_ABHAENGIGKEITSVERSIONEN.md)).
 
-### Phase 2 – Dashboard und Core (grob)
+### Phase 2 – Dashboard und Core (detailliert) · Status: PLAN – wartet auf Freigabe
 
-Tabellen-Baukasten mit gespeicherten Ansichten · eigene Felder (Definition, Formular, Tabelle, Filter) · globale Suche · Benachrichtigungen · Aktivitätsprotokoll · Dashboard-Rahmen mit Widget-System (verschieben, Größe, eigene Seiten).
+**Wichtige Rahmenbedingung:** Fachdaten (Artikel, Aufträge, Umsätze) gibt es erst ab Phase 3. Phase 2 baut deshalb die **Werkzeuge** (Dashboard-Baukasten, Tabellen, eigene Felder, Suche, Benachrichtigungen) und erprobt sie an den vorhandenen Daten (Firmen, Benutzer, Audit-Log). Umsatz- und Lager-Widgets werden **nicht vorgetäuscht**, sondern kommen mit den Fachmodulen in Phase 3. Jedes neue Modul kann die Werkzeuge dann ohne Zusatzaufwand nutzen.
+
+| AP  | Inhalt                                                                                                                                                                                                                                                                                                                                                                            | Ergebnis / Abnahme                                                             |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 2.1 | **Ereignis-System:** Jede fachliche Änderung erzeugt in derselben Transaktion ein Ereignis (Outbox-Tabelle). Ein Verteiler (Redis + BullMQ, eigener Worker-Prozess) liefert es an Empfänger aus: jetzt Benachrichtigungen und Aktivitäten, später Webhooks und Workflows (Phase 6)                                                                                                | kein Ereignis geht verloren, auch bei Absturz; Wiederholung bei Fehlern; Tests |
+| 2.2 | **Hauptnavigation:** Module melden ihre Menüpunkte zentral an; nicht gebuchte oder nicht erlaubte Punkte sind unsichtbar. Benutzer können Menüpunkte ausblenden, sortieren und als Favoriten anheften. Befehlspalette mit **Strg+K**                                                                                                                                              | Menü passt sich Lizenz, Rechten und persönlicher Einstellung an                |
+| 2.3 | **Tabellen-Baukasten:** eine gemeinsame Tabellenkomponente mit Spalten ein-/ausblenden, verschieben, Breite ändern, Sortieren, Filtern, Gruppieren, Mehrfachauswahl mit Massenaktionen, CSV-Export. **Gespeicherte Ansichten** persönlich oder für alle im Account freigegeben. Einheitliche Listen-Schnittstelle in der API (Filter, Sortierung, Seiten)                         | eingesetzt bei Firmen, Benutzern, Audit-Log                                    |
+| 2.4 | **Eigene Felder:** Kunden legen eigene Felder an (Text, Zahl, Datum, Ja/Nein, Auswahl, Mehrfachauswahl, Verweis auf anderen Datensatz), inkl. Pflichtfeld und Reihenfolge. Prüfung serverseitig. Nutzbar in Formularen, Tabellen und Filtern                                                                                                                                      | Erprobt an Firmen; Phase-3-Module übernehmen es automatisch                    |
+| 2.5 | **Globale Suche:** ein Suchfeld über alles, auf das der Benutzer Zugriff hat (Volltextsuche in PostgreSQL, deutsche Wortstämme, tolerant bei Tippfehlern). Ergebnisse beachten Mandantentrennung und Rechte                                                                                                                                                                       | findet Firmen, Benutzer, Rollen, Menüpunkte; Mandanten-Trenntests              |
+| 2.6 | **Benachrichtigungen:** Glocke oben rechts mit Zähler, Liste, „gelesen“-Markierung, persönliche Einstellungen je Ereignisart. Anfangs z. B.: Einladung angenommen, Rechte geändert, Testphase endet bald, Anmeldung von neuem Gerät                                                                                                                                               | Benachrichtigungen erscheinen ohne Neuladen der Seite                          |
+| 2.7 | **Aktivitätsprotokoll:** verständlicher Verlauf „wer hat wann was geändert“, als Gesamtliste, als Verlauf je Datensatz (z. B. Reiter „Verlauf“ bei einer Firma) und als Dashboard-Widget. Basis ist das Audit-Log                                                                                                                                                                 | nur sichtbar, was der Benutzer sehen darf                                      |
+| 2.8 | **Dashboard-Baukasten:** Widgets hinzufügen, entfernen, verschieben, Größe ändern, einstellen; mehrere eigene Dashboard-Seiten; Administratoren legen eine Standard-Ansicht für alle fest, jeder kann sie für sich anpassen. Erste Widgets mit echten Daten: Schnellzugriffe, Aktivitäten, Benachrichtigungen, Lizenz & Nutzung, Team & Einladungen, Firmenübersicht, Notizzettel | Layout wird gespeichert und geräteübergreifend geladen                         |
+| 2.9 | Tests (inkl. Mandanten-Trenntests für alle neuen Tabellen), E2E-Ablauf erweitern, Doku, Lasttest der Listen-Schnittstelle mit 100.000 Testdatensätzen                                                                                                                                                                                                                             | CI grün                                                                        |
+
+**Reihenfolge:** 2.1 → 2.3 + 2.4 → 2.5 → 2.6 + 2.7 → 2.2 → 2.8 → 2.9. Es entsteht je Arbeitspaket ein eigener, geprüfter Zwischenstand.
+
+**Neue Tabellen (alle mit `account_id` + RLS):** `outbox_events`, `notifications`, `notification_preferences`, `saved_views`, `custom_field_definitions`, `user_preferences` (Menü, Favoriten), `dashboards`, `dashboard_widgets`, `search_documents`. Bestehende Tabellen bekommen nur neue Spalten (`custom_fields`), es wird nichts gelöscht.
+
+**Vorgeschlagene Festlegungen (bitte bestätigen):**
+
+1. Dashboard und Menü: Administratoren legen den Standard fest, jeder Benutzer darf ihn für sich anpassen.
+2. Gespeicherte Tabellenansichten: persönlich, mit Option „für alle im Account freigeben“.
+3. Benachrichtigungen: zunächst nur in der Software; per E-Mail nur sicherheitsrelevante (z. B. Anmeldung von neuem Gerät).
 
 ### Phase 3 – Warenwirtschaft (grob)
 
