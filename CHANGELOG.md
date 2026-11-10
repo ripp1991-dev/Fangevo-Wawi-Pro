@@ -1,6 +1,16 @@
 # Changelog
 
-## [0.6.0] – 2026-11-09 – Phase 5: Import und Multichannel
+## [0.7.0] – 2026-11-09 – Phase 6: Automatisierung
+
+### Hinzugefügt
+
+- **Webhooks:** Abonnements je Firma für 19 Ereignisse (Aufträge, Versand, Artikel, Bestand, Kunden, Retouren, Belege, Zahlungen); signierte Zustellung (HMAC-SHA256) im Hintergrund, Wiederholungen mit wachsender Wartezeit, Zustellprotokoll, Test-Ping, erneut senden, Schlüssel erneuern, automatisches Abschalten nach Dauerfehlern mit Benachrichtigung, Schutz gegen Aufrufe ins interne Netz.
+- **Regeln (Workflows):** Auslöser (neue Bestellung, Statuswechsel, Versand, Retoure eingegangen, Bestand unter Mindestbestand, zeitgesteuert), Bedingungen (Warenwert, Land, Kundenart/-gruppe, Zahlungs-/Versandart, Kanal, Positionen, Stunden im Status …), Aktionen (Status setzen, Versandart setzen, Mitarbeiter benachrichtigen, E-Mail, Webhook) mit Platzhaltern. Versionen, Ausführungsprotokoll mit Schritten, Testlauf ohne Ausführung, Schutz vor Endlosschleifen.
+- **Zeitgesteuerte Prüfungen** (stündlich/täglich): Aufträge warten zu lange, Lieferantenbestellungen überfällig, Artikel unter Mindestbestand.
+- Neue Rechte `webhooks.manage`, `workflows.read/manage`; Modul Automatisierung freigeschaltet (ab Professional); Benachrichtigungsarten „Hinweise aus Regeln“ und „Webhook abgeschaltet“.
+- 7. Browser-E2E-Ablauf (Regel greift, Webhook signiert zugestellt).
+
+– 2026-11-09 – Phase 5: Import und Multichannel
 
 ### Hinzugefügt
 

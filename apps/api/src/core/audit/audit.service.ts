@@ -44,6 +44,7 @@ export class AuditService {
         entityType: e.entityType,
         entityId: e.entityId,
         actorUserId: e.userId,
+        companyId: e.companyId ?? null,
         payload: (e.data ?? undefined) as object | undefined,
       },
     });

@@ -521,6 +521,25 @@ export class OrdersService {
     });
   }
 
+  /** Versandart ändern (z. B. durch eine Regel), solange der Auftrag nicht versendet ist. */
+  async setShippingMethodInTx(tx: Tx, c: CompanyContext, id: string, value: string, note: string) {
+    const order = await tx.salesOrder.findUnique({ where: { id } });
+    if (!order) throw Errors.notFound();
+    if (['shipped', 'completed', 'cancelled'].includes(order.status))
+      throw new AppError(409, 'CONFLICT', 'Der Auftrag ist bereits abgeschlossen');
+    await tx.salesOrder.update({
+      where: { id },
+      data: { shippingMethod: value, updatedBy: c.user.id, version: { increment: 1 } },
+    });
+    await this.audit.record(
+      tx,
+      this.entry(c, 'order.updated', order, {
+        shippingMethod: { from: order.shippingMethod, to: value },
+        note,
+      }),
+    );
+  }
+
   /** Statuswechsel innerhalb einer laufenden Transaktion (z. B. aus Picklisten). */
   async transitionInTx(
     tx: Tx,

@@ -49,13 +49,14 @@ export class JobQueue implements OnModuleDestroy {
 
   /** Aufgabe einreihen (in derselben Transaktion wie die fachliche Änderung). */
   async enqueue(
-    tx: Tx,
+    tx: Pick<Tx, 'jobQueue'>,
     job: {
       kind: string;
       accountId: string;
       companyId?: string | null;
       userId?: string | null;
       refId: string;
+      availableAt?: Date;
     },
   ): Promise<void> {
     await tx.jobQueue.create({
@@ -66,6 +67,7 @@ export class JobQueue implements OnModuleDestroy {
         companyId: job.companyId ?? null,
         userId: job.userId ?? null,
         refId: job.refId,
+        ...(job.availableAt ? { availableAt: job.availableAt } : {}),
       },
     });
   }

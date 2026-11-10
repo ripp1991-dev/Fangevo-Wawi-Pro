@@ -112,3 +112,9 @@ Worker / EventDispatcher ──► holt outbox_pending (SKIP LOCKED) ──► T
 - `modules/import`: Datei lesen (`parse.ts`), Zeilen vorbereiten und über `ArticlesService`, `CustomersService`, `SuppliersService`, `InventoryService` ausführen; Kategorien/Hersteller/Lagerplätze über `MasterDataService` (settings).
 - `core/apikeys` + `AccessGuard`: Bearer-Anmeldung baut denselben Kontext wie eine Sitzung (Firma fest, Rechte = Schlüssel ∩ Person).
 - `modules/channels`: Kanäle, Artikel je Kanal, Shop-Schnittstelle; Aufträge über `OrdersService.createInTx`, Kunden über `CustomersService.createInTx`.
+
+## Phase 6: Automatisierung
+
+- `WebhooksService` ist Ereignis-Handler (erzeugt Zustellungen) und Job-Handler (`webhook_delivery`).
+- `WorkflowsService` ist Ereignis-Handler (legt Läufe an); `WorkflowRunHandler`/`WorkflowScheduleHandler` führen im Hintergrund aus; `startScheduler()` prüft jede Minute die Fälligkeiten.
+- Aktionen laufen über `OrdersService`, `NotificationsService`, `MailService`, `WebhooksService`.

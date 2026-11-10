@@ -10,7 +10,8 @@ Katalog: [`packages/licensing/src/catalog.ts`](packages/licensing/src/catalog.ts
 | Aufträge, Belege, Einkauf           | 3b    | ✅ fertig | Aufträge mit Preisermittlung, Reservierung und Versand; Belege mit PDF, E-Mail, Zahlungen, Gutschrift, Storno; Bestellvorschläge, Bestellungen, Wareneingang                    |
 | Pack, Versand, Retouren             | 4     | ✅ fertig | Chargen/SN-Bestand, Picklisten, Packtisch mit Prüfung, Sendungen mit eigenem Etikett, Retouren, mobile Scan-Seite (Versanddienstleister folgen nach Sandbox-Test)               |
 | Import, Multichannel, API           | 5     | ✅ fertig | FangEvo Import (CSV/XLSX, Prüflauf, Hintergrund, Rückgängig), Export, API-Schlüssel, Verkaufskanal „Eigener Shop über API“ (Marktplätze erst nach Sandbox-Test); Finanzen folgt |
-| Automatisierung, CRM, Analytics     | 6     | geplant   | –                                                                                                                                                                               |
+| Automatisierung                     | 6     | ✅ fertig | Webhooks (signiert, Wiederholungen), Regeln „Wenn–und–dann“ mit Versionen, Protokoll, Testlauf, Schleifenschutz, Zeitsteuerung; grafischer Editor folgt                         |
+| CRM, Analytics                      | 6+    | geplant   | –                                                                                                                                                                               |
 | Marketplace                         | 7     | geplant   | –                                                                                                                                                                               |
 
 ## Core im Detail
@@ -81,3 +82,10 @@ Bekannte Grenzen (bewusst, folgen später):
 | Import, Export | `modules/import` (+ `core/jobs`) | `/import`         | phase5.test, E2E |
 | API-Schlüssel  | `core/apikeys`, `AccessGuard`    | `/admin/api-keys` | phase5.test, E2E |
 | Verkaufskanäle | `modules/channels`               | `/channels`       | phase5.test, E2E |
+
+## Phase 6 im Detail
+
+| Bereich  | API                                    | Oberfläche                      | Tests            |
+| -------- | -------------------------------------- | ------------------------------- | ---------------- |
+| Webhooks | `modules/automation/webhooks.service`  | `/automation` (Reiter Webhooks) | phase6.test, E2E |
+| Regeln   | `modules/automation/workflows.service` | `/automation`                   | phase6.test, E2E |

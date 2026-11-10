@@ -153,3 +153,13 @@ Umlagerung und Inventur nehmen jetzt `batch` und `serialNumber` an. Bei Artikeln
 | `GET /channels/:id/orders/:externalId`                                                                                              | `channels.read` + `orders.read`                    |
 
 **Anmeldung mit API-Schlüssel:** `Authorization: Bearer fe_live_…`. Kein Cookie, kein CSRF-Header nötig; `X-Company-Id` kann entfallen (Firma des Schlüssels). `401` bei ungültigem/gesperrtem/abgelaufenem Schlüssel, `429` bei mehr als 600 Anfragen pro Minute.
+
+## Endpunkte (Phase 6)
+
+| Endpunkt                                                                                                                                                                        | Recht / Modul                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| `GET /webhooks/events`, `GET/POST /webhooks`, `PUT /webhooks/:id`, `POST …/rotate-secret`, `…/archive`, `…/ping`, `GET …/deliveries`, `POST …/deliveries/:deliveryId/redeliver` | `webhooks.manage` / API              |
+| `GET /workflows/catalog`, `GET /workflows`, `GET /workflows/:id` (mit Versionen und Läufen)                                                                                     | `workflows.read` / Automatisierung   |
+| `POST /workflows`, `PUT /workflows/:id` (neue Version), `POST …/archive`, `POST …/test` `{entityId}`                                                                            | `workflows.manage` / Automatisierung |
+
+**Webhook-Format:** `POST` mit JSON `{id, type, createdAt, companyId, data}`; Header `X-FangEvo-Event`, `X-FangEvo-Delivery`, `X-FangEvo-Timestamp`, `X-FangEvo-Signature: sha256=HMAC(secret, timestamp + "." + body)`. Antwort 2xx = zugestellt.

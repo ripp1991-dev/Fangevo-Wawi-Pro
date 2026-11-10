@@ -30,6 +30,8 @@ export type {
   ImportJob,
   ApiKey,
   SalesChannel,
+  Webhook,
+  WorkflowRule,
 } from '@prisma/client';
 export { createPrismaClient } from './client';
 export { withTenant, type Tx, type DbContext } from './tenant';

@@ -94,3 +94,10 @@ Bitte nicht öffentlich als Issue melden, sondern direkt an das FangEvo-Team.
 | Import        | Max. 10 MB und 50.000 Zeilen; nur CSV/XLSX; Größenlimit nur für den Upload-Endpunkt erhöht; Ausführung mit den aktuellen Rechten der Person über die Fach-Services                                                                             |
 | Export (CSV)  | Schutz gegen Formel-Einschleusung; Einkaufspreise nur mit `articles.prices`                                                                                                                                                                    |
 | Kanäle        | Externe Bestellnummer je Kanal eindeutig (DB-Index), Fehler werden protokolliert; Hintergrundtabellen `job_queue` und `api_key_index` enthalten nur IDs/Hashes                                                                                 |
+
+## Ergänzungen Phase 6
+
+| Bereich  | Maßnahme                                                                                                                                                                                                                                                         |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Webhooks | HMAC-SHA256-Signatur mit Zeitstempel; Schlüssel AES-256-GCM-verschlüsselt, nur einmal angezeigt; keine Weiterleitungen; 10 s Zeitlimit; private/interne Ziele in Produktion gesperrt (`WEBHOOK_ALLOW_PRIVATE` nur für Entwicklung); Abschalten nach Dauerfehlern |
+| Regeln   | Laufen mit den aktuellen Rechten der zuletzt speichernden Person; Versenden/Stornieren als Aktion ausgeschlossen; nur gültige Statuswechsel; Versionen unveränderlich (Trigger); Schutz vor Endlosschleifen                                                      |

@@ -7,6 +7,7 @@ export interface DomainEvent {
   entityType: string | null;
   entityId: string | null;
   actorUserId: string | null;
+  companyId: string | null;
   payload: Record<string, unknown> | null;
   createdAt: Date;
 }
