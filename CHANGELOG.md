@@ -1,6 +1,25 @@
 # Changelog
 
-## [0.4.0] – 2026-11-09 – Phase 3b: Aufträge, Belege, Einkauf
+## [0.5.0] – 2026-11-09 – Phase 4: Logistik
+
+### Hinzugefügt
+
+- **Lager:** Bestand je Lagerplatz, Charge, Seriennummer und MHD; Umlagerung und Inventur auch für Chargen/Seriennummern; Seriennummern sind eindeutig im Bestand; zusätzliche Barcodes je Artikel; Scan-Auflösung für Artikel (GTIN, Artikelnummer, Zusatz-Barcode) und Lagerplätze.
+- **Verkauf von Chargen- und Seriennummern-Artikeln:** Versand entnimmt Chargen mit frühestem MHD zuerst; Seriennummern werden am Packtisch gescannt.
+- **Kommissionierung:** Picklisten aus mehreren Aufträgen, Rundgang sortiert nach Lagerplatz, Platz- und Chargenvorschlag, Teilmengen, Abschluss setzt vollständige Aufträge auf „Verpackung“, Storno setzt zurück, Druckansicht.
+- **FangEvo Pack:** Packplätze mit eigener Einstellung (Versandart, Lieferschein/Rechnung automatisch); Auftrag scannen, Artikel scannen mit sofortiger Fehlermeldung (falscher Artikel, Variante, doppelt), Seriennummern erfassen, Pakete mit Gewicht, Abschluss mit Prüfung auf dem Server, Versand und Belegen in einem Schritt.
+- **Versand:** Sendungen mit Paketen und Trackingnummer (nachtragbar), eigenes Adressetikett als PDF. Versanddienstleister (DHL, DPD, …) folgen erst nach Zugangsdaten und Test im Testsystem.
+- **Retouren:** Anmeldung zu versendeten Aufträgen (nicht mehr als versendet), Eingang mit Zustand (wieder verkaufbar/beschädigt/entsorgen), Einlagerung mit Buchungsart „Retoure“, Gutschrift als Entwurf.
+- **Mobile Scan-Seite** `/scan`: Handscanner, Kamera (wo der Browser es kann) oder Eingabe; Bestand je Platz/Charge; Zugang, Umlagerung, Inventur; offene Picklisten.
+- Widget „Offene Retouren“; neue Rechte `picking.execute`, `packing.execute`, `shipping.manage`, `returns.read/manage`; Module Pack, Versand und Retouren freigeschaltet (ab Paket Business).
+- 5. Browser-E2E-Ablauf (Pickliste → Packtisch → Retoure → Handy-Scan).
+
+### Geändert
+
+- Lagerbestände zeigen Charge, Seriennummer, MHD und die Reservierungen je Lager (statt einer stets leeren Spalte je Lagerplatz).
+- Picklisten übernehmen neue Aufträge automatisch in „In Bearbeitung“.
+
+– 2026-11-09 – Phase 3b: Aufträge, Belege, Einkauf
 
 ### Hinzugefügt
 

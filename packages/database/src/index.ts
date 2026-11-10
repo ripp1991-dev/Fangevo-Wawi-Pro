@@ -24,6 +24,9 @@ export type {
   Document,
   PurchaseOrder,
   PurchaseOrderLine,
+  PickList,
+  Shipment,
+  Return,
 } from '@prisma/client';
 export { createPrismaClient } from './client';
 export { withTenant, type Tx, type DbContext } from './tenant';

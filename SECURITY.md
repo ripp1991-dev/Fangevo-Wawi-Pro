@@ -74,3 +74,13 @@ Bitte nicht öffentlich als Issue melden, sondern direkt an das FangEvo-Team.
 | E-Mail-Versand        | Nur festgeschriebene Belege; Empfängeradresse geprüft; Versand wird im Audit-Log festgehalten                                                                                  |
 | Logo                  | Nur PNG/JPEG als data-URL, max. ca. 200 KB, Inhalt wird nicht ins Audit-Log geschrieben                                                                                        |
 | Rechteweitergabe      | Rechte nicht gebuchter Module nur weitergeben, wer sie selbst (ohne Lizenzfilter) besitzt                                                                                      |
+
+## Ergänzungen Phase 4
+
+| Bereich       | Maßnahme                                                                                                              |
+| ------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Packen        | Vollständigkeit, fremde Artikel und doppelte Seriennummern werden auf dem Server geprüft, nicht nur in der Oberfläche |
+| Seriennummern | Je Artikel höchstens einmal im Bestand (Service-Prüfung + CHECK-Regel)                                                |
+| Sendungen     | Nicht löschbar (Trigger); Etiketten nur mit Firmenkontext abrufbar                                                    |
+| Retouren      | Höchstens die versendete Menge; Gutschrift nur mit zusätzlichem Recht `documents.manage`                              |
+| Kamera        | Zugriff nur nach Freigabe im Browser; die Erkennung läuft lokal (BarcodeDetector), Bilder verlassen das Gerät nicht   |

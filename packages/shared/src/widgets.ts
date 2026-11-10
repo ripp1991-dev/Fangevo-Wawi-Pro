@@ -106,6 +106,16 @@ export const WIDGETS = {
     defaultH: 4,
     config: z.object({}),
   },
+  open_returns: {
+    title: 'Offene Retouren',
+    description: 'Angemeldete Retouren, deren Ware noch nicht eingegangen ist',
+    permission: 'returns.read',
+    minW: 3,
+    minH: 3,
+    defaultW: 4,
+    defaultH: 3,
+    config: z.object({}),
+  },
   note: {
     title: 'Notiz',
     description: 'Persönlicher Notizzettel',

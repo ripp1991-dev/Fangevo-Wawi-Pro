@@ -327,7 +327,7 @@ export function ArticlesPage() {
   );
 }
 
-type Tab = 'data' | 'prices' | 'stock' | 'suppliers' | 'structure' | 'history';
+type Tab = 'data' | 'prices' | 'stock' | 'suppliers' | 'structure' | 'history' | 'barcodes';
 
 function ArticleDialog({
   id,
@@ -515,6 +515,7 @@ function ArticleForm({
     },
     { id: 'stock', label: 'Bestand', hidden: !a || !canStock || v.kind !== 'standard' },
     { id: 'suppliers', label: 'Bezugsquellen', hidden: !a },
+    { id: 'barcodes', label: 'Barcodes', hidden: !a },
     { id: 'history', label: 'Verlauf', hidden: !a },
   ];
   const fieldErr = (k: string) => f.fieldErrors[k];
@@ -1010,6 +1011,9 @@ function ArticleForm({
             Noch keine Bezugsquellen. Ordnen Sie den Artikel beim Lieferanten zu.
           </p>
         ))}
+      {tab === 'barcodes' && a && (
+        <BarcodesTab articleId={a.id} gtin={a.gtin} canManage={canManage && !a.archivedAt} />
+      )}
       {tab === 'history' && a && <ActivityList entityType="article" entityId={a.id} />}
     </Dialog>
   );
@@ -1137,6 +1141,77 @@ function ArticleStock({ article, md }: { article: ArticleDetail; md: MasterData 
       <p className="text-xs text-muted">
         Buchungen (Zugang, Abgang, Umlagerung, Inventur) unter „Lager &amp; Bestand“.
       </p>
+    </div>
+  );
+}
+
+/** Zusätzliche Barcodes (z. B. Lieferanten-EAN), die beim Scannen zu diesem Artikel führen. */
+function BarcodesTab({
+  articleId,
+  gtin,
+  canManage,
+}: {
+  articleId: string;
+  gtin: string | null;
+  canManage: boolean;
+}) {
+  const qc = useQueryClient();
+  const q = useQuery({
+    queryKey: ['barcodes', articleId],
+    queryFn: () => http.get<{ id: string; code: string }[]>(`/articles/${articleId}/barcodes`),
+  });
+  const [code, setCode] = useState('');
+  const add = useSubmit(
+    () => http.post(`/articles/${articleId}/barcodes`, { code }),
+    async () => {
+      setCode('');
+      await qc.invalidateQueries({ queryKey: ['barcodes', articleId] });
+    },
+  );
+  const remove = async (id: string) => {
+    await http.del(`/articles/${articleId}/barcodes/${id}`);
+    await qc.invalidateQueries({ queryKey: ['barcodes', articleId] });
+  };
+  return (
+    <div className="space-y-3 text-sm">
+      <p className="text-muted">
+        Beim Scannen werden GTIN/EAN{gtin ? ` (${gtin})` : ''}, Artikelnummer und diese zusätzlichen
+        Codes erkannt.
+      </p>
+      {add.error && <Alert tone="danger">{add.error}</Alert>}
+      <ul className="space-y-1">
+        {q.data?.map((b) => (
+          <li
+            key={b.id}
+            className="flex items-center justify-between rounded-md border border-border px-3 py-1.5"
+          >
+            <span className="font-mono">{b.code}</span>
+            {canManage && (
+              <Button size="sm" variant="ghost" onClick={() => remove(b.id)}>
+                Entfernen
+              </Button>
+            )}
+          </li>
+        ))}
+        {q.data?.length === 0 && <li className="text-muted">Keine zusätzlichen Barcodes</li>}
+      </ul>
+      {canManage && (
+        <div className="flex items-end gap-2">
+          <Field label="Neuer Barcode" error={add.fieldErrors.code}>
+            {(p) => (
+              <Input
+                {...p}
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && code && add.submit(undefined)}
+              />
+            )}
+          </Field>
+          <Button loading={add.pending} disabled={!code} onClick={() => add.submit(undefined)}>
+            Hinzufügen
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

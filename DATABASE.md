@@ -120,3 +120,18 @@ Migration `20261109121149_phase3b_orders_documents_purchasing`. Ebenfalls mit `a
 Schutz in der Datenbank: Trigger `app_protect_finalized_document` erlaubt bei festgeschriebenen Belegen nur Änderungen an `payment_status`, `sent_at` und `updated_at` und verbietet das Löschen. Für die unveränderlichen Tabellen hat die App-Rolle nur `SELECT, INSERT`. Prüfregeln: gültige Status und Belegarten, Mengen > 0, festgeschriebene Belege haben Nummer und Zeitpunkt. Neue Nummernkreise (`order`, `offer`, `order_confirmation`, `delivery_note`, `invoice`, `credit_note`, `cancellation`, `purchase_order`) werden auch für bestehende Firmen beim nächsten Zugriff ergänzt.
 
 Firmeneinstellungen haben neue Spalten für Angaben auf Belegen (`tax_number`, `managing_director`, `register_court`, `register_number`, `bank_name`, `iban`, `bic`, `document_footer`, `logo_data_url`).
+
+## Tabellen (Phase 4, firmenbezogen)
+
+Migration `20261109151957_phase4_logistics`. Alle mit `company_isolation`.
+
+| Tabelle                         | Inhalt                                                                                                 |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `stock_levels` (erweitert)      | `batch`, `serial_number`, `best_before`; Index `stock_levels_slot` jetzt inkl. Charge und Seriennummer |
+| `article_barcodes`              | Zusätzliche Barcodes je Artikel (eindeutig je Firma)                                                   |
+| `pick_lists`, `pick_list_lines` | Picklisten mit Platz-/Chargenvorschlag und gepickter Menge                                             |
+| `packing_stations`              | Packplätze mit Einstellungen                                                                           |
+| `shipments`                     | Sendungen mit Paketen, gepackten Positionen (inkl. Charge/SN), Etikett-PDF; **nicht löschbar**         |
+| `returns`, `return_lines`       | Retouren mit Zustand je Position und Verweis auf die Gutschrift                                        |
+
+Buchungsart `return` im Bestandsjournal ergänzt. Neue Nummernkreise `pick_list` (PL-), `shipment` (SE-), `return` (RT-).

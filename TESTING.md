@@ -1,16 +1,16 @@
 # Tests
 
-## Übersicht (Stand Phase 3b)
+## Übersicht (Stand Phase 4)
 
-| Ebene                                       | Werkzeug                | Ort                                                                                                         | Anzahl    |
-| ------------------------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------- | --------- |
-| Unit                                        | Vitest                  | `packages/*/src/**/*.test.ts`, `apps/api/src/**/*.test.ts`, `apps/web/src/**/*.test.ts`                     | 46        |
-| Integration (API + echte DB/Redis)          | Vitest + Fastify-Inject | `apps/api/test/auth.test.ts`, `admin.test.ts`, `phase2.test.ts`, `phase3a.test.ts`, `phase3b.test.ts`       | 79        |
-| **Mandanten- und Firmentrennung (Pflicht)** | Vitest                  | `apps/api/test/tenant-isolation.test.ts` + Abschnitte „Trennung“ in `phase3a.test.ts` und `phase3b.test.ts` | 14 + 3    |
-| End-to-End im Browser                       | Playwright              | `tests/e2e/core-flow.mjs`, `phase2-flow.mjs`, `phase3a-flow.mjs`, `phase3b-flow.mjs`                        | 4 Abläufe |
-| Last                                        | eigenes Skript          | `apps/api/scripts/perf-lists.ts`, `perf-wawi.ts`                                                            | manuell   |
+| Ebene                                       | Werkzeug                | Ort                                                                                                                        | Anzahl    |
+| ------------------------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------- |
+| Unit                                        | Vitest                  | `packages/*/src/**/*.test.ts`, `apps/api/src/**/*.test.ts`, `apps/web/src/**/*.test.ts`                                    | 46        |
+| Integration (API + echte DB/Redis)          | Vitest + Fastify-Inject | `apps/api/test/auth.test.ts`, `admin.test.ts`, `phase2.test.ts`, `phase3a.test.ts`, `phase3b.test.ts`, `phase4.test.ts`    | 87        |
+| **Mandanten- und Firmentrennung (Pflicht)** | Vitest                  | `apps/api/test/tenant-isolation.test.ts` + Abschnitte „Trennung“ in `phase3a.test.ts`, `phase3b.test.ts`, `phase4.test.ts` | 14 + 4    |
+| End-to-End im Browser                       | Playwright              | `tests/e2e/core-flow.mjs`, `phase2-flow.mjs`, `phase3a-flow.mjs`, `phase3b-flow.mjs`, `phase4-flow.mjs`                    | 5 Abläufe |
+| Last                                        | eigenes Skript          | `apps/api/scripts/perf-lists.ts`, `perf-wawi.ts`                                                                           | manuell   |
 
-Insgesamt 139 automatisierte Tests + 4 E2E-Abläufe. Kein Merge ohne grüne CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
+Insgesamt 147 automatisierte Tests + 5 E2E-Abläufe. `phase4-flow.mjs` setzt das Testkonto mit dem Plattform-Werkzeug `license:set` auf Paket Business (braucht `DATABASE_URL`). Kein Merge ohne grüne CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
 
 ## Ausführen
 

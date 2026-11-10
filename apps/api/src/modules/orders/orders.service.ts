@@ -59,10 +59,22 @@ export interface AddressSnapshot {
   country: string;
 }
 
-interface Demand {
+export interface Demand {
   lineId: string;
   articleId: string;
   quantity: Prisma.Decimal;
+  trackBatches: boolean;
+  trackSerials: boolean;
+}
+
+/** Konkrete Entnahme beim Packen: Position, Artikel, Menge und ggf. Charge/SN/Lagerplatz. */
+export interface Allocation {
+  orderLineId: string;
+  articleId: string;
+  quantity: string;
+  batch?: string | null;
+  serialNumber?: string | null;
+  locationId?: string | null;
 }
 
 export interface Shortage {
@@ -233,11 +245,6 @@ export class OrdersService {
         if (!a.active) throw notOrderable(`Artikel ${a.number} ist inaktiv`, i);
         if (a.kind === 'parent')
           throw notOrderable(`${a.number} ist ein Vaterartikel. Bitte eine Variante wählen`, i);
-        if (a.stockTracked && (a.trackSerials || a.trackBatches))
-          throw notOrderable(
-            `${a.number} wird mit Chargen/Seriennummern geführt. Der Versand solcher Artikel folgt mit FangEvo Lager (Phase 4)`,
-            i,
-          );
         const rate = taxRates.find((r) => r.id === a.taxRateId);
         const price = l.unitPriceNet
           ? { price: dec(l.unitPriceNet), specific: true }
@@ -381,7 +388,7 @@ export class OrdersService {
   // ───── Reservierung ─────
 
   /** Bestandsbedarf je Position; Sets werden in ihre Komponenten aufgelöst. */
-  private async demands(tx: Tx, orderId: string): Promise<Demand[]> {
+  async demands(tx: Tx, orderId: string): Promise<Demand[]> {
     const lines = await tx.salesOrderLine.findMany({
       where: { orderId, articleId: { not: null } },
       orderBy: { position: 'asc' },
@@ -406,10 +413,18 @@ export class OrdersService {
               lineId: l.id,
               articleId: ca.id,
               quantity: dec(l.quantity).times(comp.quantity),
+              trackBatches: ca.trackBatches,
+              trackSerials: ca.trackSerials,
             });
         }
       } else if (a.stockTracked) {
-        out.push({ lineId: l.id, articleId: a.id, quantity: dec(l.quantity) });
+        out.push({
+          lineId: l.id,
+          articleId: a.id,
+          quantity: dec(l.quantity),
+          trackBatches: a.trackBatches,
+          trackSerials: a.trackSerials,
+        });
       }
     }
     return out;
@@ -487,6 +502,20 @@ export class OrdersService {
 
   transition(t: TenantContext, id: string, to: OrderStatus, note: string | null) {
     return this.cdb.run(t, async (tx, c) => {
+      await this.transitionInTx(tx, c, id, to, note);
+      return this.load(tx, c, id);
+    });
+  }
+
+  /** Statuswechsel innerhalb einer laufenden Transaktion (z. B. aus Picklisten). */
+  async transitionInTx(
+    tx: Tx,
+    c: CompanyContext,
+    id: string,
+    to: OrderStatus,
+    note: string | null,
+  ) {
+    {
       const order = await tx.salesOrder.findUnique({ where: { id } });
       if (!order) throw Errors.notFound();
       const from = order.status as OrderStatus;
@@ -498,39 +527,103 @@ export class OrdersService {
         );
       if ((ORDER_NEEDS_STOCK as string[]).includes(to)) await this.requireStock(tx, c, order);
       await this.setStatus(tx, c, order, to, note);
-      return this.load(tx, c, id);
-    });
+      return order;
+    }
   }
 
   /** Versand: bucht den Bestand im Auftragslager ab und gibt die Reservierungen frei. */
   ship(t: TenantContext, id: string, note: string | null) {
     return this.cdb.run(t, async (tx, c) => {
-      const order = await tx.salesOrder.findUnique({ where: { id } });
-      if (!order) throw Errors.notFound();
-      if (!(ORDER_SHIPPABLE as string[]).includes(order.status))
-        throw new AppError(
-          409,
-          'CONFLICT',
-          `Im Status „${ORDER_STATUSES[order.status as OrderStatus]}“ kann nicht versendet werden`,
-        );
-      await this.requireStock(tx, c, order);
-      const demands = await this.demands(tx, id);
-      for (const d of demands) await this.issue(tx, c, order, d);
-      await this.release(tx, id);
-      await this.setStatus(tx, c, order, 'shipped', note, { shippedAt: new Date() });
+      await this.shipInTx(tx, c, id, note, []);
       return this.load(tx, c, id);
     });
   }
 
-  /** Bucht eine Menge im Lager ab: zuerst von Lagerplätzen mit dem meisten Bestand. */
-  private async issue(tx: Tx, c: CompanyContext, order: SalesOrder, d: Demand) {
-    const slots = await tx.$queryRaw<{ locationId: string | null; quantity: Prisma.Decimal }[]>`
-      SELECT location_id AS "locationId", quantity FROM stock_levels
-      WHERE company_id = ${c.companyId}::uuid AND article_id = ${d.articleId}::uuid
+  /**
+   * Versand innerhalb einer laufenden Transaktion (auch vom Packtisch genutzt).
+   * `allocations` legt Charge/Seriennummer/Lagerplatz fest; der Rest wird automatisch entnommen
+   * (Chargen: frühestes MHD zuerst). Seriennummern müssen immer angegeben werden.
+   */
+  async shipInTx(
+    tx: Tx,
+    c: CompanyContext,
+    id: string,
+    note: string | null,
+    allocations: Allocation[],
+  ): Promise<SalesOrder> {
+    const order = await tx.salesOrder.findUnique({ where: { id } });
+    if (!order) throw Errors.notFound();
+    if (!(ORDER_SHIPPABLE as string[]).includes(order.status))
+      throw new AppError(
+        409,
+        'CONFLICT',
+        `Im Status „${ORDER_STATUSES[order.status as OrderStatus]}“ kann nicht versendet werden`,
+      );
+    await this.requireStock(tx, c, order);
+    const demands = await this.demands(tx, id);
+    const pool = allocations.map((a) => ({ ...a, left: dec(a.quantity) }));
+    for (const d of demands) {
+      let rest = d.quantity;
+      for (const a of pool.filter(
+        (x) => x.orderLineId === d.lineId && x.articleId === d.articleId && x.left.greaterThan(0),
+      )) {
+        if (rest.lessThanOrEqualTo(0)) break;
+        const take = Prisma.Decimal.min(rest, a.left);
+        await this.issue(tx, c, order, d.articleId, take, {
+          batch: a.batch ?? null,
+          serialNumber: a.serialNumber ?? null,
+          locationId: a.locationId ?? null,
+        });
+        a.left = a.left.minus(take);
+        rest = rest.minus(take);
+      }
+      if (rest.greaterThan(0)) {
+        if (d.trackSerials)
+          throw new AppError(
+            409,
+            'CONFLICT',
+            'Für Artikel mit Seriennummern bitte über den Packtisch versenden und die Seriennummern scannen',
+          );
+        await this.issue(tx, c, order, d.articleId, rest, null, d.trackBatches);
+      }
+    }
+    if (pool.some((a) => a.left.greaterThan(0)))
+      throw new AppError(422, 'VALIDATION_FAILED', 'Es wurde mehr verpackt als bestellt');
+    await this.release(tx, id);
+    await this.setStatus(tx, c, order, 'shipped', note, { shippedAt: new Date() });
+    return order;
+  }
+
+  /**
+   * Bucht eine Menge im Auftragslager ab. Mit `lot` genau aus dieser Charge/SN (und ggf. diesem Platz),
+   * sonst von Plätzen mit dem meisten Bestand bzw. bei Chargen mit dem frühesten MHD.
+   */
+  private async issue(
+    tx: Tx,
+    c: CompanyContext,
+    order: SalesOrder,
+    articleId: string,
+    quantity: Prisma.Decimal,
+    lot: { batch: string | null; serialNumber: string | null; locationId: string | null } | null,
+    tracked = false,
+  ) {
+    const slots = await tx.$queryRaw<
+      {
+        locationId: string | null;
+        batch: string | null;
+        serialNumber: string | null;
+        quantity: Prisma.Decimal;
+      }[]
+    >`
+      SELECT location_id AS "locationId", batch, serial_number AS "serialNumber", quantity FROM stock_levels
+      WHERE company_id = ${c.companyId}::uuid AND article_id = ${articleId}::uuid
         AND warehouse_id = ${order.warehouseId}::uuid AND quantity > 0
-      ORDER BY quantity DESC, location_id NULLS FIRST
+        AND (${lot === null} OR COALESCE(batch, '') = ${lot?.batch ?? ''})
+        AND (${lot === null} OR COALESCE(serial_number, '') = ${lot?.serialNumber ?? ''})
+        AND (${!lot?.locationId} OR location_id = ${lot?.locationId ?? null}::uuid)
+      ORDER BY best_before ASC NULLS LAST, quantity DESC, location_id NULLS FIRST
       FOR UPDATE`;
-    let rest = d.quantity;
+    let rest = quantity;
     const extra = {
       referenceType: 'sales_order',
       referenceId: order.id,
@@ -542,7 +635,13 @@ export class OrdersService {
       await this.inventory.apply(
         tx,
         c,
-        { articleId: d.articleId, warehouseId: order.warehouseId, locationId: s.locationId },
+        {
+          articleId,
+          warehouseId: order.warehouseId,
+          locationId: s.locationId,
+          batch: s.batch,
+          serialNumber: s.serialNumber,
+        },
         take.negated(),
         'issue',
         extra,
@@ -550,11 +649,23 @@ export class OrdersService {
       rest = rest.minus(take);
     }
     if (rest.greaterThan(0)) {
+      if (lot?.serialNumber)
+        throw new AppError(
+          409,
+          'CONFLICT',
+          `Seriennummer ${lot.serialNumber} ist in diesem Lager nicht im Bestand`,
+        );
+      if (tracked || lot?.batch)
+        throw new AppError(
+          409,
+          'CONFLICT',
+          `Nicht genug Bestand${lot?.batch ? ` in Charge ${lot.batch}` : ' in Chargen'} für diesen Artikel`,
+        );
       // Rest nur bei erlaubtem Minusbestand (apply prüft das)
       await this.inventory.apply(
         tx,
         c,
-        { articleId: d.articleId, warehouseId: order.warehouseId, locationId: null },
+        { articleId, warehouseId: order.warehouseId, locationId: lot?.locationId ?? null },
         rest.negated(),
         'issue',
         extra,

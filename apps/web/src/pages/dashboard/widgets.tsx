@@ -332,6 +332,47 @@ function TopSellers() {
   );
 }
 
+function OpenReturns() {
+  const q = useQuery({
+    queryKey: ['open-returns'],
+    queryFn: () =>
+      http.get<{
+        items: {
+          id: string;
+          number: string;
+          orderNumber: string | null;
+          customerName: string | null;
+        }[];
+        total: number;
+      }>(
+        `/returns?pageSize=8&filters=${encodeURIComponent(JSON.stringify([{ field: 'status', op: 'eq', value: 'open' }]))}`,
+      ),
+  });
+  if (!q.data) return <Spinner />;
+  if (!q.data.total)
+    return <p className="py-6 text-center text-sm text-muted">Keine offenen Retouren</p>;
+  return (
+    <div className="space-y-2 text-sm">
+      <p>
+        <Link to="/returns" className="text-2xl font-semibold hover:underline">
+          {q.data.total}
+        </Link>{' '}
+        angemeldet, Ware noch nicht da
+      </p>
+      <ul className="divide-y divide-border">
+        {q.data.items.map((r) => (
+          <li key={r.id} className="flex justify-between gap-2 py-1">
+            <span>{r.number}</span>
+            <span className="truncate text-muted">
+              {r.orderNumber} · {r.customerName}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function Activity({ config }: WidgetProps) {
   return <ActivityList limit={Number(config.limit ?? 8)} compact />;
 }
@@ -347,6 +388,7 @@ export const WIDGET_COMPONENTS: Record<WidgetType, (p: WidgetProps) => ReactNode
   revenue: Revenue,
   open_orders: OpenOrders,
   top_sellers: TopSellers,
+  open_returns: OpenReturns,
   note: Note,
 };
 

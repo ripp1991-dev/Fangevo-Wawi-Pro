@@ -126,7 +126,18 @@ export class DocumentsService {
   // ───── Erstellen ─────
 
   fromOrder(t: TenantContext, orderId: string, input: z.infer<typeof documentFromOrderSchema>) {
-    return this.cdb.run(t, async (tx, c) => {
+    return this.cdb.run(t, async (tx, c) =>
+      this.load(tx, (await this.fromOrderInTx(tx, c, orderId, input)).id),
+    );
+  }
+
+  async fromOrderInTx(
+    tx: Tx,
+    c: CompanyContext,
+    orderId: string,
+    input: z.infer<typeof documentFromOrderSchema>,
+  ): Promise<Document> {
+    {
       const { order, lines } = await this.orders.forDocument(tx, orderId);
       if (order.status === 'cancelled')
         throw new AppError(409, 'CONFLICT', 'Der Auftrag ist storniert');
@@ -185,13 +196,24 @@ export class DocumentsService {
             : null,
         notes: input.notes ?? null,
       });
-      return this.load(tx, doc.id);
-    });
+      return doc;
+    }
   }
 
   /** Gutschrift zu einer Rechnung (ganz oder für einzelne Positionen). */
   creditNote(t: TenantContext, invoiceId: string, input: z.infer<typeof creditNoteSchema>) {
-    return this.cdb.run(t, async (tx, c) => {
+    return this.cdb.run(t, async (tx, c) =>
+      this.load(tx, (await this.creditNoteInTx(tx, c, invoiceId, input)).id),
+    );
+  }
+
+  async creditNoteInTx(
+    tx: Tx,
+    c: CompanyContext,
+    invoiceId: string,
+    input: z.infer<typeof creditNoteSchema>,
+  ): Promise<Document> {
+    {
       const invoice = await this.requireFinalInvoice(tx, invoiceId);
       const source = invoice.lines as unknown as DocumentLine[];
       const picked = input.lines?.length
@@ -236,8 +258,8 @@ export class DocumentsService {
         serviceDate: invoice.serviceDate,
         notes: `Gutschrift zur Rechnung ${invoice.number}. Grund: ${input.reason}`,
       });
-      return this.load(tx, doc.id);
-    });
+      return doc;
+    }
   }
 
   /** Stornorechnung: hebt eine Rechnung vollständig auf (negierte Beträge, sofort festgeschrieben). */
@@ -351,7 +373,7 @@ export class DocumentsService {
     });
   }
 
-  private async doFinalize(tx: Tx, c: CompanyContext, doc: Document) {
+  async doFinalize(tx: Tx, c: CompanyContext, doc: Document) {
     const sender = await this.sender(tx, c);
     if (['invoice', 'credit_note', 'cancellation'].includes(doc.type)) {
       const missing = [

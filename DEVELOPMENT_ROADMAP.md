@@ -1,6 +1,6 @@
 # FangEvo Wawi Pro – Entwicklungsplan
 
-**Stand:** 2026-11-09 · **Status:** Phase 0, 1, 2, 3a und 3b abgeschlossen · nächster Schritt: E-Rechnung (nach Steuerberater-Prüfung) bzw. Planung Phase 4
+**Stand:** 2026-11-09 · **Status:** Phase 0–4 abgeschlossen · nächster Schritt: Phase 5 (Import und Multichannel)
 Grundlage: [Master Playbook v1.0](docs/product/MASTER_PLAYBOOK_v1.0.md) · Technik: [ADR-001](docs/decisions/ADR-001_TECHNOLOGIE_EMPFEHLUNG.md)
 
 ---
@@ -225,7 +225,20 @@ Offen bzw. bewusst später: Produktbilder (Dateispeicher folgt mit Phase 3b), Be
 
 Bewusst später: E-Rechnung (XRechnung/ZUGFeRD) und Steuer-Sonderfälle (Reverse-Charge, innergemeinschaftliche Lieferung, Kleinunternehmer) nach Prüfung durch den Steuerberater; Verkauf von Artikeln mit Chargen-/Seriennummernpflicht (Auswahl beim Versand, Phase 4); Produktbilder und Dateispeicher (mit Phase 4/5); Prioritäten zwischen Aufträgen bei knappem Bestand (Phase 4, FangEvo Pack); Mahnwesen (Phase 5, Finanzen).
 
-### Phase 4–8
+### Phase 4 – Logistik (gestartet 2026-11-09 auf Auftrag „alle Phasen automatisch durcharbeiten“) · Status: abgeschlossen
+
+| AP                       | Inhalt                                                                                                                                                                                                                                                                   |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 4.1 Lager mit Chargen/SN | Bestand je Lagerplatz **und** Charge/Seriennummer/MHD; zusätzliche Barcodes je Artikel; Scan-Auflösung (Artikel, Lagerplatz); Verkauf von Chargen-/SN-Artikeln (Charge nach MHD zuerst, SN beim Packen scannen)                                                          |
+| 4.2 Picklisten           | Pickliste aus mehreren Aufträgen, Platzvorschlag (Lagerplatz mit Bestand, Charge mit frühestem MHD), Pick bestätigen, Fehlmengen; Aufträge wechseln auf „Kommissionierung“/„Verpackung“                                                                                  |
+| 4.3 FangEvo Pack         | Packtisch-Arbeitsplätze, Auftrag scannen, Artikel scannen mit Fehlerprüfung (falscher Artikel, Variante, doppelt, unvollständig), Seriennummern, Gewicht/Pakete, Abschluss = Versand + Belege                                                                            |
+| 4.4 Versand              | Sendungen mit Paketen, Trackingnummer, Versandetikett. Versanddienstleister als austauschbare Adapter; ohne Zugangsdaten und Sandbox-Test nur „manuell“ (eigene Trackingnummer) und „eigenes Adressetikett“ (PDF). DHL/DPD/GLS usw. werden **nicht** als fertig gemeldet |
+| 4.5 Retouren             | Retoure zum Auftrag, Wareneingang mit Zustand (wieder verkaufbar/beschädigt/entsorgen), Bestandsbuchung, Gutschrift aus der Rechnung                                                                                                                                     |
+| 4.6 Mobile Scanner       | Handy-Oberfläche `/scan`: Artikel/Platz scannen (Kamera, wo der Browser es kann, sonst Handscanner/Eingabe), Bestand abfragen, Wareneingang, Umlagerung, Inventur, Kommissionieren                                                                                       |
+
+Ergebnis Phase 4: alle Arbeitspakete umgesetzt und getestet (phase4.test, E2E `phase4-flow.mjs`). Offen: Etiketten echter Versanddienstleister (brauchen Zugangsdaten und Sandbox-Test), Reservierung je Charge, Waagen-/Druckeranbindung am Packplatz (heute Browser-Druck).
+
+### Phase 5–8
 
 Wie im Playbook. Sie werden vor Beginn jeweils in Arbeitspakete wie in Phase 1 zerlegt und zur Freigabe vorgelegt.
 

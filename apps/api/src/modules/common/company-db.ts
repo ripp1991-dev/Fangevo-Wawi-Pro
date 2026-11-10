@@ -17,6 +17,9 @@ const DEFAULT_SEQUENCES: Record<NumberSequenceKey, { prefix: string; padding: nu
   credit_note: { prefix: 'GU-', padding: 6 },
   cancellation: { prefix: 'ST-', padding: 6 },
   purchase_order: { prefix: 'BE-', padding: 6 },
+  pick_list: { prefix: 'PL-', padding: 6 },
+  shipment: { prefix: 'SE-', padding: 6 },
+  return: { prefix: 'RT-', padding: 6 },
 };
 
 /** Firmenkontext einer Anfrage (Account, Benutzer und aktive Firma). */

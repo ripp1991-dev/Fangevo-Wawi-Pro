@@ -16,16 +16,16 @@ datasource db {
 // ───────────── Global (ohne Mandantenbezug) ─────────────
 
 model User {
-  id                String    @id @db.Uuid
-  email             String    @unique
-  name              String
-  passwordHash      String    @map("password_hash")
-  emailVerifiedAt   DateTime? @map("email_verified_at")
-  mfaEnabled        Boolean   @default(false) @map("mfa_enabled")
-  mfaSecretEnc      String?   @map("mfa_secret_enc")
-  lastAccountId     String?   @map("last_account_id") @db.Uuid
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
+  id              String    @id @db.Uuid
+  email           String    @unique
+  name            String
+  passwordHash    String    @map("password_hash")
+  emailVerifiedAt DateTime? @map("email_verified_at")
+  mfaEnabled      Boolean   @default(false) @map("mfa_enabled")
+  mfaSecretEnc    String?   @map("mfa_secret_enc")
+  lastAccountId   String?   @map("last_account_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   sessions      Session[]
   authTokens    AuthToken[]
@@ -36,17 +36,17 @@ model User {
 }
 
 model Session {
-  id           String    @id @db.Uuid
-  tokenHash    String    @unique @map("token_hash")
-  userId       String    @map("user_id") @db.Uuid
-  accountId    String?   @map("account_id") @db.Uuid
-  mfaPending   Boolean   @default(false) @map("mfa_pending")
-  ip           String?
-  userAgent    String?   @map("user_agent")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  lastSeenAt   DateTime  @default(now()) @map("last_seen_at")
-  expiresAt    DateTime  @map("expires_at")
-  revokedAt    DateTime? @map("revoked_at")
+  id         String    @id @db.Uuid
+  tokenHash  String    @unique @map("token_hash")
+  userId     String    @map("user_id") @db.Uuid
+  accountId  String?   @map("account_id") @db.Uuid
+  mfaPending Boolean   @default(false) @map("mfa_pending")
+  ip         String?
+  userAgent  String?   @map("user_agent")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  lastSeenAt DateTime  @default(now()) @map("last_seen_at")
+  expiresAt  DateTime  @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -126,25 +126,25 @@ model Account {
 }
 
 model Company {
-  id         String    @id @db.Uuid
-  accountId  String    @map("account_id") @db.Uuid
-  name       String
-  legalName  String?   @map("legal_name")
-  vatId      String?   @map("vat_id")
-  street     String?
-  postalCode String?   @map("postal_code")
-  city       String?
-  country    String    @default("DE") @db.Char(2)
-  email      String?
-  phone      String?
-  archivedAt DateTime? @map("archived_at")
-  createdAt  DateTime  @default(now()) @map("created_at")
-  createdBy  String?   @map("created_by") @db.Uuid
-  updatedAt  DateTime  @updatedAt @map("updated_at")
-  updatedBy  String?   @map("updated_by") @db.Uuid
-  version    Int       @default(1)
+  id           String    @id @db.Uuid
+  accountId    String    @map("account_id") @db.Uuid
+  name         String
+  legalName    String?   @map("legal_name")
+  vatId        String?   @map("vat_id")
+  street       String?
+  postalCode   String?   @map("postal_code")
+  city         String?
+  country      String    @default("DE") @db.Char(2)
+  email        String?
+  phone        String?
+  archivedAt   DateTime? @map("archived_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  createdBy    String?   @map("created_by") @db.Uuid
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  updatedBy    String?   @map("updated_by") @db.Uuid
+  version      Int       @default(1)
   /// Werte der kundeneigenen Felder (siehe CustomFieldDefinition), Schlüssel = Feld-Key
-  customFields Json    @default("{}") @map("custom_fields")
+  customFields Json      @default("{}") @map("custom_fields")
 
   account Account         @relation(fields: [accountId], references: [id], onDelete: Restrict)
   access  CompanyAccess[]
@@ -561,40 +561,40 @@ model CustomerGroup {
 }
 
 model Article {
-  id                  String    @id @db.Uuid
-  accountId           String    @map("account_id") @db.Uuid
-  companyId           String    @map("company_id") @db.Uuid
-  number              String
+  id                String    @id @db.Uuid
+  accountId         String    @map("account_id") @db.Uuid
+  companyId         String    @map("company_id") @db.Uuid
+  number            String
   /// standard | parent (Vaterartikel) | variant (Kindartikel) | set (Stückliste)
-  kind                String    @default("standard")
-  parentId            String?   @map("parent_id") @db.Uuid
+  kind              String    @default("standard")
+  parentId          String?   @map("parent_id") @db.Uuid
   /// Bei Vaterartikeln: Variantenmerkmale {"Größe":["S","M"]}; bei Kindartikeln: Ausprägung {"Größe":"M"}
-  variantAttributes   Json?     @map("variant_attributes")
-  name                String
-  shortDescription    String?   @map("short_description")
-  description         String?
-  gtin                String?
-  manufacturerId      String?   @map("manufacturer_id") @db.Uuid
-  brand               String?
-  categoryId          String?   @map("category_id") @db.Uuid
-  unit                String    @default("Stück")
-  taxRateId           String    @map("tax_rate_id") @db.Uuid
-  purchasePriceNet    Decimal   @default(0) @map("purchase_price_net") @db.Decimal(19, 4)
-  salePriceNet        Decimal   @default(0) @map("sale_price_net") @db.Decimal(19, 4)
-  weightKg            Decimal?  @map("weight_kg") @db.Decimal(12, 4)
-  minStock            Decimal   @default(0) @map("min_stock") @db.Decimal(19, 4)
-  stockTracked        Boolean   @default(true) @map("stock_tracked")
-  trackBatches        Boolean   @default(false) @map("track_batches")
-  trackSerials        Boolean   @default(false) @map("track_serials")
-  trackBestBefore     Boolean   @default(false) @map("track_best_before")
-  active              Boolean   @default(true)
-  customFields        Json      @default("{}") @map("custom_fields")
-  archivedAt          DateTime? @map("archived_at")
-  createdAt           DateTime  @default(now()) @map("created_at")
-  createdBy           String?   @map("created_by") @db.Uuid
-  updatedAt           DateTime  @updatedAt @map("updated_at")
-  updatedBy           String?   @map("updated_by") @db.Uuid
-  version             Int       @default(1)
+  variantAttributes Json?     @map("variant_attributes")
+  name              String
+  shortDescription  String?   @map("short_description")
+  description       String?
+  gtin              String?
+  manufacturerId    String?   @map("manufacturer_id") @db.Uuid
+  brand             String?
+  categoryId        String?   @map("category_id") @db.Uuid
+  unit              String    @default("Stück")
+  taxRateId         String    @map("tax_rate_id") @db.Uuid
+  purchasePriceNet  Decimal   @default(0) @map("purchase_price_net") @db.Decimal(19, 4)
+  salePriceNet      Decimal   @default(0) @map("sale_price_net") @db.Decimal(19, 4)
+  weightKg          Decimal?  @map("weight_kg") @db.Decimal(12, 4)
+  minStock          Decimal   @default(0) @map("min_stock") @db.Decimal(19, 4)
+  stockTracked      Boolean   @default(true) @map("stock_tracked")
+  trackBatches      Boolean   @default(false) @map("track_batches")
+  trackSerials      Boolean   @default(false) @map("track_serials")
+  trackBestBefore   Boolean   @default(false) @map("track_best_before")
+  active            Boolean   @default(true)
+  customFields      Json      @default("{}") @map("custom_fields")
+  archivedAt        DateTime? @map("archived_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  createdBy         String?   @map("created_by") @db.Uuid
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  updatedBy         String?   @map("updated_by") @db.Uuid
+  version           Int       @default(1)
 
   @@unique([companyId, number])
   @@index([companyId, name])
@@ -630,31 +630,31 @@ model SetComponent {
 }
 
 model Customer {
-  id                 String    @id @db.Uuid
-  accountId          String    @map("account_id") @db.Uuid
-  companyId          String    @map("company_id") @db.Uuid
-  number             String
+  id               String    @id @db.Uuid
+  accountId        String    @map("account_id") @db.Uuid
+  companyId        String    @map("company_id") @db.Uuid
+  number           String
   /// private | business
-  type               String    @default("private")
-  companyName        String?   @map("company_name")
-  salutation         String?
-  firstName          String?   @map("first_name")
-  lastName           String?   @map("last_name")
-  email              String?
-  phone              String?
-  vatId              String?   @map("vat_id")
-  customerGroupId    String?   @map("customer_group_id") @db.Uuid
-  paymentTermsDays   Int       @default(14) @map("payment_terms_days")
-  blocked            Boolean   @default(false)
-  blockedReason      String?   @map("blocked_reason")
-  notes              String?
-  customFields       Json      @default("{}") @map("custom_fields")
-  archivedAt         DateTime? @map("archived_at")
-  createdAt          DateTime  @default(now()) @map("created_at")
-  createdBy          String?   @map("created_by") @db.Uuid
-  updatedAt          DateTime  @updatedAt @map("updated_at")
-  updatedBy          String?   @map("updated_by") @db.Uuid
-  version            Int       @default(1)
+  type             String    @default("private")
+  companyName      String?   @map("company_name")
+  salutation       String?
+  firstName        String?   @map("first_name")
+  lastName         String?   @map("last_name")
+  email            String?
+  phone            String?
+  vatId            String?   @map("vat_id")
+  customerGroupId  String?   @map("customer_group_id") @db.Uuid
+  paymentTermsDays Int       @default(14) @map("payment_terms_days")
+  blocked          Boolean   @default(false)
+  blockedReason    String?   @map("blocked_reason")
+  notes            String?
+  customFields     Json      @default("{}") @map("custom_fields")
+  archivedAt       DateTime? @map("archived_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  createdBy        String?   @map("created_by") @db.Uuid
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  updatedBy        String?   @map("updated_by") @db.Uuid
+  version          Int       @default(1)
 
   @@unique([companyId, number])
   @@index([companyId, lastName])
@@ -810,15 +810,19 @@ model StockMovement {
 
 /// Aktueller Bestand je Artikel und Lager(platz); wird nur zusammen mit dem Journal geändert.
 model StockLevel {
-  id          String   @id @db.Uuid
-  accountId   String   @map("account_id") @db.Uuid
-  companyId   String   @map("company_id") @db.Uuid
-  articleId   String   @map("article_id") @db.Uuid
-  warehouseId String   @map("warehouse_id") @db.Uuid
-  locationId  String?  @map("location_id") @db.Uuid
-  quantity    Decimal  @default(0) @db.Decimal(19, 4)
-  reserved    Decimal  @default(0) @db.Decimal(19, 4)
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id           String    @id @db.Uuid
+  accountId    String    @map("account_id") @db.Uuid
+  companyId    String    @map("company_id") @db.Uuid
+  articleId    String    @map("article_id") @db.Uuid
+  warehouseId  String    @map("warehouse_id") @db.Uuid
+  locationId   String?   @map("location_id") @db.Uuid
+  /// Phase 4: Bestand je Charge/Seriennummer (leer = ohne Rückverfolgung)
+  batch        String?
+  serialNumber String?   @map("serial_number")
+  bestBefore   DateTime? @map("best_before") @db.Date
+  quantity     Decimal   @default(0) @db.Decimal(19, 4)
+  reserved     Decimal   @default(0) @db.Decimal(19, 4)
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
   @@index([companyId, articleId])
   @@map("stock_levels")
@@ -920,37 +924,37 @@ model StockReservation {
 
 /// Belege: Angebot, Auftragsbestätigung, Lieferschein, Rechnung, Gutschrift, Stornorechnung, Bestellung
 model Document {
-  id               String    @id @db.Uuid
-  accountId        String    @map("account_id") @db.Uuid
-  companyId        String    @map("company_id") @db.Uuid
+  id              String    @id @db.Uuid
+  accountId       String    @map("account_id") @db.Uuid
+  companyId       String    @map("company_id") @db.Uuid
   /// offer | order_confirmation | delivery_note | invoice | credit_note | cancellation | purchase_order
-  type             String
+  type            String
   /// Nummer wird erst beim Festschreiben vergeben (lückenlos)
-  number           String?
+  number          String?
   /// draft | finalized
-  status           String    @default("draft")
-  orderId          String?   @map("order_id") @db.Uuid
-  purchaseOrderId  String?   @map("purchase_order_id") @db.Uuid
-  relatedId        String?   @map("related_id") @db.Uuid
-  recipient        Json
-  lines            Json
-  taxSummary       Json      @map("tax_summary")
-  totalNet         Decimal   @map("total_net") @db.Decimal(19, 4)
-  totalTax         Decimal   @map("total_tax") @db.Decimal(19, 4)
-  totalGross       Decimal   @map("total_gross") @db.Decimal(19, 4)
-  issueDate        DateTime  @map("issue_date") @db.Date
-  serviceDate      DateTime? @map("service_date") @db.Date
-  dueDate          DateTime? @map("due_date") @db.Date
-  notes            String?
+  status          String    @default("draft")
+  orderId         String?   @map("order_id") @db.Uuid
+  purchaseOrderId String?   @map("purchase_order_id") @db.Uuid
+  relatedId       String?   @map("related_id") @db.Uuid
+  recipient       Json
+  lines           Json
+  taxSummary      Json      @map("tax_summary")
+  totalNet        Decimal   @map("total_net") @db.Decimal(19, 4)
+  totalTax        Decimal   @map("total_tax") @db.Decimal(19, 4)
+  totalGross      Decimal   @map("total_gross") @db.Decimal(19, 4)
+  issueDate       DateTime  @map("issue_date") @db.Date
+  serviceDate     DateTime? @map("service_date") @db.Date
+  dueDate         DateTime? @map("due_date") @db.Date
+  notes           String?
   /// Rechnungen: unpaid | partially_paid | paid | cancelled
-  paymentStatus    String?   @map("payment_status")
-  finalizedAt      DateTime? @map("finalized_at")
-  finalizedBy      String?   @map("finalized_by") @db.Uuid
-  pdfSha256        String?   @map("pdf_sha256")
-  sentAt           DateTime? @map("sent_at")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  createdBy        String?   @map("created_by") @db.Uuid
-  updatedAt        DateTime  @updatedAt @map("updated_at")
+  paymentStatus   String?   @map("payment_status")
+  finalizedAt     DateTime? @map("finalized_at")
+  finalizedBy     String?   @map("finalized_by") @db.Uuid
+  pdfSha256       String?   @map("pdf_sha256")
+  sentAt          DateTime? @map("sent_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  createdBy       String?   @map("created_by") @db.Uuid
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   @@unique([companyId, type, number])
   @@index([companyId, type, issueDate])
@@ -1011,20 +1015,20 @@ model PurchaseOrder {
 }
 
 model PurchaseOrderLine {
-  id               String   @id @db.Uuid
-  accountId        String   @map("account_id") @db.Uuid
-  companyId        String   @map("company_id") @db.Uuid
-  purchaseOrderId  String   @map("purchase_order_id") @db.Uuid
+  id               String  @id @db.Uuid
+  accountId        String  @map("account_id") @db.Uuid
+  companyId        String  @map("company_id") @db.Uuid
+  purchaseOrderId  String  @map("purchase_order_id") @db.Uuid
   position         Int
-  articleId        String   @map("article_id") @db.Uuid
-  articleNumber    String   @map("article_number")
-  supplierSku      String?  @map("supplier_sku")
+  articleId        String  @map("article_id") @db.Uuid
+  articleNumber    String  @map("article_number")
+  supplierSku      String? @map("supplier_sku")
   name             String
   unit             String
-  quantity         Decimal  @db.Decimal(19, 4)
-  receivedQuantity Decimal  @default(0) @map("received_quantity") @db.Decimal(19, 4)
-  unitPriceNet     Decimal  @map("unit_price_net") @db.Decimal(19, 4)
-  lineNet          Decimal  @map("line_net") @db.Decimal(19, 4)
+  quantity         Decimal @db.Decimal(19, 4)
+  receivedQuantity Decimal @default(0) @map("received_quantity") @db.Decimal(19, 4)
+  unitPriceNet     Decimal @map("unit_price_net") @db.Decimal(19, 4)
+  lineNet          Decimal @map("line_net") @db.Decimal(19, 4)
 
   @@index([purchaseOrderId])
   @@map("purchase_order_lines")
@@ -1043,4 +1047,142 @@ model GoodsReceipt {
 
   @@index([purchaseOrderId])
   @@map("goods_receipts")
+}
+
+// ───────────── Phase 4: Logistik ─────────────
+
+/// Zusätzliche Barcodes je Artikel (neben der GTIN), z. B. Lieferanten-EAN
+model ArticleBarcode {
+  id        String   @id @db.Uuid
+  accountId String   @map("account_id") @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  articleId String   @map("article_id") @db.Uuid
+  code      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([companyId, code])
+  @@index([articleId])
+  @@map("article_barcodes")
+}
+
+model PickList {
+  id          String    @id @db.Uuid
+  accountId   String    @map("account_id") @db.Uuid
+  companyId   String    @map("company_id") @db.Uuid
+  number      String
+  /// open | in_progress | done | cancelled
+  status      String    @default("open")
+  warehouseId String    @map("warehouse_id") @db.Uuid
+  assignedTo  String?   @map("assigned_to") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  createdBy   String?   @map("created_by") @db.Uuid
+  completedAt DateTime? @map("completed_at")
+
+  @@unique([companyId, number])
+  @@index([companyId, status])
+  @@map("pick_lists")
+}
+
+model PickListLine {
+  id             String  @id @db.Uuid
+  accountId      String  @map("account_id") @db.Uuid
+  companyId      String  @map("company_id") @db.Uuid
+  pickListId     String  @map("pick_list_id") @db.Uuid
+  position       Int
+  orderId        String  @map("order_id") @db.Uuid
+  orderLineId    String  @map("order_line_id") @db.Uuid
+  articleId      String  @map("article_id") @db.Uuid
+  articleNumber  String  @map("article_number")
+  name           String
+  locationId     String? @map("location_id") @db.Uuid
+  batch          String?
+  quantity       Decimal @db.Decimal(19, 4)
+  pickedQuantity Decimal @default(0) @map("picked_quantity") @db.Decimal(19, 4)
+
+  @@index([pickListId])
+  @@index([orderId])
+  @@map("pick_list_lines")
+}
+
+model PackingStation {
+  id             String    @id @db.Uuid
+  accountId      String    @map("account_id") @db.Uuid
+  companyId      String    @map("company_id") @db.Uuid
+  name           String
+  defaultCarrier String    @default("manual") @map("default_carrier")
+  /// z. B. {"autoInvoice":true,"autoDeliveryNote":true}
+  settings       Json      @default("{}")
+  archivedAt     DateTime? @map("archived_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@unique([companyId, name])
+  @@map("packing_stations")
+}
+
+/// Sendung eines Auftrags (ein oder mehrere Pakete)
+model Shipment {
+  id             String   @id @db.Uuid
+  accountId      String   @map("account_id") @db.Uuid
+  companyId      String   @map("company_id") @db.Uuid
+  number         String
+  orderId        String   @map("order_id") @db.Uuid
+  stationId      String?  @map("station_id") @db.Uuid
+  /// manual | own_label
+  carrier        String
+  trackingNumber String?  @map("tracking_number")
+  /// [{"weightKg":"1.2","lengthCm":30,...}]
+  parcels        Json
+  /// verpackte Positionen inkl. Charge/Seriennummer
+  items          Json
+  labelPdf       Bytes?   @map("label_pdf")
+  createdAt      DateTime @default(now()) @map("created_at")
+  createdBy      String?  @map("created_by") @db.Uuid
+
+  @@unique([companyId, number])
+  @@index([orderId])
+  @@map("shipments")
+}
+
+model Return {
+  id           String    @id @db.Uuid
+  accountId    String    @map("account_id") @db.Uuid
+  companyId    String    @map("company_id") @db.Uuid
+  number       String
+  orderId      String    @map("order_id") @db.Uuid
+  customerId   String    @map("customer_id") @db.Uuid
+  /// open | received | cancelled
+  status       String    @default("open")
+  reason       String?
+  notes        String?
+  warehouseId  String    @map("warehouse_id") @db.Uuid
+  receivedAt   DateTime? @map("received_at")
+  creditNoteId String?   @map("credit_note_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+  createdBy    String?   @map("created_by") @db.Uuid
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@unique([companyId, number])
+  @@index([companyId, status])
+  @@index([orderId])
+  @@map("returns")
+}
+
+model ReturnLine {
+  id            String  @id @db.Uuid
+  accountId     String  @map("account_id") @db.Uuid
+  companyId     String  @map("company_id") @db.Uuid
+  returnId      String  @map("return_id") @db.Uuid
+  orderLineId   String  @map("order_line_id") @db.Uuid
+  articleId     String? @map("article_id") @db.Uuid
+  articleNumber String? @map("article_number")
+  name          String
+  quantity      Decimal @db.Decimal(19, 4)
+  /// resell | damaged | scrap (beim Eingang festgelegt)
+  condition     String?
+  locationId    String? @map("location_id") @db.Uuid
+  batch         String?
+  serialNumber  String? @map("serial_number")
+
+  @@index([returnId])
+  @@map("return_lines")
 }

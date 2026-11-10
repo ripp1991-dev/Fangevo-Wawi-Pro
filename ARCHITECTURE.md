@@ -98,3 +98,10 @@ Worker / EventDispatcher ──► holt outbox_pending (SKIP LOCKED) ──► T
 - **Einkauf** (`PurchasingService`): Wareneingang prüft Lagerplatz und Rückverfolgung über `InventoryService.checkSlot/checkTracking` und bucht über `apply()`; das Bestellungs-PDF nutzt denselben Generator.
 - **Oberfläche:** Seiten `orders.tsx`, `documents.tsx`, `purchasing.tsx`; Suchfelder für Kunde/Lieferant/Artikel in `components/pickers.tsx`; PDF-Abruf mit Firmenkontext über `openPdf()` in `lib/sales.ts`.
 - Entscheidungen dazu: [ADR-008](docs/decisions/ADR-008_BELEGE_RESERVIERUNG.md).
+
+## Phase 4: Logistik
+
+- Modul `modules/logistics` mit `ScanService`, `PickingService`, `PackingService`, `ReturnsService`; Etikett-PDF in `label-pdf.ts`.
+- Packtisch und Picklisten nutzen nur Services anderer Module: `OrdersService.demands/transitionInTx/shipInTx`, `DocumentsService.fromOrderInTx/doFinalize/creditNoteInTx`, `InventoryService.apply/checkSlot/checkTracking`.
+- Versanddienstleister sind als austauschbare Arten (`CARRIERS` in `packages/shared/src/schemas/logistics.ts`) angelegt; echte Anbindungen kommen als zusätzliche Arten (ADR-009).
+- Oberfläche: `picking.tsx`, `packing.tsx`, `returns.tsx`, `scan.tsx` (mobil); Barcodes als Reiter im Artikel.

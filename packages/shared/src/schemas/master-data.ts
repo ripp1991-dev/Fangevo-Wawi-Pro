@@ -86,6 +86,9 @@ export const NUMBER_SEQUENCE_KEYS = {
   credit_note: 'Gutschriftnummer',
   cancellation: 'Stornorechnungsnummer',
   purchase_order: 'Bestellnummer (Einkauf)',
+  pick_list: 'Picklistennummer',
+  shipment: 'Sendungsnummer',
+  return: 'Retourennummer',
 } as const;
 export type NumberSequenceKey = keyof typeof NUMBER_SEQUENCE_KEYS;
 
@@ -363,6 +366,8 @@ export const stockTransferSchema = z.object({
   toWarehouseId: uuid,
   toLocationId: uuid.optional().nullable(),
   quantity: positiveQuantity,
+  batch: optText(80),
+  serialNumber: optText(120),
   note: optText(500),
 });
 
@@ -372,5 +377,12 @@ export const stockCorrectionSchema = z.object({
   warehouseId: uuid,
   locationId: uuid.optional().nullable(),
   countedQuantity: decimalString({ label: 'Gezählte Menge' }),
+  batch: optText(80),
+  serialNumber: optText(120),
+  bestBefore: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Datum JJJJ-MM-TT')
+    .optional()
+    .nullable(),
   note: optText(500),
 });
