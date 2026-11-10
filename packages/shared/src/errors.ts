@@ -21,6 +21,9 @@ export const ERROR_CODES = [
   'LAST_OWNER',
   'RATE_LIMITED',
   'INTERNAL_ERROR',
+  'BILLING_DETAILS_MISSING',
+  'BILLING_NOT_CONFIGURED',
+  'PLAN_NOT_SELF_SERVICE',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

@@ -1,6 +1,9 @@
 import { type ComponentType } from 'react';
 import {
   BadgeCheck,
+  CreditCard,
+  LayoutGrid,
+  LifeBuoy,
   Boxes,
   Building2,
   FileUp,
@@ -241,6 +244,30 @@ export const NAV_ITEMS: NavItem[] = [
     icon: BadgeCheck,
     permission: 'license.read',
     keywords: 'paket abo',
+  },
+  {
+    to: '/admin/billing',
+    label: 'Abo & Rechnungen',
+    group: 'admin',
+    icon: CreditCard,
+    permission: 'billing.manage',
+    keywords: 'abo paket rechnung zahlung kündigen upgrade',
+  },
+  {
+    to: '/marketplace',
+    label: 'Marketplace',
+    group: 'admin',
+    icon: LayoutGrid,
+    permission: 'license.read',
+    keywords: 'module zubuchen erweiterungen testen',
+  },
+  {
+    to: '/support',
+    label: 'Support',
+    group: 'admin',
+    icon: LifeBuoy,
+    permission: 'support.manage',
+    keywords: 'hilfe anfrage ticket fehler melden',
   },
   {
     to: '/admin/account',

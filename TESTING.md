@@ -34,6 +34,8 @@ cd apps/web && npx vite
 E2E_API_LOG=/tmp/fangevo-api.log pnpm test:e2e
 ```
 
+Für den Phase-7-Ablauf muss die API mit `PLATFORM_ADMIN_EMAILS=@platform.example.test` laufen (der Test legt einen FangEvo-Mitarbeiter mit Zwei-Faktor an). Ohne vorinstallierte Playwright-Browser kann mit `E2E_CHROMIUM_PATH` ein vorhandenes Chromium genutzt werden.
+
 Der Ablauf: Registrieren (inkl. Validierungsfehler) → E-Mail bestätigen → Anmelden → Firma anlegen → Mitarbeiter einladen → Rollen, Audit-Log, Lizenz, MFA-Einrichtung ansehen → Einladung auf dem Handy annehmen → Rechte prüfen → Dunkelmodus. Screenshots landen in `tests/e2e/screenshots/`. Hinweis: Wiederholte Läufe können das Registrierungs-Limit (10 pro Stunde und IP) erreichen.
 
 ## Was die Mandanten-Testsuite prüft
@@ -82,3 +84,7 @@ Ausführen: `pnpm --filter @fangevo/api perf:lists` (nur gegen `*_test`-Datenban
 ## Grenzen
 
 - Last- und Performance-Tests (k6) folgen ab Phase 3.
+
+## Phase 7 (Stand 2026-11-09)
+
+`test/phase7.test.ts` prüft: Aktivierung mit Rechnung (Beträge, PDF, E-Mail, Unveränderlichkeit), Hochstufen mit anteiliger Rechnung, Herabstufen und Verlängerung im Abrechnungslauf (ohne doppelte Rechnung), Zusatzmodul-Test und Umstellung, Kündigung und Lesemodus, Zahlungsverzug (30 Tage), Rechte und Account-Trennung, Support mit Antwort und Benachrichtigung, Plattform-Zugang nur mit Freigabe und 2FA, Lizenzänderung und Sperre, Zahlung markieren. Preis- und Lizenzregeln: `packages/licensing/src/billing.test.ts`. Zeitabhängige Abläufe werden mit `BillingService.processAccount(accountId, zeitpunkt)` simuliert.

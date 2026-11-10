@@ -9,7 +9,7 @@ import { RequirePermission, Tenant, type TenantContext } from '../http/context';
 export class LicenseController {
   constructor(@Inject(Database) private readonly db: Database) {}
 
-  /** Lizenzstand inklusive Nutzung. Änderungen erfolgen nur durch FangEvo (bis Phase 7 per Plattform-Werkzeug). */
+  /** Lizenzstand inklusive Nutzung. Änderungen über das Abo (Kundenportal, Marketplace, Plattform-Verwaltung). */
   @Get()
   @RequirePermission('license.read')
   async get(@Tenant() t: TenantContext) {

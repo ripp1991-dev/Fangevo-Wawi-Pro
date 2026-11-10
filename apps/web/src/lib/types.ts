@@ -10,6 +10,7 @@ export interface SessionUser {
 export interface SessionData {
   user: SessionUser;
   mfaPending: boolean;
+  platformAdmin?: boolean;
   accounts?: { id: string; name: string; isOwner: boolean }[];
   account?: {
     id: string;

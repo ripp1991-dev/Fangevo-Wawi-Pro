@@ -78,6 +78,7 @@ jobs:
       MAIL_TRANSPORT: log
       APP_ENCRYPTION_KEY: Y2ktb25seS1rZXktbm90LWZvci1wcm9kdWN0aW9uISE=
       E2E_API_LOG: /tmp/fangevo-api.log
+      PLATFORM_ADMIN_EMAILS: '@platform.example.test'
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

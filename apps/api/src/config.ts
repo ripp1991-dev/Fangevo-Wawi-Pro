@@ -30,6 +30,28 @@ const schema = z.object({
   /** Webhooks an private/interne Adressen erlauben (nur Entwicklung/Tests) */
   WEBHOOK_ALLOW_PRIVATE: z.stringbool().optional(),
   LOG_LEVEL: z.string().default('info'),
+  /**
+   * FangEvo-Mitarbeiter mit Zugang zur Plattform-Verwaltung (Komma-getrennt). Einträge mit
+   * führendem @ gelten für die ganze Domain (z. B. @fangevo.de). Zwei-Faktor ist zusätzlich Pflicht.
+   */
+  PLATFORM_ADMIN_EMAILS: z.string().default(''),
+  /** Postfach des Supports für neue Tickets und Antworten */
+  SUPPORT_EMAIL: z.string().email().optional(),
+  /** Absender (FangEvo) auf Plattform-Rechnungen. Pflicht in Produktion, bevor Rechnungen erstellt werden. */
+  PLATFORM_ISSUER_NAME: z.string().optional(),
+  PLATFORM_ISSUER_STREET: z.string().optional(),
+  PLATFORM_ISSUER_POSTAL_CODE: z.string().optional(),
+  PLATFORM_ISSUER_CITY: z.string().optional(),
+  PLATFORM_ISSUER_COUNTRY: z.string().length(2).default('DE'),
+  PLATFORM_ISSUER_EMAIL: z.string().optional(),
+  PLATFORM_ISSUER_VAT_ID: z.string().optional(),
+  PLATFORM_ISSUER_TAX_NUMBER: z.string().optional(),
+  PLATFORM_ISSUER_MANAGING_DIRECTOR: z.string().optional(),
+  PLATFORM_ISSUER_REGISTER_COURT: z.string().optional(),
+  PLATFORM_ISSUER_REGISTER_NUMBER: z.string().optional(),
+  PLATFORM_ISSUER_BANK_NAME: z.string().optional(),
+  PLATFORM_ISSUER_IBAN: z.string().optional(),
+  PLATFORM_ISSUER_BIC: z.string().optional(),
 });
 
 export type AppConfig = z.infer<typeof schema> & {
@@ -37,6 +59,8 @@ export type AppConfig = z.infer<typeof schema> & {
   isProd: boolean;
   webhookAllowPrivate: boolean;
   dispatchInline: boolean;
+  platformAdmins: Set<string>;
+  isPlatformAdmin: (email: string) => boolean;
 };
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -57,12 +81,22 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   if (c.NODE_ENV === 'production' && c.RATE_LIMIT_DISABLED) {
     throw new Error('Rate-Limits dürfen in Produktion nicht deaktiviert werden');
   }
+  const admins = new Set(
+    c.PLATFORM_ADMIN_EMAILS.split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean),
+  );
   return {
     ...c,
     mailTransport: c.MAIL_TRANSPORT ?? (c.SMTP_HOST ? 'smtp' : 'log'),
     dispatchInline: c.EVENT_DISPATCH_INLINE ?? c.NODE_ENV === 'development',
     isProd: c.NODE_ENV === 'production',
     webhookAllowPrivate: c.WEBHOOK_ALLOW_PRIVATE ?? c.NODE_ENV !== 'production',
+    platformAdmins: admins,
+    isPlatformAdmin: (email: string) => {
+      const e = email.trim().toLowerCase();
+      return admins.has(e) || admins.has(e.slice(e.lastIndexOf('@')));
+    },
   };
 }
 

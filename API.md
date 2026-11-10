@@ -163,3 +163,26 @@ Umlagerung und Inventur nehmen jetzt `batch` und `serialNumber` an. Bei Artikeln
 | `POST /workflows`, `PUT /workflows/:id` (neue Version), `POST …/archive`, `POST …/test` `{entityId}`                                                                            | `workflows.manage` / Automatisierung |
 
 **Webhook-Format:** `POST` mit JSON `{id, type, createdAt, companyId, data}`; Header `X-FangEvo-Event`, `X-FangEvo-Delivery`, `X-FangEvo-Timestamp`, `X-FangEvo-Signature: sha256=HMAC(secret, timestamp + "." + body)`. Antwort 2xx = zugestellt.
+
+## Endpunkte (Phase 7)
+
+| Methode  | Pfad                                               | Recht / Zugang          | Zweck                                                    |
+| -------- | -------------------------------------------------- | ----------------------- | -------------------------------------------------------- |
+| GET      | `/billing`                                         | `billing.manage`        | Abo, Pakete, Zusatzmodule, Rechnungen, Zahlungsinfo      |
+| PUT      | `/billing/details`                                 | `billing.manage`        | Rechnungsdaten                                           |
+| POST     | `/billing/activate`                                | `billing.manage`        | Abo starten (`plan`, `interval`), erste Rechnung         |
+| POST     | `/billing/plan`                                    | `billing.manage`        | Paket/Intervall wechseln (`effective: now / period_end`) |
+| POST     | `/billing/cancel`, `/billing/reactivate`           | `billing.manage`        | Kündigen zum Laufzeitende / zurücknehmen                 |
+| GET      | `/billing/invoices/:id/pdf`                        | `billing.manage`        | Rechnung als PDF                                         |
+| GET      | `/marketplace`                                     | `license.read`          | Module mit Beschreibung, Preis, Status                   |
+| POST     | `/marketplace/:module/book`, `/:module/cancel`     | `billing.manage`        | Zusatzmodul buchen (Test) / kündigen                     |
+| GET/POST | `/support/tickets`                                 | `support.manage`        | Anfragen auflisten / anlegen                             |
+| GET      | `/support/tickets/:id`                             | `support.manage`        | Anfrage mit Verlauf                                      |
+| POST     | `/support/tickets/:id/messages`, `/:id/close`      | `support.manage`        | Antworten / erledigt                                     |
+| GET      | `/platform/accounts?q=`, `/platform/accounts/:id`  | FangEvo-Mitarbeiter+2FA | Accounts, Details (Lizenz, Abo, Rechnungen, Verlauf)     |
+| POST     | `/platform/accounts/:id/license`                   | FangEvo-Mitarbeiter+2FA | Lizenz/Abo ändern ohne Rechnung                          |
+| POST     | `/platform/accounts/:id/invoices/:invoiceId/paid`  | FangEvo-Mitarbeiter+2FA | Zahlung eingegangen                                      |
+| GET/POST | `/platform/support`, `/platform/support/:id/reply` | FangEvo-Mitarbeiter+2FA | Support-Postfach, Antwort mit Status                     |
+| POST     | `/platform/billing-run`                            | FangEvo-Mitarbeiter+2FA | Abrechnungslauf sofort                                   |
+
+Neue Fehlercodes: `BILLING_DETAILS_MISSING` (422), `BILLING_NOT_CONFIGURED` (503), `PLAN_NOT_SELF_SERVICE` (422). `GET /auth/session` liefert zusätzlich `platformAdmin`.

@@ -159,3 +159,18 @@ Migration `…_phase6_automation`.
 | `webhooks`, `webhook_deliveries`                                            | Abonnements (verschlüsselter Schlüssel, Ereignisse, Fehlerzähler) und Zustellungen (Status, Versuche, Antwort) |
 | `workflow_rules`, `workflow_versions` (**unveränderlich**), `workflow_runs` | Regeln, Fassungen, Läufe mit Kontext und Schritten                                                             |
 | `workflow_schedule` (global)                                                | Fälligkeiten zeitgesteuerter Regeln (nur IDs)                                                                  |
+
+## Tabellen (Phase 7)
+
+| Tabelle                | Ebene   | Inhalt                                                                                                            |
+| ---------------------- | ------- | ----------------------------------------------------------------------------------------------------------------- |
+| `subscriptions`        | Account | Abo: Paket, Intervall, Status, Laufzeit, Kündigung, geplanter Wechsel, Sperre, zusätzliche Firmen, Rechnungsdaten |
+| `subscription_addons`  | Account | Zusatzmodule (`trial`, `active`, `canceled`) mit Testende und Laufzeitende                                        |
+| `platform_invoices`    | Account | Rechnungen von FangEvo mit Positionen, Summen, PDF und Prüfsumme; Trigger erlaubt nur Status/Zahlungsdatum        |
+| `support_tickets`      | Account | Support-Anfragen (Nummer `S-NNNNNN`, Kategorie, Priorität, Status)                                                |
+| `support_messages`     | Account | Verlauf (nur anfügen)                                                                                             |
+| `platform_counters`    | global  | Zähler für Rechnungs- und Ticketnummern                                                                           |
+| `platform_accounts`    | global  | Verzeichnis für die Plattform-Verwaltung (Name, Inhaber-E-Mail, Paket, Status)                                    |
+| `support_ticket_index` | global  | Postfach-Index für den Support (nur IDs, Status, Priorität)                                                       |
+
+Migrationen: `phase7_commercial` (Tabellen, RLS, Trigger, Verzeichnis-Befüllung), `phase7_subscription_extras` (geplantes Intervall, Sperre, zusätzliche Firmen). Beide sind nicht-destruktiv. Accounts von vor Phase 7 erhalten ihr Abo beim ersten Aufruf automatisch aus der bestehenden Lizenz (Module außerhalb des Pakets werden als Zusatzmodule übernommen).

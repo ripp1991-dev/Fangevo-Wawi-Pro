@@ -63,7 +63,7 @@ export function LicensePage() {
     <>
       <PageHeader
         title="Lizenz"
-        description="Ihr gebuchtes Paket, Limits und Module. Änderungen nimmt aktuell das FangEvo-Team für Sie vor."
+        description="Ihr gebuchtes Paket, Limits und Module. Paket wechseln unter „Abo & Rechnungen“, Module zubuchen im Marketplace."
       />
       <div className="grid gap-4 lg:grid-cols-[1fr_2fr]">
         <Card>

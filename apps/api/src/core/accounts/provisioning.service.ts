@@ -75,6 +75,25 @@ export class ProvisioningService {
           change: { event: 'trial_started', plan: 'starter', days: DEFAULT_TRIAL_DAYS },
         },
       });
+      // Phase 7: Abo (Testphase) und Eintrag im Plattform-Verzeichnis
+      await tx.subscription.create({
+        data: {
+          accountId,
+          plan: 'starter',
+          status: 'trialing',
+          billingName: input.accountName,
+          billingEmail: owner.email,
+        },
+      });
+      await tx.platformAccount.create({
+        data: {
+          accountId,
+          name: input.accountName,
+          ownerEmail: owner.email,
+          plan: 'starter',
+          status: 'TRIAL',
+        },
+      });
       await this.audit.record(tx, {
         accountId,
         userId: input.ownerUserId,

@@ -1477,3 +1477,143 @@ model WorkflowSchedule {
   @@index([nextRunAt])
   @@map("workflow_schedule")
 }
+
+// ───────────── Phase 7: Kommerzialisierung ─────────────
+
+/// Abo eines Accounts (ein Abo je Account)
+model Subscription {
+  accountId          String    @id @map("account_id") @db.Uuid
+  plan               String
+  /// month | year
+  interval           String    @default("month")
+  /// trialing | active | past_due | canceled
+  status             String    @default("trialing")
+  currentPeriodStart DateTime? @map("current_period_start")
+  currentPeriodEnd   DateTime? @map("current_period_end")
+  cancelAtPeriodEnd  Boolean   @default(false) @map("cancel_at_period_end")
+  /// Herabstufung zum Laufzeitende
+  scheduledPlan      String?   @map("scheduled_plan")
+  /// Wechsel monatlich/jährlich zum Laufzeitende
+  scheduledInterval  String?   @map("scheduled_interval")
+  /// Von FangEvo gesperrt (nur lesen)
+  suspendedAt        DateTime? @map("suspended_at")
+  /// Zusätzlich gebuchte Firmen über die im Paket enthaltenen
+  extraCompanies     Int       @default(0) @map("extra_companies")
+  /// invoice (Überweisung); weitere Zahlarten nach Anbieter-Entscheidung
+  paymentMethod      String    @default("invoice") @map("payment_method")
+  billingName        String?   @map("billing_name")
+  billingStreet      String?   @map("billing_street")
+  billingPostalCode  String?   @map("billing_postal_code")
+  billingCity        String?   @map("billing_city")
+  billingCountry     String    @default("DE") @map("billing_country") @db.Char(2)
+  billingVatId       String?   @map("billing_vat_id")
+  billingEmail       String?   @map("billing_email")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  @@map("subscriptions")
+}
+
+model SubscriptionAddon {
+  id          String    @id @db.Uuid
+  accountId   String    @map("account_id") @db.Uuid
+  module      String
+  /// trial | active | canceled
+  status      String
+  trialEndsAt DateTime? @map("trial_ends_at")
+  startedAt   DateTime  @default(now()) @map("started_at")
+  /// Bei Kündigung: Ende der bezahlten Laufzeit
+  endsAt      DateTime? @map("ends_at")
+
+  @@unique([accountId, module])
+  @@map("subscription_addons")
+}
+
+/// Rechnungen von FangEvo an den Kunden (Abo)
+model PlatformInvoice {
+  id          String    @id @db.Uuid
+  accountId   String    @map("account_id") @db.Uuid
+  number      String    @unique
+  periodStart DateTime  @map("period_start")
+  periodEnd   DateTime  @map("period_end")
+  lines       Json
+  totalNet    Decimal   @map("total_net") @db.Decimal(19, 4)
+  totalTax    Decimal   @map("total_tax") @db.Decimal(19, 4)
+  totalGross  Decimal   @map("total_gross") @db.Decimal(19, 4)
+  /// open | paid | void
+  status      String    @default("open")
+  pdf         Bytes
+  sha256      String
+  issuedAt    DateTime  @default(now()) @map("issued_at")
+  dueDate     DateTime  @map("due_date") @db.Date
+  paidAt      DateTime? @map("paid_at")
+
+  @@index([accountId, issuedAt])
+  @@map("platform_invoices")
+}
+
+/// Globale Zähler der Plattform (z. B. Rechnungsnummern von FangEvo)
+model PlatformCounter {
+  key   String @id
+  value Int    @default(0)
+
+  @@map("platform_counters")
+}
+
+/// Verzeichnis der Accounts für die Plattform-Verwaltung (global, nur Kennzahlen)
+model PlatformAccount {
+  accountId  String   @id @map("account_id") @db.Uuid
+  name       String
+  ownerEmail String?  @map("owner_email")
+  plan       String
+  status     String
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("platform_accounts")
+}
+
+model SupportTicket {
+  id        String   @id @db.Uuid
+  accountId String   @map("account_id") @db.Uuid
+  number    String
+  subject   String
+  /// question | bug | billing | feature
+  category  String
+  /// low | normal | high | urgent
+  priority  String   @default("normal")
+  /// open | waiting_support | waiting_customer | closed
+  status    String   @default("waiting_support")
+  createdBy String   @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([accountId, number])
+  @@map("support_tickets")
+}
+
+model SupportMessage {
+  id           String   @id @db.Uuid
+  accountId    String   @map("account_id") @db.Uuid
+  ticketId     String   @map("ticket_id") @db.Uuid
+  authorUserId String?  @map("author_user_id") @db.Uuid
+  authorName   String   @map("author_name")
+  fromSupport  Boolean  @default(false) @map("from_support")
+  body         String
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([ticketId, createdAt])
+  @@map("support_messages")
+}
+
+/// Postfach-Index für das Support-Team (global, nur IDs und Status)
+model SupportTicketIndex {
+  ticketId  String   @id @map("ticket_id") @db.Uuid
+  accountId String   @map("account_id") @db.Uuid
+  status    String
+  priority  String
+  updatedAt DateTime @map("updated_at")
+
+  @@index([status, updatedAt])
+  @@map("support_ticket_index")
+}
