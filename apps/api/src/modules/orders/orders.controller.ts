@@ -42,6 +42,12 @@ export class OrdersController {
     return this.orders.stats(t);
   }
 
+  @Get('tree')
+  @RequirePermission('orders.read')
+  tree(@Tenant() t: TenantContext) {
+    return this.orders.tree(t);
+  }
+
   @Get(':id')
   @RequirePermission('orders.read')
   get(@Tenant() t: TenantContext, @Param('id', uuidParam) id: string) {

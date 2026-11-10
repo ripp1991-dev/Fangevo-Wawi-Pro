@@ -62,6 +62,183 @@ interface OrderRow {
   totalNet: string;
   totalGross: string;
   shippedAt: string | null;
+  channelId: string | null;
+  channelName: string | null;
+}
+
+interface OrderTree {
+  statuses: { status: OrderStatus; count: number }[];
+  channels: { id: string | null; name: string; open: number }[];
+}
+
+/** Auswahl im Statusbaum (wie in klassischen Warenwirtschaften: Baum links, Liste rechts). */
+interface TreeSelection {
+  key: string;
+  label: string;
+  statuses: OrderStatus[] | null;
+  /** undefined = alle Kanäle, null = ohne Kanal */
+  channelId?: string | null;
+}
+
+const OPEN_GROUPS: { label: string; statuses: OrderStatus[] }[] = [
+  { label: 'Neu', statuses: ['new', 'unchecked'] },
+  { label: 'In Bearbeitung', statuses: ['in_progress'] },
+  { label: 'Wartet auf Zahlung', statuses: ['awaiting_payment'] },
+  { label: 'Wartet auf Bestand', statuses: ['awaiting_stock'] },
+  { label: 'Kommissionierung', statuses: ['picking'] },
+  { label: 'Verpackung', statuses: ['packing'] },
+  { label: 'Versandbereit', statuses: ['ready_to_ship'] },
+];
+const OPEN_STATUSES = OPEN_GROUPS.flatMap((g) => g.statuses);
+const DONE_GROUPS: { label: string; statuses: OrderStatus[] }[] = [
+  { label: 'Versendet', statuses: ['shipped'] },
+  { label: 'Abgeschlossen', statuses: ['completed'] },
+  { label: 'Storniert', statuses: ['cancelled'] },
+];
+const ALL_ORDERS: TreeSelection = { key: 'all', label: 'Alle Aufträge', statuses: null };
+const OPEN_ORDERS: TreeSelection = { key: 'open', label: 'Offen', statuses: OPEN_STATUSES };
+
+function selectionFilters(s: TreeSelection): ListFilter[] {
+  const f: ListFilter[] = [];
+  if (s.statuses) f.push({ field: 'status', op: 'in', value: s.statuses } as ListFilter);
+  if (s.channelId !== undefined)
+    f.push(
+      (s.channelId === null
+        ? { field: 'channelId', op: 'empty' }
+        : { field: 'channelId', op: 'eq', value: s.channelId }) as ListFilter,
+    );
+  return f;
+}
+
+function StatusTree({
+  value,
+  onChange,
+}: {
+  value: TreeSelection;
+  onChange: (s: TreeSelection) => void;
+}) {
+  const q = useQuery({
+    queryKey: ['orders', 'tree'],
+    queryFn: () => http.get<OrderTree>('/orders/tree'),
+    refetchInterval: 30_000,
+  });
+  const count = (statuses: OrderStatus[]) =>
+    (q.data?.statuses ?? [])
+      .filter((x) => statuses.includes(x.status))
+      .reduce((a, x) => a + x.count, 0);
+  const total = (q.data?.statuses ?? []).reduce((a, x) => a + x.count, 0);
+  const item = (s: TreeSelection, n: number, depth = 0) => (
+    <li key={s.key}>
+      <button
+        type="button"
+        aria-current={value.key === s.key ? 'true' : undefined}
+        onClick={() => onChange(s)}
+        className={`flex w-full items-center justify-between rounded px-2 py-1 text-left text-sm hover:bg-surface-2 ${
+          value.key === s.key ? 'bg-primary/10 font-semibold text-primary' : ''
+        }`}
+        style={{ paddingLeft: 8 + depth * 14 }}
+      >
+        <span className="truncate">{s.label}</span>
+        <span className="ml-2 tabular-nums text-xs text-muted">{n}</span>
+      </button>
+    </li>
+  );
+  return (
+    <nav aria-label="Auftragsstatus" className="rounded-lg border border-border bg-surface p-2">
+      <p className="px-2 pb-1 text-xs font-semibold uppercase text-muted">Aufträge</p>
+      <ul className="space-y-0.5">
+        {item(OPEN_ORDERS, count(OPEN_STATUSES))}
+        {OPEN_GROUPS.map((g) =>
+          item({ key: `s:${g.label}`, label: g.label, statuses: g.statuses }, count(g.statuses), 1),
+        )}
+        {DONE_GROUPS.map((g) =>
+          item({ key: `s:${g.label}`, label: g.label, statuses: g.statuses }, count(g.statuses)),
+        )}
+        {item(ALL_ORDERS, total)}
+      </ul>
+      <p className="mt-3 px-2 pb-1 text-xs font-semibold uppercase text-muted">Offen nach Kanal</p>
+      <ul className="space-y-0.5">
+        {(q.data?.channels ?? []).map((c) =>
+          item(
+            {
+              key: `c:${c.id ?? 'none'}`,
+              label: c.name,
+              statuses: OPEN_STATUSES,
+              channelId: c.id,
+            },
+            c.open,
+          ),
+        )}
+      </ul>
+    </nav>
+  );
+}
+
+/** Positionen und Kopfdaten des markierten Auftrags unter der Liste. */
+function OrderPreview({ id, onOpen }: { id: string; onOpen: () => void }) {
+  const q = useQuery({
+    queryKey: ['order', id],
+    queryFn: () => http.get<OrderDetail>(`/orders/${id}`),
+  });
+  if (!q.data) return <Spinner />;
+  const o = q.data;
+  const ship = o.customerSnapshot.shipping ?? o.customerSnapshot.billing;
+  return (
+    <div className="rounded-lg border border-border bg-surface p-3">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <div className="text-sm">
+          <span className="font-semibold">Auftrag {o.number}</span> ·{' '}
+          {o.customerSnapshot.displayName}
+          {ship && (
+            <span className="text-muted">
+              {' '}
+              ·{' '}
+              {[ship.street, [ship.postalCode, ship.city].filter(Boolean).join(' ')]
+                .filter(Boolean)
+                .join(', ')}
+            </span>
+          )}{' '}
+          <Badge tone={ORDER_TONE[o.status]}>{orderStatusLabel(o.status)}</Badge>
+        </div>
+        <Button size="sm" variant="secondary" onClick={onOpen}>
+          Auftrag öffnen
+        </Button>
+      </div>
+      {o.shortages.length > 0 && (
+        <Alert tone="warning">
+          Fehlbestand:{' '}
+          {o.shortages.map((s) => `${s.number} (${s.available}/${s.needed})`).join(', ')}
+        </Alert>
+      )}
+      <Table>
+        <THead>
+          <TR>
+            <TH>Pos.</TH>
+            <TH>Artikel</TH>
+            <TH className="text-right">Menge</TH>
+            <TH className="text-right">Einzel netto</TH>
+            <TH className="text-right">Brutto</TH>
+          </TR>
+        </THead>
+        <TBody>
+          {o.lines.map((l) => (
+            <TR key={l.id}>
+              <TD>{l.position}</TD>
+              <TD>
+                {l.articleNumber && <span className="text-muted">{l.articleNumber} · </span>}
+                {l.name}
+              </TD>
+              <TD className="text-right tabular-nums">
+                {formatQty(l.quantity)} {l.unit}
+              </TD>
+              <TD className="text-right tabular-nums">{formatMoney(l.unitPriceNet)}</TD>
+              <TD className="text-right tabular-nums">{formatMoney(l.lineGross)}</TD>
+            </TR>
+          ))}
+        </TBody>
+      </Table>
+    </div>
+  );
 }
 
 interface OrderLine {
@@ -123,6 +300,8 @@ export function OrdersPage() {
   const [open, setOpen] = useState<string | 'new' | null>(() =>
     new URLSearchParams(window.location.search).get('id'),
   );
+  const [sel, setSel] = useState<TreeSelection>(OPEN_ORDERS);
+  const [marked, setMarked] = useState<string | null>(null);
   const columns = useMemo<Column<OrderRow>[]>(
     () => [
       {
@@ -164,6 +343,14 @@ export function OrdersPage() {
         options: Object.entries(ORDER_STATUSES).map(([value, label]) => ({ value, label })),
         value: (r) => r.status,
         cell: (r) => <Badge tone={ORDER_TONE[r.status]}>{orderStatusLabel(r.status)}</Badge>,
+      },
+      {
+        id: 'channel',
+        header: 'Kanal',
+        kind: 'string',
+        filterable: false,
+        width: 140,
+        value: (r) => r.channelName ?? 'Ohne Kanal',
       },
       {
         id: 'totalGross',
@@ -215,29 +402,47 @@ export function OrdersPage() {
           )
         }
       />
-      <DataTable<OrderRow>
-        tableKey="orders"
-        mode="server"
-        queryKey={['orders']}
-        fetch={(p: {
-          q: string;
-          sort: string | null;
-          filters: ListFilter[];
-          page: number;
-          pageSize: number;
-        }) => {
-          const q = new URLSearchParams({ page: String(p.page), pageSize: String(p.pageSize) });
-          if (p.q) q.set('q', p.q);
-          if (p.sort) q.set('sort', p.sort);
-          if (p.filters.length) q.set('filters', JSON.stringify(p.filters));
-          return http.get(`/orders?${q}`);
-        }}
-        columns={columns}
-        rowId={(r) => r.id}
-        exportName="auftraege"
-        onRowClick={(r) => setOpen(r.id)}
-        initial={{ sort: 'orderDate:desc' }}
-      />
+      <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
+        <StatusTree
+          value={sel}
+          onChange={(s) => {
+            setSel(s);
+            setMarked(null);
+          }}
+        />
+        <div className="min-w-0 space-y-4">
+          <p className="text-sm font-semibold">{sel.label}</p>
+          <DataTable<OrderRow>
+            key={sel.key}
+            tableKey="orders"
+            mode="server"
+            queryKey={['orders', sel.key]}
+            fetch={(p: {
+              q: string;
+              sort: string | null;
+              filters: ListFilter[];
+              page: number;
+              pageSize: number;
+            }) => {
+              const q = new URLSearchParams({
+                page: String(p.page),
+                pageSize: String(p.pageSize),
+              });
+              if (p.q) q.set('q', p.q);
+              if (p.sort) q.set('sort', p.sort);
+              const filters = [...selectionFilters(sel), ...p.filters];
+              if (filters.length) q.set('filters', JSON.stringify(filters));
+              return http.get(`/orders?${q}`);
+            }}
+            columns={columns}
+            rowId={(r) => r.id}
+            exportName="auftraege"
+            onRowClick={(r) => setMarked(r.id)}
+            initial={{ sort: 'orderDate:desc' }}
+          />
+          {marked && <OrderPreview id={marked} onOpen={() => setOpen(marked)} />}
+        </div>
+      </div>
       {open === 'new' && (
         <OrderEditor order={null} onClose={() => setOpen(null)} onSaved={(id) => setOpen(id)} />
       )}

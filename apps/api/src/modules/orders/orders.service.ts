@@ -36,6 +36,7 @@ export const ORDER_FIELDS: FieldSpec = {
   shippingMethod: { kind: 'string', sortable: true },
   shippedAt: { kind: 'date', sortable: true },
   createdAt: { kind: 'date', sortable: true },
+  channelId: { kind: 'enum' },
 };
 
 export interface CustomerSnapshot {
@@ -116,15 +117,63 @@ export class OrdersService {
         }),
         tx.salesOrder.count({ where: args.where }),
       ]);
+      const channelIds = [
+        ...new Set(items.map((o) => o.channelId).filter((x): x is string => !!x)),
+      ];
+      const channels = channelIds.length
+        ? await tx.salesChannel.findMany({
+            where: { id: { in: channelIds } },
+            select: { id: true, name: true },
+          })
+        : [];
       return {
         items: items.map((o) => ({
           ...o,
           customerName: (o.customerSnapshot as unknown as CustomerSnapshot).displayName,
           customerNumber: (o.customerSnapshot as unknown as CustomerSnapshot).number,
+          channelName: channels.find((c) => c.id === o.channelId)?.name ?? null,
         })),
         total,
         page: q.page,
         pageSize: q.pageSize,
+      };
+    });
+  }
+
+  /**
+   * Zähler für den Statusbaum der Auftragsübersicht: alle Aufträge je Status und offene Aufträge
+   * (Bestand reserviert) je Verkaufskanal.
+   */
+  tree(t: TenantContext) {
+    return this.cdb.run(t, async (tx) => {
+      const [byStatus, byChannel] = await Promise.all([
+        tx.salesOrder.groupBy({ by: ['status'], _count: { _all: true } }),
+        tx.salesOrder.groupBy({
+          by: ['channelId'],
+          where: { status: { in: ORDER_RESERVING } },
+          _count: { _all: true },
+        }),
+      ]);
+      const ids = byChannel.map((g) => g.channelId).filter((x): x is string => !!x);
+      const channels = await tx.salesChannel.findMany({
+        where: { OR: [{ id: { in: ids } }, { archivedAt: null }] },
+        select: { id: true, name: true },
+        orderBy: { name: 'asc' },
+      });
+      return {
+        statuses: byStatus.map((g) => ({ status: g.status, count: g._count._all })),
+        channels: [
+          ...channels.map((c) => ({
+            id: c.id,
+            name: c.name,
+            open: byChannel.find((g) => g.channelId === c.id)?._count._all ?? 0,
+          })),
+          {
+            id: null,
+            name: 'Ohne Kanal',
+            open: byChannel.find((g) => g.channelId === null)?._count._all ?? 0,
+          },
+        ],
       };
     });
   }
