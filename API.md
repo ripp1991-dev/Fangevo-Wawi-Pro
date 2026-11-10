@@ -102,3 +102,25 @@ Alle verlangen den Header **`X-Company-Id`** (aktive Firma) und das jeweilige Mo
 | `POST /inventory/bookings` (Zugang/Abgang), `POST /inventory/transfers`, `POST /inventory/corrections`                                                                                                                                                                                                                                                             | `inventory.manage`                                             |
 
 Beträge und Mengen werden als Text übertragen (`"49.90"`, auch `"49,90"` wird akzeptiert). Neue Fehlerfälle: `COMPANY_REQUIRED` (400) ohne Firmenkontext, `CONFLICT` (409) bei zu wenig Bestand oder vergebener Nummer.
+
+## Endpunkte (Phase 3b)
+
+Ebenfalls mit Header **`X-Company-Id`** und gebuchtem Modul (`orders`, `documents`, `purchasing`).
+
+| Endpunkt                                                                                                                             | Recht               |
+| ------------------------------------------------------------------------------------------------------------------------------------ | ------------------- |
+| `GET /orders`, `GET /orders/:id` (mit Positionen, Statusverlauf, Fehlmengen), `GET /orders/stats`                                    | `orders.read`       |
+| `POST /orders`, `PUT /orders/:id` (nur in bearbeitbaren Status, mit `version`)                                                       | `orders.manage`     |
+| `POST /orders/:id/status` `{to, note}`, `POST /orders/:id/ship`, `POST /orders/:id/cancel` `{reason}`                                | `orders.manage`     |
+| `GET /documents`, `GET /documents/:id`, `GET /documents/:id/pdf`, `GET /documents/stats`                                             | `documents.read`    |
+| `POST /documents/from-order/:orderId` `{type}` (offer, order_confirmation, delivery_note, invoice)                                   | `documents.manage`  |
+| `POST /documents/:id/finalize`, `DELETE /documents/:id` (nur Entwurf), `POST /documents/:id/send` `{to}`                             | `documents.manage`  |
+| `POST /documents/:id/payments` `{amount, paidOn}`, `POST /documents/:id/credit-note`, `POST /documents/:id/cancel`                   | `documents.manage`  |
+| `GET /purchase-orders`, `GET /purchase-orders/:id`, `GET /purchase-orders/:id/pdf`, `GET /purchase-orders/suggestions`               | `purchasing.read`   |
+| `POST /purchase-orders`, `PUT /purchase-orders/:id` (nur Entwurf), `POST …/order`, `POST …/send`, `POST …/cancel`, `POST …/receipts` | `purchasing.manage` |
+
+**Preise:** Bleibt `unitPriceNet` einer Artikelposition leer, ermittelt der Server den Preis (Kundengruppenpreis → Staffelpreis → Verkaufspreis; ohne eigenen Preis erbt eine Variante vom Vaterartikel) und setzt den Rabatt der Kundengruppe. Alle Summen rechnet der Server.
+
+**Statuswechsel** sind fest vorgegeben (`ORDER_TRANSITIONS` in `packages/shared/src/schemas/sales.ts`). „Versendet“ wird nur über `/ship`, „Storniert“ nur über `/cancel` erreicht. Kommissionierung, Verpackung und Versandbereit setzen ausreichend Bestand voraus (`409` mit Fehlmengen).
+
+**Belege:** Entwurf ohne Nummer → `finalize` vergibt die Nummer und erzeugt das PDF. Für Rechnungen, Gutschriften und Stornos sind Firmenanschrift und Steuernummer oder USt-IdNr. sowie die Kundenanschrift Pflicht (`422`). Pro Auftrag gibt es höchstens eine gültige Rechnung (`409`); nach einer Stornorechnung ist eine neue möglich. Das PDF kommt als `application/pdf`.

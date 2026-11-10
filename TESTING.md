@@ -1,16 +1,16 @@
 # Tests
 
-## Übersicht (Stand Phase 3a)
+## Übersicht (Stand Phase 3b)
 
-| Ebene                                       | Werkzeug                | Ort                                                                                             | Anzahl    |
-| ------------------------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------- | --------- |
-| Unit                                        | Vitest                  | `packages/*/src/**/*.test.ts`, `apps/api/src/**/*.test.ts`, `apps/web/src/**/*.test.ts`         | 43        |
-| Integration (API + echte DB/Redis)          | Vitest + Fastify-Inject | `apps/api/test/auth.test.ts`, `admin.test.ts`, `phase2.test.ts`, `phase3a.test.ts`              | 68        |
-| **Mandanten- und Firmentrennung (Pflicht)** | Vitest                  | `apps/api/test/tenant-isolation.test.ts` + Abschnitt „Trennung der Firmen“ in `phase3a.test.ts` | 14 + 2    |
-| End-to-End im Browser                       | Playwright              | `tests/e2e/core-flow.mjs`, `phase2-flow.mjs`, `phase3a-flow.mjs`                                | 3 Abläufe |
-| Last                                        | eigenes Skript          | `apps/api/scripts/perf-lists.ts`                                                                | manuell   |
+| Ebene                                       | Werkzeug                | Ort                                                                                                         | Anzahl    |
+| ------------------------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------- | --------- |
+| Unit                                        | Vitest                  | `packages/*/src/**/*.test.ts`, `apps/api/src/**/*.test.ts`, `apps/web/src/**/*.test.ts`                     | 46        |
+| Integration (API + echte DB/Redis)          | Vitest + Fastify-Inject | `apps/api/test/auth.test.ts`, `admin.test.ts`, `phase2.test.ts`, `phase3a.test.ts`, `phase3b.test.ts`       | 79        |
+| **Mandanten- und Firmentrennung (Pflicht)** | Vitest                  | `apps/api/test/tenant-isolation.test.ts` + Abschnitte „Trennung“ in `phase3a.test.ts` und `phase3b.test.ts` | 14 + 3    |
+| End-to-End im Browser                       | Playwright              | `tests/e2e/core-flow.mjs`, `phase2-flow.mjs`, `phase3a-flow.mjs`, `phase3b-flow.mjs`                        | 4 Abläufe |
+| Last                                        | eigenes Skript          | `apps/api/scripts/perf-lists.ts`, `perf-wawi.ts`                                                            | manuell   |
 
-Insgesamt 125 automatisierte Tests + 3 E2E-Abläufe. Kein Merge ohne grüne CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
+Insgesamt 139 automatisierte Tests + 4 E2E-Abläufe. Kein Merge ohne grüne CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
 
 ## Ausführen
 
@@ -58,6 +58,26 @@ Der Ablauf: Registrieren (inkl. Validierungsfehler) → E-Mail bestätigen → A
 | 1000 Zeilen (Export-Seite)      | 99 ms  |
 
 Ausführen: `pnpm --filter @fangevo/api perf:lists` (nur gegen `*_test`-Datenbanken).
+
+## Lasttest Warenwirtschaft (Stand 2026-11-09, Cloud-Container, 4 CPU)
+
+`pnpm --filter @fangevo/api perf:wawi` legt in der Testdatenbank eine Firma mit 100.000 Artikeln (mit Bestand), 20.000 Kunden und 50.000 Aufträgen mit je 3 Positionen an und misst über die echte API (RLS, Rechte, Lizenz, JSON). Mediane aus 5 Läufen:
+
+| Vorgang                                    |                                     Median |
+| ------------------------------------------ | -----------------------------------------: |
+| Artikel: erste Seite                       |                                      85 ms |
+| Artikel: Suche „Wobbler Modell 4711“       |                                     237 ms |
+| Artikel: Seite 1000 nach Name              |                                     174 ms |
+| Kunden: Suche                              |                                      97 ms |
+| Aufträge: erste Seite / Status-Filter      |                                 67 / 26 ms |
+| Aufträge: Suche Nummer                     |                                      94 ms |
+| Kennzahlen Aufträge (offen, Topseller)     |                                     200 ms |
+| Kennzahlen Umsatz                          |                                      18 ms |
+| Unter Mindestbestand                       |                                     135 ms |
+| Bestellvorschläge                          | 277 ms (vorher 1.315 ms, Abfrage umgebaut) |
+| Auftrag anlegen inkl. Reservierung         |                                      77 ms |
+| Versand (Bestand abbuchen)                 |                                      49 ms |
+| Rechnung erstellen / festschreiben mit PDF |                                 30 / 53 ms |
 
 ## Grenzen
 

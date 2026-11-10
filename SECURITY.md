@@ -61,3 +61,16 @@ Bitte nicht öffentlich als Issue melden, sondern direkt an das FangEvo-Team.
 | Bestand        | Unveränderliches Journal, Sperre der Bestandszeile gegen gleichzeitige Buchungen (Test mit 20 parallelen Abgängen)               |
 | Nummern        | Lückenlos und eindeutig je Firma                                                                                                 |
 | JTL-Daten      | Export nur lesend, nur Artikeldaten, keine personenbezogenen Daten; Exportdateien per `.gitignore` vom Repository ausgeschlossen |
+
+## Ergänzungen Phase 3b
+
+| Bereich               | Maßnahme                                                                                                                                                                       |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Preise und Summen     | Werden immer serverseitig berechnet (Decimal, kaufmännisch gerundet); der Client liefert höchstens einen gewünschten Einzelpreis (Recht `orders.manage`)                       |
+| Belege (GoBD)         | Nummer erst beim Festschreiben, lückenlos; festgeschriebene Belege per Trigger unveränderlich (nur Zahlungsstatus und Versanddatum änderbar), Löschen verboten                 |
+| Beleg-PDF             | Unveränderlich gespeichert mit SHA-256; beim Abruf wird die Prüfsumme kontrolliert                                                                                             |
+| Zahlungen, Eingänge   | Tabellen `payments`, `goods_receipts`, `order_status_history`, `document_files` nur `SELECT, INSERT` für die App-Rolle, zusätzlich Trigger gegen Ändern/Löschen                |
+| Bestand bei Aufträgen | Reservierung nach Anlage-Reihenfolge; Versand nutzt die Zeilensperre des Bestandsjournals; doppelter Versand desselben Auftrags wird verhindert (Test mit parallelen Anfragen) |
+| E-Mail-Versand        | Nur festgeschriebene Belege; Empfängeradresse geprüft; Versand wird im Audit-Log festgehalten                                                                                  |
+| Logo                  | Nur PNG/JPEG als data-URL, max. ca. 200 KB, Inhalt wird nicht ins Audit-Log geschrieben                                                                                        |
+| Rechteweitergabe      | Rechte nicht gebuchter Module nur weitergeben, wer sie selbst (ohne Lizenzfilter) besitzt                                                                                      |

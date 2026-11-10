@@ -6,6 +6,7 @@ export interface MailMessage {
   to: string;
   subject: string;
   text: string;
+  attachments?: { filename: string; content: Buffer; contentType: string }[];
 }
 
 /**
@@ -43,7 +44,10 @@ export class MailService {
         this.sent.push(msg);
         return;
       case 'log':
-        this.logger.log(`E-Mail an ${msg.to}: ${msg.subject}\n${msg.text}`, 'MailService');
+        this.logger.log(
+          `E-Mail an ${msg.to}: ${msg.subject}\n${msg.text}${msg.attachments?.length ? `\nAnhänge: ${msg.attachments.map((a) => a.filename).join(', ')}` : ''}`,
+          'MailService',
+        );
         return;
       case 'smtp':
         await this.transporter!.sendMail({ from: this.config.SMTP_FROM, ...msg });

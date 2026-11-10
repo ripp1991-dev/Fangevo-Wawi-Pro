@@ -2,16 +2,16 @@
 
 Katalog: [`packages/licensing/src/catalog.ts`](packages/licensing/src/catalog.ts). „In Entwicklung“ heißt: geplant, aber **nicht** implementiert. Die Oberfläche zeigt das ehrlich an.
 
-| Modul                               | Phase | Status    | Inhalt heute                                                                                                                                      |
-| ----------------------------------- | ----- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Core                                | 1     | ✅ fertig | Registrierung, Login, MFA, Sitzungen, Accounts, Firmen, Benutzer, Einladungen, Rollen & Rechte, Lizenz-Kern, Audit-Log, Administrationsoberfläche |
-| Dashboard und Core-Werkzeuge        | 2     | ✅ fertig | Dashboard-Baukasten, Tabellen-Baukasten, eigene Felder, globale Suche, Benachrichtigungen, Aktivitäten, anpassbares Menü                          |
-| Artikel, Kunden, Lieferanten, Lager | 3a    | ✅ fertig | Stammdaten, Preise, Varianten, Sets, Adressen, Bezugsquellen, Bestandsjournal, Firmeneinstellungen                                                |
-| Aufträge, Belege, Einkauf           | 3b    | geplant   | –                                                                                                                                                 |
-| Pack, Versand, Retouren             | 4     | geplant   | –                                                                                                                                                 |
-| Import, Multichannel, Finanzen, API | 5     | geplant   | –                                                                                                                                                 |
-| Automatisierung, CRM, Analytics     | 6     | geplant   | –                                                                                                                                                 |
-| Marketplace                         | 7     | geplant   | –                                                                                                                                                 |
+| Modul                               | Phase | Status    | Inhalt heute                                                                                                                                                 |
+| ----------------------------------- | ----- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Core                                | 1     | ✅ fertig | Registrierung, Login, MFA, Sitzungen, Accounts, Firmen, Benutzer, Einladungen, Rollen & Rechte, Lizenz-Kern, Audit-Log, Administrationsoberfläche            |
+| Dashboard und Core-Werkzeuge        | 2     | ✅ fertig | Dashboard-Baukasten, Tabellen-Baukasten, eigene Felder, globale Suche, Benachrichtigungen, Aktivitäten, anpassbares Menü                                     |
+| Artikel, Kunden, Lieferanten, Lager | 3a    | ✅ fertig | Stammdaten, Preise, Varianten, Sets, Adressen, Bezugsquellen, Bestandsjournal, Firmeneinstellungen                                                           |
+| Aufträge, Belege, Einkauf           | 3b    | ✅ fertig | Aufträge mit Preisermittlung, Reservierung und Versand; Belege mit PDF, E-Mail, Zahlungen, Gutschrift, Storno; Bestellvorschläge, Bestellungen, Wareneingang |
+| Pack, Versand, Retouren             | 4     | geplant   | –                                                                                                                                                            |
+| Import, Multichannel, Finanzen, API | 5     | geplant   | –                                                                                                                                                            |
+| Automatisierung, CRM, Analytics     | 6     | geplant   | –                                                                                                                                                            |
+| Marketplace                         | 7     | geplant   | –                                                                                                                                                            |
 
 ## Core im Detail
 
@@ -39,6 +39,24 @@ Katalog: [`packages/licensing/src/catalog.ts`](packages/licensing/src/catalog.ts
 | Aktivitäten        | `core/activity`            | Reiter „Verlauf“, Widget               | phase2.test, E2E                                   |
 | Menü               | `core/preferences`         | „Menü anpassen“                        | phase2.test, navigation.test, E2E                  |
 | Dashboard          | `core/dashboards`          | Startseite                             | phase2.test, E2E                                   |
+
+## Warenwirtschaft (Phase 3a und 3b) im Detail
+
+| Bereich              | API                               | Oberfläche                               | Tests             |
+| -------------------- | --------------------------------- | ---------------------------------------- | ----------------- |
+| Firmeneinstellungen  | `modules/settings`                | `/company-settings`                      | phase3a.test, E2E |
+| Artikel              | `modules/articles`                | `/articles`                              | phase3a.test, E2E |
+| Kunden, Lieferanten  | `modules/customers`, `suppliers`  | `/customers`, `/suppliers`               | phase3a.test, E2E |
+| Lager & Bestand      | `modules/inventory`               | `/inventory`                             | phase3a.test, E2E |
+| Aufträge             | `modules/orders`                  | `/orders`                                | phase3b.test, E2E |
+| Belege und Zahlungen | `modules/documents` (PDF: pdfkit) | `/documents`, Reiter „Belege“ im Auftrag | phase3b.test, E2E |
+| Einkauf              | `modules/purchasing`              | `/purchasing`                            | phase3b.test      |
+
+Bekannte Grenzen (bewusst, folgen später):
+
+- Artikel mit Chargen- oder Seriennummernpflicht können noch nicht über Aufträge verkauft werden (Auswahl der Charge beim Versand folgt mit FangEvo Lager/Pack, Phase 4).
+- E-Rechnung (XRechnung/ZUGFeRD) folgt nach Prüfung durch den Steuerberater; Sonderfälle wie Reverse-Charge, innergemeinschaftliche Lieferung und Kleinunternehmerregelung werden noch nicht automatisch auf der Rechnung vermerkt.
+- Gutschriften für einzelne Positionen sind über die API möglich, die Oberfläche bietet die Gutschrift über die ganze Rechnung.
 
 ## Neues Modul anlegen (ab Phase 3)
 

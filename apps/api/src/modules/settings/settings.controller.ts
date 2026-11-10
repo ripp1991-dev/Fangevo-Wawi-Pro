@@ -107,8 +107,16 @@ export class SettingsController {
     @Body(zodPipe(companySettingsInputSchema)) b: z.infer<typeof companySettingsInputSchema>,
   ) {
     await this.cdb.run(t, async (tx, c) => {
-      await tx.companySettings.update({ where: { companyId: c.companyId }, data: b });
-      await this.log(tx, c, 'company_settings.updated', 'company', c.companyId, b);
+      // Leere Texte als „nicht gesetzt“ speichern
+      const data = Object.fromEntries(
+        Object.entries(b).map(([k, v]) => [k, v === '' ? null : v]),
+      ) as typeof b;
+      await tx.companySettings.update({ where: { companyId: c.companyId }, data });
+      const { logoDataUrl, ...logged } = data;
+      await this.log(tx, c, 'company_settings.updated', 'company', c.companyId, {
+        ...logged,
+        ...(logoDataUrl !== undefined ? { logo: logoDataUrl ? 'geändert' : 'entfernt' } : {}),
+      });
     });
   }
 

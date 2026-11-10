@@ -41,7 +41,7 @@ export class InventoryService {
   ) {}
 
   /** Prüft Artikel, Lager und Lagerplatz (alles innerhalb der Firma, RLS). */
-  private async checkSlot(tx: Tx, s: Slot, forReceipt = false) {
+  async checkSlot(tx: Tx, s: Slot, forReceipt = false) {
     const article = await tx.article.findUnique({ where: { id: s.articleId } });
     if (!article)
       throw new AppError(422, 'VALIDATION_FAILED', 'Artikel nicht gefunden', [
@@ -75,7 +75,7 @@ export class InventoryService {
     return article;
   }
 
-  private checkTracking(
+  checkTracking(
     article: { trackBatches: boolean; trackSerials: boolean; trackBestBefore: boolean },
     type: string,
     qty: Prisma.Decimal,

@@ -32,7 +32,10 @@ import { CustomFieldsPage } from './pages/admin/custom-fields';
 import { ArticlesPage } from './pages/wawi/articles';
 import { CompanySettingsPage } from './pages/wawi/company-settings';
 import { CustomersPage } from './pages/wawi/customers';
+import { DocumentsPage } from './pages/wawi/documents';
 import { InventoryPage } from './pages/wawi/inventory';
+import { OrdersPage } from './pages/wawi/orders';
+import { PurchasingPage } from './pages/wawi/purchasing';
 import { SuppliersPage } from './pages/wawi/suppliers';
 import { SecurityPage } from './pages/settings/security';
 
@@ -125,6 +128,9 @@ const routeTree = root.addChildren([
   mfaRoute,
   app.addChildren([
     page('/', DashboardPage),
+    page('/orders', OrdersPage, 'orders.read'),
+    page('/documents', DocumentsPage, 'documents.read'),
+    page('/purchasing', PurchasingPage, 'purchasing.read'),
     page('/articles', ArticlesPage, 'articles.read'),
     page('/customers', CustomersPage, 'customers.read'),
     page('/suppliers', SuppliersPage, 'suppliers.read'),

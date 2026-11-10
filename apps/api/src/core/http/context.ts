@@ -10,6 +10,11 @@ export interface AccountContext {
   membershipId: string;
   isOwner: boolean;
   permissions: Set<Permission>;
+  /**
+   * Rechte aus Rollen und Einzelrechten ohne Lizenzfilter. Maßstab dafür, welche Rechte jemand
+   * weitergeben darf (auch Rechte noch nicht gebuchter Module, die er bei Buchung selbst hätte).
+   */
+  grantable: Set<string>;
   entitlement: EntitlementSnapshot;
   accessMode: AccessMode;
   allCompanies: boolean;

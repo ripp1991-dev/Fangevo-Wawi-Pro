@@ -109,7 +109,9 @@ describe('Benutzer, Einladungen und Rechte', () => {
       'articles.read',
       'companies.read',
       'customers.read',
+      'documents.read',
       'inventory.read',
+      'orders.read',
       'suppliers.read',
     ]);
     expect((await m.client.get('/admin/companies')).status).toBe(200);

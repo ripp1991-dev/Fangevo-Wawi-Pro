@@ -89,3 +89,12 @@ Worker / EventDispatcher ──► holt outbox_pending (SKIP LOCKED) ──► T
 - **Bestand:** ausschließlich über `InventoryService.apply()`: Bestandszeile sperren und fortschreiben, Journalbuchung schreiben, Minusbestand prüfen. Spätere Module (Aufträge, Wareneingang, Pack) buchen über diese Funktion.
 - **Nummern:** `CompanyDb.nextNumber()` (lückenlos, gesperrte Zeile).
 - **Frontend:** Seiten unter `apps/web/src/pages/wawi`, Auswahllisten über `useMasterData()`; Beträge als Text, Anzeige mit `formatMoney`/`formatQty`.
+
+## Phase 3b: Aufträge, Belege, Einkauf
+
+- Neue Module `modules/orders`, `modules/documents`, `modules/purchasing`. Gemeinsame Rechenhilfen in `modules/common/totals.ts` (Rundung, Summen je Steuersatz).
+- **Aufträge** (`OrdersService`): Preisermittlung (`resolvePrice`), Statusmaschine aus `packages/shared/src/schemas/sales.ts`, Reservierung (`stock_reservations`), Fehlmengen (`shortages`), Versand bucht über `InventoryService.apply()`.
+- **Belege** (`DocumentsService`): lesen Aufträge nur über `OrdersService.forDocument()`; Aufträge prüfen offene Rechnungen über die Abfragefunktion `documents/document-queries.ts` (keine gegenseitige Abhängigkeit der Services). PDF über `document-pdf.ts` (pdfkit), Ablage mit Prüfsumme, E-Mail über `MailService` mit Anhang.
+- **Einkauf** (`PurchasingService`): Wareneingang prüft Lagerplatz und Rückverfolgung über `InventoryService.checkSlot/checkTracking` und bucht über `apply()`; das Bestellungs-PDF nutzt denselben Generator.
+- **Oberfläche:** Seiten `orders.tsx`, `documents.tsx`, `purchasing.tsx`; Suchfelder für Kunde/Lieferant/Artikel in `components/pickers.tsx`; PDF-Abruf mit Firmenkontext über `openPdf()` in `lib/sales.ts`.
+- Entscheidungen dazu: [ADR-008](docs/decisions/ADR-008_BELEGE_RESERVIERUNG.md).

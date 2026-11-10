@@ -18,6 +18,8 @@ export async function startApp(
 export interface Res<T = any> {
   status: number;
   body: T;
+  raw: Buffer;
+  headers: Record<string, unknown>;
 }
 
 /** Kleiner HTTP-Client mit Cookie-Speicher (simuliert einen Browser). */
@@ -51,7 +53,12 @@ export class Client {
       const v = first.split(';')[0]!;
       this.cookie = v === 'fe_session=' ? undefined : v;
     }
-    return { status: r.statusCode, body: (r.body ? safeJson(r.body) : undefined) as T };
+    return {
+      status: r.statusCode,
+      body: (r.body ? safeJson(r.body) : undefined) as T,
+      raw: r.rawPayload,
+      headers: r.headers,
+    };
   }
   get<T = any>(url: string) {
     return this.req<T>('GET', url);
