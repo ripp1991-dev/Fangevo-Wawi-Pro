@@ -1,7 +1,14 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, FileText, Minus, PackageCheck, Plus, ScanLine, Trash2 } from 'lucide-react';
 import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { CARRIERS, type Carrier, type ListFilter } from '@fangevo/shared';
+import {
+  CARRIERS,
+  NO_CHANNEL,
+  PACKING_MISMATCH,
+  type Carrier,
+  type ListFilter,
+  type PackingMismatch,
+} from '@fangevo/shared';
 import {
   Alert,
   Badge,
@@ -26,7 +33,7 @@ import { type Column } from '../../components/table/types';
 import { Tabs } from '../../components/tabs';
 import { ApiError, errorMessage, http } from '../../lib/api';
 import { formatDateTime } from '../../lib/format';
-import { formatQty } from '../../lib/master-data';
+import { categoryPaths, formatQty, useMasterData } from '../../lib/master-data';
 import {
   documentTypeLabel,
   openPdf,
@@ -35,12 +42,68 @@ import {
 } from '../../lib/sales';
 import { useCan, useSession } from '../../lib/session';
 
+interface Rules {
+  channelIds: string[];
+  categoryIds: string[];
+  excludeCategoryIds: string[];
+  mismatch: PackingMismatch;
+  locked: boolean;
+}
+
+const EMPTY_RULES: Rules = {
+  channelIds: [],
+  categoryIds: [],
+  excludeCategoryIds: [],
+  mismatch: 'warn',
+  locked: false,
+};
+
 interface Station {
   id: string;
   name: string;
   defaultCarrier: Carrier;
-  settings: { autoInvoice?: boolean; autoDeliveryNote?: boolean };
+  settings: { autoInvoice?: boolean; autoDeliveryNote?: boolean; rules?: Partial<Rules> };
   archivedAt: string | null;
+}
+
+const rulesOf = (s: Station | null): Rules => ({ ...EMPTY_RULES, ...(s?.settings.rules ?? {}) });
+
+interface QueueItem {
+  id: string;
+  number: string;
+  status: string;
+  orderDate: string;
+  externalNumber: string | null;
+  shippingMethod: string | null;
+  customerName: string;
+  channelId: string | null;
+  channelName: string | null;
+  positions: number;
+}
+
+interface QueueData {
+  rules: Rules;
+  channels: { id: string; name: string; count: number }[];
+  total: number;
+  truncated: boolean;
+  items: QueueItem[];
+}
+
+interface ChannelOption {
+  id: string;
+  name: string;
+}
+
+/** Verkaufskanäle für Auswahllisten (ohne Modul „Multichannel“ nur „Ohne Kanal“). */
+function useChannelOptions() {
+  const can = useCan();
+  return useQuery({
+    queryKey: ['channels', 'options'],
+    enabled: can('channels.read'),
+    retry: false,
+    queryFn: async () =>
+      (await http.get<{ items: ChannelOption[] }>('/channels?pageSize=100')).items,
+  });
 }
 
 interface PackItem {
@@ -68,7 +131,10 @@ interface Prepared {
     shippingAddress: AddressSnapshot | null;
     shippingMethod: string | null;
     notes: string | null;
+    channelId: string | null;
+    channelName: string | null;
   };
+  rule: { ok: boolean; message: string | null; mismatch: PackingMismatch };
   items: PackItem[];
 }
 
@@ -129,9 +195,10 @@ function PackStation() {
   const [prep, setPrep] = useState<Prepared | null>(null);
   const [packed, setPacked] = useState<Packed[]>([]);
   const [code, setCode] = useState('');
-  const [msg, setMsg] = useState<{ tone: 'danger' | 'success' | 'info'; text: string } | null>(
-    null,
-  );
+  const [msg, setMsg] = useState<{
+    tone: 'danger' | 'success' | 'info' | 'warning';
+    text: string;
+  } | null>(null);
   const [serialFor, setSerialFor] = useState<PackItem | null>(null);
   const [carrier, setCarrier] = useState<Carrier>('manual');
   const [tracking, setTracking] = useState('');
@@ -180,6 +247,36 @@ function PackStation() {
     setMsg({ tone: 'success', text: `${it.articleNumber} · ${it.name} gepackt` });
   };
 
+  /** Auftrag laden (gescannte Nummer oder Klick in der Warteschlange) und gegen die Packregeln prüfen. */
+  const loadOrder = async (ref: string) => {
+    try {
+      const q = new URLSearchParams({ code: ref });
+      if (station) q.set('stationId', station.id);
+      const p = await http.get<Prepared>(`/packing/orders?${q}`);
+      if (!p.order.shippable) {
+        setMsg({
+          tone: 'danger',
+          text: `Auftrag ${p.order.number} ist „${orderStatusLabel(p.order.status)}“ und kann nicht gepackt werden`,
+        });
+        return;
+      }
+      if (!p.rule.ok && p.rule.mismatch === 'block') {
+        setMsg({ tone: 'danger', text: `Auftrag ${p.order.number}: ${p.rule.message}` });
+        return;
+      }
+      setPrep(p);
+      setPacked([]);
+      setDone(null);
+      setMsg(
+        p.rule.ok
+          ? { tone: 'info', text: `Auftrag ${p.order.number} geladen – jetzt Artikel scannen` }
+          : { tone: 'warning', text: `Achtung: ${p.rule.message}` },
+      );
+    } catch (err) {
+      setMsg({ tone: 'danger', text: errorMessage(err) });
+    }
+  };
+
   const onScan = async (e: FormEvent) => {
     e.preventDefault();
     const c = code.trim();
@@ -195,22 +292,7 @@ function PackStation() {
       return;
     }
     if (!prep) {
-      try {
-        const p = await http.get<Prepared>(`/packing/orders?code=${encodeURIComponent(c)}`);
-        if (!p.order.shippable) {
-          setMsg({
-            tone: 'danger',
-            text: `Auftrag ${p.order.number} ist „${orderStatusLabel(p.order.status)}“ und kann nicht gepackt werden`,
-          });
-          return;
-        }
-        setPrep(p);
-        setPacked([]);
-        setDone(null);
-        setMsg({ tone: 'info', text: `Auftrag ${p.order.number} geladen – jetzt Artikel scannen` });
-      } catch (err) {
-        setMsg({ tone: 'danger', text: errorMessage(err) });
-      }
+      await loadOrder(c);
       return;
     }
     const matches = prep.items.filter((it) =>
@@ -282,6 +364,7 @@ function PackStation() {
       setParcels(['']);
       await qc.invalidateQueries({ queryKey: ['orders'] });
       await qc.invalidateQueries({ queryKey: ['shipments'] });
+      await qc.invalidateQueries({ queryKey: ['packing-queue'] });
     } catch (err) {
       const detail =
         err instanceof ApiError && Object.keys(err.fieldErrors).length
@@ -294,7 +377,7 @@ function PackStation() {
   };
 
   const toneClass = useMemo(
-    () => ({ danger: 'danger', success: 'success', info: 'info' }) as const,
+    () => ({ danger: 'danger', success: 'success', info: 'info', warning: 'warning' }) as const,
     [],
   );
 
@@ -376,13 +459,23 @@ function PackStation() {
             ))}
           </Alert>
         )}
+        {!prep && (
+          <PackQueue
+            key={station?.id ?? ''}
+            stationId={station?.id ?? null}
+            onPick={(id) => void loadOrder(id)}
+          />
+        )}
         {prep && (
           <Card>
             <CardBody>
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <p className="font-semibold">
-                    Auftrag {prep.order.number} · {prep.order.customerName}
+                    Auftrag {prep.order.number} · {prep.order.customerName}{' '}
+                    <Badge tone={prep.rule.ok ? 'neutral' : 'warning'}>
+                      {prep.order.channelName ?? 'Ohne Kanal'}
+                    </Badge>
                   </p>
                   <p className="text-sm text-muted">
                     {[
@@ -621,6 +714,121 @@ function PackStation() {
   );
 }
 
+/** Warteschlange am Packplatz: packbereite Aufträge nach den Packregeln, mit Kanal-Reitern. */
+function PackQueue({
+  stationId,
+  onPick,
+}: {
+  stationId: string | null;
+  onPick: (id: string) => void;
+}) {
+  const [channel, setChannel] = useState('');
+  const [allChannels, setAllChannels] = useState(false);
+  const q = useQuery({
+    queryKey: ['packing-queue', stationId, channel, allChannels],
+    queryFn: () => {
+      const p = new URLSearchParams({ stage: 'packing' });
+      if (stationId) p.set('stationId', stationId);
+      if (channel) p.set('channelId', channel);
+      if (allChannels) p.set('allChannels', 'true');
+      return http.get<QueueData>(`/packing/queue?${p}`);
+    },
+    refetchInterval: 30_000,
+  });
+  if (q.isPending) return <Spinner />;
+  if (q.isError) return <Alert tone="danger">{errorMessage(q.error)}</Alert>;
+  const d = q.data;
+  const all = d.channels.reduce((a, c) => a + c.count, 0);
+  const restricted = d.rules.channelIds.length > 0;
+  return (
+    <Card>
+      <CardBody>
+        {restricted && !d.rules.locked && (
+          <div className="mb-2">
+            <Checkbox
+              label="Auch andere Kanäle anzeigen"
+              checked={allChannels}
+              onChange={(e) => {
+                setAllChannels(e.target.checked);
+                setChannel('');
+              }}
+            />
+          </div>
+        )}
+        <div className="mb-3 flex flex-wrap items-center gap-2" role="tablist" aria-label="Kanal">
+          <Button
+            size="sm"
+            role="tab"
+            aria-selected={!channel}
+            variant={!channel ? 'primary' : 'secondary'}
+            onClick={() => setChannel('')}
+          >
+            Alle ({all})
+          </Button>
+          {d.channels.map((c) => (
+            <Button
+              key={c.id}
+              size="sm"
+              role="tab"
+              aria-selected={channel === c.id}
+              variant={channel === c.id ? 'primary' : 'secondary'}
+              onClick={() => setChannel(c.id)}
+            >
+              {c.name} ({c.count})
+            </Button>
+          ))}
+        </div>
+        {d.truncated && (
+          <p className="mb-2 text-xs text-muted">
+            Es warten sehr viele Aufträge; angezeigt werden die ältesten.
+          </p>
+        )}
+        {d.items.length ? (
+          <Table>
+            <THead>
+              <TR>
+                <TH>Auftrag</TH>
+                <TH>Datum</TH>
+                <TH>Kanal</TH>
+                <TH>Kunde</TH>
+                <TH>Versand</TH>
+                <TH className="text-right">Pos.</TH>
+                <TH />
+              </TR>
+            </THead>
+            <TBody>
+              {d.items.map((o) => (
+                <TR key={o.id}>
+                  <TD>
+                    {o.number}
+                    {o.externalNumber && (
+                      <span className="block text-xs text-muted">{o.externalNumber}</span>
+                    )}
+                  </TD>
+                  <TD>{formatDateTime(o.orderDate)}</TD>
+                  <TD>{o.channelName ?? 'Ohne Kanal'}</TD>
+                  <TD>{o.customerName}</TD>
+                  <TD>{o.shippingMethod ?? '–'}</TD>
+                  <TD className="text-right tabular-nums">{o.positions}</TD>
+                  <TD>
+                    <Button size="sm" variant="secondary" onClick={() => onPick(o.id)}>
+                      Packen
+                    </Button>
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+        ) : (
+          <p className="py-6 text-center text-sm text-muted">
+            Keine Aufträge zum Packen{channel ? ' in diesem Kanal' : ''}.
+          </p>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+
 interface ShipmentRow {
   id: string;
   number: string;
@@ -744,29 +952,170 @@ function Shipments() {
   );
 }
 
+/** Packregeln bearbeiten: Kanäle, Kategorien (nur / ohne), Verhalten bei fremden Aufträgen. */
+function RulesEditor({
+  title,
+  initial,
+  channels,
+  categories,
+  onSave,
+  onCancel,
+}: {
+  title: string;
+  initial: Rules;
+  channels: ChannelOption[];
+  /** Aktive Kategorien als [id, Pfad] */
+  categories: [string, string][];
+  onSave: (r: Rules) => void | Promise<void>;
+  onCancel: () => void;
+}) {
+  const [r, setR] = useState<Rules>(initial);
+  const [busy, setBusy] = useState(false);
+  const toggle = (key: 'channelIds' | 'categoryIds' | 'excludeCategoryIds', id: string) =>
+    setR((x) => ({
+      ...x,
+      [key]: x[key].includes(id) ? x[key].filter((y) => y !== id) : [...x[key], id],
+    }));
+  const cats = [...categories].sort((a, b) => a[1].localeCompare(b[1], 'de'));
+  const channelOpts = [...channels, { id: NO_CHANNEL, name: 'Ohne Kanal (manuelle Aufträge)' }];
+  return (
+    <Card>
+      <CardBody>
+        <p className="mb-3 font-semibold">{title}</p>
+        <div className="grid gap-4 md:grid-cols-3">
+          <fieldset className="space-y-2">
+            <legend className="mb-1 text-sm font-medium">Kanäle (leer = alle)</legend>
+            {channelOpts.map((c) => (
+              <Checkbox
+                key={c.id}
+                label={c.name}
+                checked={r.channelIds.includes(c.id)}
+                onChange={() => toggle('channelIds', c.id)}
+              />
+            ))}
+          </fieldset>
+          <fieldset className="space-y-2">
+            <legend className="mb-1 text-sm font-medium">Nur Kategorien</legend>
+            <p className="text-xs text-muted">
+              Aufträge, deren Artikel alle aus diesen Kategorien stammen (inkl. Unterkategorien).
+            </p>
+            {cats.map(([id, name]) => (
+              <Checkbox
+                key={id}
+                label={name}
+                checked={r.categoryIds.includes(id)}
+                disabled={r.excludeCategoryIds.includes(id)}
+                onChange={() => toggle('categoryIds', id)}
+              />
+            ))}
+          </fieldset>
+          <fieldset className="space-y-2">
+            <legend className="mb-1 text-sm font-medium">Ohne Kategorien</legend>
+            <p className="text-xs text-muted">
+              Blendet Aufträge aus, die nur aus diesen Kategorien bestehen. Gemischte Aufträge
+              bleiben hier.
+            </p>
+            {cats.map(([id, name]) => (
+              <Checkbox
+                key={id}
+                label={name}
+                checked={r.excludeCategoryIds.includes(id)}
+                disabled={r.categoryIds.includes(id)}
+                onChange={() => toggle('excludeCategoryIds', id)}
+              />
+            ))}
+          </fieldset>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <Field label="Auftrag passt nicht zum Packplatz">
+            {(p) => (
+              <Select
+                {...p}
+                value={r.mismatch}
+                onChange={(e) => setR({ ...r, mismatch: e.target.value as PackingMismatch })}
+              >
+                {Object.entries(PACKING_MISMATCH).map(([k, l]) => (
+                  <option key={k} value={k}>
+                    {l}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
+          <Checkbox
+            label="Kanäle fest einstellen"
+            description="Packer können am Platz nicht auf andere Kanäle umschalten."
+            checked={r.locked}
+            onChange={(e) => setR({ ...r, locked: e.target.checked })}
+          />
+        </div>
+        <div className="mt-4 flex gap-2">
+          <Button
+            loading={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                await onSave(r);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            Speichern
+          </Button>
+          <Button variant="ghost" onClick={onCancel}>
+            Abbrechen
+          </Button>
+        </div>
+      </CardBody>
+    </Card>
+  );
+}
+
 function Stations() {
   const qc = useQueryClient();
   const q = useQuery({
     queryKey: ['packing-stations'],
     queryFn: () => http.get<Station[]>('/packing/stations'),
   });
+  const channels = useChannelOptions();
+  const md = useMasterData();
   const [v, setV] = useState({
     name: '',
     defaultCarrier: 'manual' as Carrier,
     autoInvoice: false,
     autoDeliveryNote: true,
+    rules: EMPTY_RULES,
   });
+  const [editing, setEditing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const save = async (id: string | null, body: typeof v) => {
     setError(null);
     try {
       await (id ? http.put(`/packing/stations/${id}`, body) : http.post('/packing/stations', body));
       await qc.invalidateQueries({ queryKey: ['packing-stations'] });
+      await qc.invalidateQueries({ queryKey: ['packing-queue'] });
       if (!id) setV({ ...v, name: '' });
+      return true;
     } catch (e) {
       setError(errorMessage(e));
+      return false;
     }
   };
+  const channelName = (id: string) =>
+    id === NO_CHANNEL ? 'Ohne Kanal' : (channels.data?.find((c) => c.id === id)?.name ?? '?');
+  const paths = categoryPaths(md.data?.categories ?? []);
+  const summary = (r: Rules) =>
+    [
+      r.channelIds.length ? r.channelIds.map(channelName).join(', ') : 'alle Kanäle',
+      r.categoryIds.length && `nur ${r.categoryIds.map((c) => paths.get(c) ?? '?').join(', ')}`,
+      r.excludeCategoryIds.length &&
+        `ohne ${r.excludeCategoryIds.map((c) => paths.get(c) ?? '?').join(', ')}`,
+      r.mismatch === 'block' && 'gesperrt',
+      r.locked && 'fest',
+    ]
+      .filter(Boolean)
+      .join(' · ');
   if (!q.data) return <Spinner />;
   return (
     <div className="max-w-3xl space-y-4">
@@ -778,6 +1127,7 @@ function Stations() {
             <TH>Versandart</TH>
             <TH>Lieferschein</TH>
             <TH>Rechnung</TH>
+            <TH>Packregeln</TH>
           </TR>
         </THead>
         <TBody>
@@ -789,6 +1139,7 @@ function Stations() {
                 defaultCarrier: s.defaultCarrier,
                 autoInvoice: !!s.settings.autoInvoice,
                 autoDeliveryNote: !!s.settings.autoDeliveryNote,
+                rules: rulesOf(s),
               };
               return (
                 <TR key={s.id}>
@@ -808,11 +1159,44 @@ function Stations() {
                       onChange={(e) => save(s.id, { ...body, autoInvoice: e.target.checked })}
                     />
                   </TD>
+                  <TD>
+                    <span className="text-sm">{summary(body.rules)}</span>{' '}
+                    <Button size="sm" variant="link" onClick={() => setEditing(s.id)}>
+                      Bearbeiten
+                    </Button>
+                  </TD>
                 </TR>
               );
             })}
         </TBody>
       </Table>
+      {editing &&
+        (() => {
+          const s = q.data.find((x) => x.id === editing);
+          if (!s) return null;
+          return (
+            <RulesEditor
+              key={s.id}
+              title={`Packregeln für „${s.name}“`}
+              initial={rulesOf(s)}
+              channels={channels.data ?? []}
+              categories={(md.data?.categories ?? [])
+                .filter((c) => !c.archivedAt)
+                .map((c): [string, string] => [c.id, paths.get(c.id) ?? c.name])}
+              onCancel={() => setEditing(null)}
+              onSave={async (rules) => {
+                const ok = await save(s.id, {
+                  name: s.name,
+                  defaultCarrier: s.defaultCarrier,
+                  autoInvoice: !!s.settings.autoInvoice,
+                  autoDeliveryNote: !!s.settings.autoDeliveryNote,
+                  rules,
+                });
+                if (ok) setEditing(null);
+              }}
+            />
+          );
+        })()}
       <Card>
         <CardBody>
           <p className="mb-3 font-semibold">Neuer Packplatz</p>

@@ -44,11 +44,64 @@ export const CARRIERS = {
 } as const;
 export type Carrier = keyof typeof CARRIERS;
 
+/** Kanalfilter-Wert für Aufträge ohne Verkaufskanal (manuell erfasst). */
+export const NO_CHANNEL = 'none';
+
+export const PACKING_MISMATCH = {
+  warn: 'Nur warnen',
+  block: 'Packen sperren',
+} as const;
+export type PackingMismatch = keyof typeof PACKING_MISMATCH;
+
+/**
+ * Packregeln eines Packplatzes. Leere Listen bedeuten „alle“.
+ * - channelIds: nur Aufträge dieser Kanäle (NO_CHANNEL = ohne Kanal)
+ * - categoryIds: nur Aufträge, deren Artikel ALLE aus diesen Kategorien (inkl. Unterkategorien) stammen
+ * - excludeCategoryIds: Aufträge ausblenden, deren Artikel alle aus diesen Kategorien stammen
+ *   (gemischte Aufträge bleiben sichtbar, z. B. für einen Allround-Platz)
+ */
+export const packingRulesSchema = z.object({
+  channelIds: z
+    .array(z.union([uuid, z.literal(NO_CHANNEL)]))
+    .max(50)
+    .default([]),
+  categoryIds: z.array(uuid).max(50).default([]),
+  excludeCategoryIds: z.array(uuid).max(50).default([]),
+  mismatch: z
+    .enum(Object.keys(PACKING_MISMATCH) as [PackingMismatch, ...PackingMismatch[]])
+    .default('warn'),
+  /** Packer dürfen am Platz nicht auf andere Kanäle umschalten. */
+  locked: z.boolean().default(false),
+});
+export type PackingRules = z.infer<typeof packingRulesSchema>;
+
 export const packingStationInputSchema = z.object({
   name: z.string().trim().min(1, 'Name fehlt').max(80),
   defaultCarrier: z.enum(Object.keys(CARRIERS) as [Carrier, ...Carrier[]]).default('manual'),
   autoInvoice: z.boolean().default(false),
   autoDeliveryNote: z.boolean().default(true),
+  rules: packingRulesSchema.prefault({}),
+});
+
+export const PACKING_QUEUE_STAGES = {
+  packing: 'Bereit zum Packen',
+  pickable: 'Bereit zum Kommissionieren',
+  all: 'Alle versandfähigen',
+} as const;
+export type PackingQueueStage = keyof typeof PACKING_QUEUE_STAGES;
+
+export const packingQueueQuerySchema = z.object({
+  stationId: uuid.optional(),
+  /** Ein Kanal innerhalb der Packplatz-Regeln (oder NO_CHANNEL); leer = alle erlaubten */
+  channelId: z.union([uuid, z.literal(NO_CHANNEL)]).optional(),
+  /** Kanäle des Packplatzes ignorieren (nur wenn der Platz nicht festgelegt ist) */
+  allChannels: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+  stage: z
+    .enum(Object.keys(PACKING_QUEUE_STAGES) as [PackingQueueStage, ...PackingQueueStage[]])
+    .default('packing'),
 });
 
 export const parcelSchema = z.object({
