@@ -34,6 +34,10 @@ Preise und Modulzuordnung sind **Platzhalter** und müssen kalkuliert werden (`p
 
 Neues Recht `custom_fields.manage` (Modul Core). Systemrollen erhalten neue Rechte automatisch, weil ihre Rechte aus dem Code gelesen werden. Dashboard-Widgets und Menüeinträge erscheinen nur, wenn Recht und Modul vorhanden sind.
 
+## Hinweis Phase 3a
+
+Die Module **Artikel, Kunden, Lieferanten und Lager** sind verfügbar (`available: true`) und im Paket Starter enthalten. Ohne gebuchtes Modul antwortet die API mit `MODULE_NOT_LICENSED`; Menüpunkte und Rechte des Moduls sind dann wirkungslos.
+
 ## Status und Zugriff
 
 | Status                  | Zugriff                                                                                                             |

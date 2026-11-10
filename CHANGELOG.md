@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.3.0] – 2026-11-09 – Phase 3a: Warenwirtschaft – Stammdaten und Lager
+
+### Hinzugefügt
+
+- **Firmentrennung** in der Datenbank: Fachdaten zusätzlich je Firma per RLS getrennt (ADR-007).
+- **Firmeneinstellungen:** frei anlegbare Steuersätze (Vorschlag 19/7/0 %, je Artikel wählbar), Kundengruppen (brutto/netto, Rabatt), Kategorien (Baum, ohne Zyklen), Hersteller, Lager und Lagerplätze, lückenlose Nummernkreise, Minusbestand an/aus.
+- **Artikel:** Stammdaten, EAN/GTIN mit Prüfziffer, Kategorien, Hersteller/Marke, Einheiten, Gewicht, Mindestbestand, Einkaufs-/Verkaufspreis, Staffel- und Kundengruppenpreise, Sets (Stücklisten), Vaterartikel mit Varianten-Erzeugung, Chargen/Seriennummern/MHD-Pflicht, eigene Felder, Verlauf. Einkaufspreise nur mit Recht „Preise“.
+- **Kunden:** Privat/Geschäft, mehrere Rechnungs- und Lieferadressen, Ansprechpartner, Kundengruppe, Zahlungsziel, Sperre mit Grund, eigene Felder, Verlauf.
+- **Lieferanten:** Stammdaten, Adressen, Ansprechpartner, Lieferanten-Artikel (Lief.-Art.-Nr., EK, Lieferzeit, Mindestmenge, bevorzugte Bezugsquelle).
+- **Lager & Bestand:** Zugang, Abgang, Umlagerung, Inventur/Korrektur; unveränderliches Journal; Bestände je Lager(platz); Liste „Unter Mindestbestand“ und Dashboard-Widget.
+- Neue Rechte: `company_settings.manage`, `articles.read/manage/prices`, `customers.read/manage`, `suppliers.read/manage`, `inventory.read/manage`. Rolle „Mitarbeiter“ darf die neuen Bereiche ansehen.
+- Module Artikel, Kunden, Lieferanten und Lager sind im Katalog freigeschaltet.
+- Anleitung für den lesenden JTL-Export ([docs/research/03_JTL_EXPORT_AUFTRAG.md](docs/research/03_JTL_EXPORT_AUFTRAG.md)).
+- 3. Browser-E2E-Ablauf (Phase 3a).
+
+### Behoben (während der Entwicklung gefunden)
+
+- Standardwerte einer Firma gingen verloren, wenn der allererste Zugriff fehlschlug (jetzt eigene Transaktion, sicher bei gleichzeitigen Zugriffen).
+- Personen ohne Preisrecht konnten Artikel nicht speichern, weil ausgeblendete Preise als „0“ mitgeschickt wurden (Preise sind jetzt optional).
+- Reihenfolge der Variantenmerkmale wurde von der Datenbank vertauscht (jetzt geordnete Liste).
+
 ## [0.2.0] – 2026-11-09 – Phase 2: Dashboard und Core-Werkzeuge
 
 ### Hinzugefügt

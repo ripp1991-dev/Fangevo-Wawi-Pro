@@ -73,7 +73,16 @@ export const tableStateSchema = z.object({
 });
 export type TableState = z.infer<typeof tableStateSchema>;
 
-export const TABLE_KEYS = ['companies', 'members', 'audit'] as const;
+export const TABLE_KEYS = [
+  'companies',
+  'members',
+  'audit',
+  'articles',
+  'customers',
+  'suppliers',
+  'stock',
+  'movements',
+] as const;
 export const savedViewInputSchema = z.object({
   tableKey: z.enum(TABLE_KEYS),
   name: z.string().trim().min(1, 'Name fehlt').max(60),
@@ -92,7 +101,12 @@ export const CUSTOM_FIELD_TYPES = [
   'reference',
 ] as const;
 export type CustomFieldType = (typeof CUSTOM_FIELD_TYPES)[number];
-export const CUSTOM_FIELD_ENTITIES = { company: 'Firma' } as const;
+export const CUSTOM_FIELD_ENTITIES = {
+  company: 'Firma',
+  article: 'Artikel',
+  customer: 'Kunde',
+  supplier: 'Lieferant',
+} as const;
 export type CustomFieldEntity = keyof typeof CUSTOM_FIELD_ENTITIES;
 export const REFERENCE_TARGETS = { company: 'Firma', member: 'Benutzer' } as const;
 

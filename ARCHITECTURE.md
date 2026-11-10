@@ -81,3 +81,11 @@ Worker / EventDispatcher ──► holt outbox_pending (SKIP LOCKED) ──► T
 - **Einstellungen und Dashboards:** persönlicher Wert vor Account-Standard vor eingebautem Standard. Widgets prüfen ihr Recht serverseitig beim Ausliefern.
 - **Zugriffskontext:** Bei „alle Firmen“ werden die Firmen nicht aufgezählt; eine angefragte Firma (`X-Company-Id`) wird gezielt geprüft.
 - **Frontend:** `DataTable` (Tabellen-Baukasten), `CommandPalette` (Strg+K), `NotificationBell` (Abfrage alle 30 s), Menü-Registrierung `lib/navigation.ts`, Dashboard mit `react-grid-layout`.
+
+## Phase 3a: Fachmodule
+
+- Fachmodule liegen unter `apps/api/src/modules/<name>` (Service + Controller): `settings`, `articles`, `customers`, `suppliers`, `inventory`; gemeinsame Helfer in `modules/common` (`CompanyDb`, Adressen/Ansprechpartner, Decimal).
+- **Firmenkontext:** Controller sind mit `@RequiresCompany()` markiert. `CompanyDb.run(t, fn)` setzt `app.account_id`, `app.user_id` und `app.company_id` für die RLS und legt beim ersten Zugriff die Standardwerte der Firma an (ADR-007).
+- **Bestand:** ausschließlich über `InventoryService.apply()`: Bestandszeile sperren und fortschreiben, Journalbuchung schreiben, Minusbestand prüfen. Spätere Module (Aufträge, Wareneingang, Pack) buchen über diese Funktion.
+- **Nummern:** `CompanyDb.nextNumber()` (lückenlos, gesperrte Zeile).
+- **Frontend:** Seiten unter `apps/web/src/pages/wawi`, Auswahllisten über `useMasterData()`; Beträge als Text, Anzeige mit `formatMoney`/`formatQty`.

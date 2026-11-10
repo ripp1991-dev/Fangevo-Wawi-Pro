@@ -198,6 +198,41 @@ function Note({ config, onConfig }: WidgetProps) {
   );
 }
 
+function LowStock() {
+  const q = useQuery({
+    queryKey: ['low-stock'],
+    queryFn: () =>
+      http.get<
+        {
+          id: string;
+          number: string;
+          name: string;
+          unit: string;
+          minStock: string;
+          stock: string;
+        }[]
+      >('/inventory/low-stock'),
+  });
+  if (!q.data) return <Spinner />;
+  if (!q.data.length)
+    return <p className="py-6 text-center text-sm text-muted">Alle Artikel über Mindestbestand</p>;
+  return (
+    <ul className="divide-y divide-border text-sm">
+      {q.data.slice(0, 12).map((a) => (
+        <li key={a.id} className="flex items-center justify-between gap-2 py-1.5">
+          <Link to="/articles" search={{ id: a.id }} className="truncate hover:underline">
+            {a.number} · {a.name}
+          </Link>
+          <span className="shrink-0 tabular-nums text-warning">
+            {Number(a.stock).toLocaleString('de-DE')} / {Number(a.minStock).toLocaleString('de-DE')}{' '}
+            {a.unit}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function Activity({ config }: WidgetProps) {
   return <ActivityList limit={Number(config.limit ?? 8)} compact />;
 }
@@ -209,6 +244,7 @@ export const WIDGET_COMPONENTS: Record<WidgetType, (p: WidgetProps) => ReactNode
   license: LicenseWidget,
   team: Team,
   companies: Companies,
+  low_stock: LowStock,
   note: Note,
 };
 

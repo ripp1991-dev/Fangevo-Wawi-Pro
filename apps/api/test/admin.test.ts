@@ -105,7 +105,13 @@ describe('Benutzer, Einladungen und Rechte', () => {
     });
     const s = await m.client.get('/auth/session');
     expect(s.body.account.id).toBe(owner.accountId);
-    expect(s.body.account.permissions).toEqual(['companies.read']);
+    expect(s.body.account.permissions).toEqual([
+      'articles.read',
+      'companies.read',
+      'customers.read',
+      'inventory.read',
+      'suppliers.read',
+    ]);
     expect((await m.client.get('/admin/companies')).status).toBe(200);
     const denied = await m.client.post('/admin/companies', { name: 'X', country: 'DE' });
     expect(denied.status).toBe(403);

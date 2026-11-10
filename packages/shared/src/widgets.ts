@@ -66,6 +66,16 @@ export const WIDGETS = {
     defaultH: 3,
     config: z.object({}),
   },
+  low_stock: {
+    title: 'Unter Mindestbestand',
+    description: 'Artikel, die nachbestellt werden sollten (aktive Firma)',
+    permission: 'inventory.read',
+    minW: 3,
+    minH: 3,
+    defaultW: 6,
+    defaultH: 4,
+    config: z.object({}),
+  },
   note: {
     title: 'Notiz',
     description: 'Persönlicher Notizzettel',

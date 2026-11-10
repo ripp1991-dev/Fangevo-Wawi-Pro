@@ -1,6 +1,6 @@
 # FangEvo Wawi Pro – Entwicklungsplan
 
-**Stand:** 2026-11-09 · **Status:** Phase 0, 1 und 2 abgeschlossen · nächster Schritt: Plan Phase 3 (Warenwirtschaft) zur Freigabe
+**Stand:** 2026-11-09 · **Status:** Phase 0, 1, 2 und 3a abgeschlossen · nächster Schritt: Phase 3b (Aufträge, Belege, Einkauf)
 Grundlage: [Master Playbook v1.0](docs/product/MASTER_PLAYBOOK_v1.0.md) · Technik: [ADR-001](docs/decisions/ADR-001_TECHNOLOGIE_EMPFEHLUNG.md)
 
 ---
@@ -196,6 +196,26 @@ Abweichungen vom Plan: BullMQ noch nicht eingesetzt, der Verteiler läuft über 
 ### Phase 3 – Warenwirtschaft (grob)
 
 Reihenfolge: Artikel → Kunden → Lieferanten → Lager/Bestandsjournal → Aufträge (Statusmaschine, Reservierung) → Dokumente (PDF, Nummernkreise, Festschreibung) → Einkauf → erste Dashboard-Widgets.
+
+### Phase 3 – Warenwirtschaft (von FangEvo freigegeben am 2026-11-09)
+
+**Festlegungen:** (1) Daten je Firma getrennt, keine gemeinsam genutzten Artikel. (2) Steuersätze legt der Kunde selbst an und wählt sie je Artikel; EU-Sonderregeln erst nach steuerlicher Prüfung. (3) In Phase 3 PDF-Rechnungen; E-Rechnung (XRechnung/ZUGFeRD) als eigenes Paket direkt danach, nach Prüfung durch Steuerberater. (4) Minusbestand standardmäßig aus, je Firma einschaltbar. (5) Testdaten aus der JTL-Wawi von FangEvo (lesender Export, siehe [03_JTL_EXPORT_AUFTRAG.md](docs/research/03_JTL_EXPORT_AUFTRAG.md)); bis dahin Beispieldaten.
+
+#### Status Phase 3a (2026-11-09): abgeschlossen
+
+| AP                  | Status | Nachweis                                                                                                                                        |
+| ------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| 3.1 Grundlagen      | ✅     | Firmentrennung per RLS (ADR-007), Steuersätze, Kundengruppen, Kategorien, Hersteller, Lager/Lagerplätze, Nummernkreise, Geldbeträge als Decimal |
+| 3.2 Artikel         | ✅     | Preise inkl. Staffel/Kundengruppe, Sets, Varianten, EAN-Prüfung, Preisrecht, eigene Felder, Suche, Verlauf                                      |
+| 3.3 Kunden          | ✅     | Privat/Geschäft, Adressen, Ansprechpartner, Gruppen, Sperre                                                                                     |
+| 3.4 Lieferanten     | ✅     | Stammdaten, Lieferanten-Artikel, bevorzugte Bezugsquelle                                                                                        |
+| 3.5 Lager & Bestand | ✅     | Journal, Zugang/Abgang/Umlagerung/Inventur, Minusbestand-Einstellung, Chargen/SN/MHD-Pflicht, gleichzeitige Buchungen getestet                  |
+
+Offen bzw. bewusst später: Produktbilder (Dateispeicher folgt mit Phase 3b), Bestände je Charge/Seriennummer (Phase 4, FangEvo Lager), Import der JTL-Daten (Phase 5, Import-Assistent; die Testdaten werden vorher geprüft).
+
+#### Phase 3b (nächster Schritt)
+
+Aufträge (Statusregeln, Reservierung), Belege (Angebot, Auftragsbestätigung, Lieferschein, Rechnung, Gutschrift, Storno; PDF; GoBD-Festschreibung; E-Mail-Versand), Einkauf (Bestellvorschläge, Bestellungen, Wareneingang), Startseite mit Umsatz und offenen Aufträgen, Lasttest mit 100.000 Artikeln.
 
 ### Phase 4–8
 

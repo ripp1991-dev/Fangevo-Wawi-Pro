@@ -6,6 +6,8 @@ export interface DbContext {
   /** Aktiver Mandant. null nur für Abfragen über die eigenen Mitgliedschaften. */
   accountId: string | null;
   userId: string | null;
+  /** Aktive Firma. Pflicht für firmenbezogene Tabellen (Artikel, Kunden, Lager …). */
+  companyId?: string | null;
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -23,12 +25,12 @@ export async function withTenant<T>(
   fn: (tx: Tx) => Promise<T>,
   options?: { isolationLevel?: Prisma.TransactionIsolationLevel; timeout?: number },
 ): Promise<T> {
-  for (const v of [ctx.accountId, ctx.userId]) {
+  for (const v of [ctx.accountId, ctx.userId, ctx.companyId ?? null]) {
     if (v !== null && !UUID_RE.test(v)) throw new Error('Ungültiger Mandantenkontext');
   }
   return prisma.$transaction(
     async (tx) => {
-      await tx.$executeRaw`SELECT set_config('app.account_id', ${ctx.accountId ?? ''}, true), set_config('app.user_id', ${ctx.userId ?? ''}, true)`;
+      await tx.$executeRaw`SELECT set_config('app.account_id', ${ctx.accountId ?? ''}, true), set_config('app.user_id', ${ctx.userId ?? ''}, true), set_config('app.company_id', ${ctx.companyId ?? ''}, true)`;
       return fn(tx);
     },
     { timeout: options?.timeout ?? 15_000, isolationLevel: options?.isolationLevel },

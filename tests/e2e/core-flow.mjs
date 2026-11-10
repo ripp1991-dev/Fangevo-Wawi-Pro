@@ -123,7 +123,8 @@ await p2.screenshot({ path: `${shots}/11-mobile-staff-dashboard.png` });
 await p2.goto(BASE + '/admin/members');
 await p2.getByText('Keine Berechtigung').waitFor();
 const sess = await (await p2.request.get(BASE + '/api/v1/auth/session')).json();
-if (JSON.stringify(sess.account.permissions) !== '["companies.read"]')
+const staffPerms = sess.account.permissions;
+if (!staffPerms.includes('companies.read') || staffPerms.some((p) => !p.endsWith('.read')))
   throw new Error('falsche Rechte ' + JSON.stringify(sess.account.permissions));
 await p2.screenshot({ path: `${shots}/12-mobile-no-permission.png` });
 

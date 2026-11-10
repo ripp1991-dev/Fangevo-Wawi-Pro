@@ -1,12 +1,17 @@
 import { type ComponentType } from 'react';
 import {
   BadgeCheck,
+  Boxes,
   Building2,
   FileClock,
   LayoutDashboard,
+  Package,
   Settings,
+  Settings2,
   ShieldCheck,
   SlidersHorizontal,
+  Truck,
+  UserRound,
   Users,
 } from 'lucide-react';
 import { type Permission } from '@fangevo/shared';
@@ -15,7 +20,7 @@ export interface NavItem {
   /** Pfad, zugleich eindeutige ID für Einstellungen */
   to: string;
   label: string;
-  group: 'main' | 'admin';
+  group: 'main' | 'wawi' | 'admin';
   icon: ComponentType<{ className?: string }>;
   permission?: Permission;
   /** Lizenzmodul (ab Phase 3 relevant, z. B. "articles") */
@@ -36,12 +41,56 @@ export const NAV_ITEMS: NavItem[] = [
     keywords: 'dashboard start',
   },
   {
+    to: '/articles',
+    label: 'Artikel',
+    group: 'wawi',
+    icon: Package,
+    permission: 'articles.read',
+    module: 'articles',
+    keywords: 'produkte sortiment ean',
+  },
+  {
+    to: '/customers',
+    label: 'Kunden',
+    group: 'wawi',
+    icon: UserRound,
+    permission: 'customers.read',
+    module: 'customers',
+    keywords: 'käufer debitoren',
+  },
+  {
+    to: '/suppliers',
+    label: 'Lieferanten',
+    group: 'wawi',
+    icon: Truck,
+    permission: 'suppliers.read',
+    module: 'suppliers',
+    keywords: 'kreditoren einkauf',
+  },
+  {
+    to: '/inventory',
+    label: 'Lager & Bestand',
+    group: 'wawi',
+    icon: Boxes,
+    permission: 'inventory.read',
+    module: 'inventory',
+    keywords: 'bestand inventur umlagerung',
+  },
+  {
     to: '/admin/companies',
     label: 'Firmen',
     group: 'admin',
     icon: Building2,
     permission: 'companies.read',
     keywords: 'mandant filiale',
+  },
+  {
+    to: '/company-settings',
+    label: 'Firmeneinstellungen',
+    group: 'admin',
+    icon: Settings2,
+    permission: 'company_settings.manage',
+    keywords: 'steuer nummernkreis kundengruppe kategorie lager',
   },
   {
     to: '/admin/members',
@@ -93,7 +142,11 @@ export const NAV_ITEMS: NavItem[] = [
   },
 ];
 
-export const NAV_GROUPS = { main: undefined, admin: 'Administration' } as const;
+export const NAV_GROUPS = {
+  main: undefined,
+  wawi: 'Warenwirtschaft',
+  admin: 'Administration',
+} as const;
 
 export interface NavPreference {
   hidden: string[];
