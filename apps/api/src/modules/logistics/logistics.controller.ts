@@ -18,6 +18,7 @@ import {
   barcodeInputSchema,
   listQuerySchema,
   packCompleteSchema,
+  packingQueueQuerySchema,
   packingStationInputSchema,
   pickConfirmSchema,
   pickListCreateSchema,
@@ -40,6 +41,7 @@ import { ScanService } from './scan.service';
 
 type ListQuery = z.infer<typeof listQuerySchema>;
 const codeQuery = z.object({ code: z.string().trim().min(1).max(120) });
+const prepareQuery = codeQuery.extend({ stationId: z.uuid().optional() });
 const trackingSchema = z.object({ trackingNumber: z.string().trim().min(1).max(80) });
 
 @ApiTags('Lager: Scannen')
@@ -185,10 +187,22 @@ export class PackingController {
     await this.packing.archiveStation(t, id, true);
   }
 
+  @Get('queue')
+  @RequirePermission('packing.execute')
+  queue(
+    @Tenant() t: TenantContext,
+    @Query(zodPipe(packingQueueQuerySchema)) q: z.infer<typeof packingQueueQuerySchema>,
+  ) {
+    return this.packing.queue(t, q);
+  }
+
   @Get('orders')
   @RequirePermission('packing.execute')
-  prepare(@Tenant() t: TenantContext, @Query(zodPipe(codeQuery)) q: z.infer<typeof codeQuery>) {
-    return this.packing.prepare(t, q.code);
+  prepare(
+    @Tenant() t: TenantContext,
+    @Query(zodPipe(prepareQuery)) q: z.infer<typeof prepareQuery>,
+  ) {
+    return this.packing.prepare(t, q.code, q.stationId);
   }
 
   @Post('orders/:id/complete')

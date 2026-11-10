@@ -2,11 +2,15 @@ import { Inject, Injectable } from '@nestjs/common';
 import { type z } from 'zod';
 import { type Prisma, uuidv7, type Shipment, type Tx } from '@fangevo/database';
 import {
+  NO_CHANNEL,
   ORDER_SHIPPABLE,
   ORDER_STATUSES,
   type ListQuery,
   type OrderStatus,
   type PackComplete,
+  type PackingQueueStage,
+  type PackingRules,
+  type packingQueueQuerySchema,
   type packingStationInputSchema,
 } from '@fangevo/shared';
 import { AuditService } from '../../core/audit/audit.service';
@@ -19,9 +23,29 @@ import { openInvoiceCount } from '../documents/document-queries';
 import { DocumentsService } from '../documents/documents.service';
 import { type CustomerSnapshot, OrdersService } from '../orders/orders.service';
 import { renderLabelPdf } from './label-pdf';
+import { categorySets, checkRules, loadSubjects, readRules, ruleMessage } from './packing-rules';
 import { PickingService } from './picking.service';
 
 type StationInput = z.infer<typeof packingStationInputSchema>;
+type PackingQueueQuery = z.infer<typeof packingQueueQuerySchema>;
+
+/** Status je Warteschlangen-Stufe. */
+const QUEUE_STATUSES: Record<PackingQueueStage, OrderStatus[]> = {
+  packing: ['packing', 'ready_to_ship'],
+  pickable: [
+    'new',
+    'unchecked',
+    'in_progress',
+    'awaiting_payment',
+    'awaiting_stock',
+    'ready_to_ship',
+  ],
+  all: ORDER_SHIPPABLE,
+};
+/** So viele älteste Aufträge werden je Abruf gegen die Regeln geprüft. */
+const QUEUE_SCAN = 1000;
+/** So viele Aufträge liefert die Warteschlange höchstens aus. */
+const QUEUE_ITEMS = 200;
 
 export const SHIPMENT_FIELDS: FieldSpec = {
   number: { kind: 'string', sortable: true },
@@ -56,10 +80,15 @@ export class PackingService {
 
   saveStation(t: TenantContext, id: string | null, input: StationInput) {
     return this.cdb.run(t, async (tx, c) => {
+      await this.validateRules(tx, input.rules);
       const data = {
         name: input.name,
         defaultCarrier: input.defaultCarrier,
-        settings: { autoInvoice: input.autoInvoice, autoDeliveryNote: input.autoDeliveryNote },
+        settings: {
+          autoInvoice: input.autoInvoice,
+          autoDeliveryNote: input.autoDeliveryNote,
+          rules: input.rules,
+        } as unknown as Prisma.InputJsonValue,
       };
       const dup = await tx.packingStation.findFirst({
         where: { name: input.name, ...(id ? { NOT: { id } } : {}) },
@@ -97,16 +126,179 @@ export class PackingService {
     });
   }
 
+  /** Kanäle und Kategorien der Regeln müssen zur aktiven Firma gehören (RLS blendet fremde aus). */
+  private async validateRules(tx: Tx, rules: PackingRules) {
+    const channelIds = rules.channelIds.filter((x) => x !== NO_CHANNEL);
+    if (
+      channelIds.length &&
+      (await tx.salesChannel.count({ where: { id: { in: channelIds } } })) !== channelIds.length
+    )
+      throw new AppError(
+        422,
+        'VALIDATION_FAILED',
+        'Mindestens ein Verkaufskanal wurde nicht gefunden',
+        [{ path: 'rules.channelIds', message: 'Verkaufskanal nicht gefunden' }],
+      );
+    const cats = [...new Set([...rules.categoryIds, ...rules.excludeCategoryIds])];
+    if (cats.length && (await tx.category.count({ where: { id: { in: cats } } })) !== cats.length)
+      throw new AppError(
+        422,
+        'VALIDATION_FAILED',
+        'Mindestens eine Kategorie wurde nicht gefunden',
+        [{ path: 'rules.categoryIds', message: 'Kategorie nicht gefunden' }],
+      );
+    const both = rules.categoryIds.filter((x) => rules.excludeCategoryIds.includes(x));
+    if (both.length)
+      throw new AppError(
+        422,
+        'VALIDATION_FAILED',
+        'Eine Kategorie kann nicht gleichzeitig ein- und ausgeschlossen sein',
+        [{ path: 'rules.excludeCategoryIds', message: 'Doppelt ausgewählt' }],
+      );
+  }
+
+  private async stationRules(tx: Tx, stationId: string | null | undefined) {
+    if (!stationId) return { station: null, rules: readRules({}) };
+    const station = await tx.packingStation.findUnique({ where: { id: stationId } });
+    if (!station || station.archivedAt)
+      throw new AppError(422, 'VALIDATION_FAILED', 'Packplatz nicht gefunden');
+    return { station, rules: readRules(station.settings) };
+  }
+
+  private async channelNames(tx: Tx, ids: (string | null)[]) {
+    const real = [...new Set(ids.filter((x): x is string => !!x))];
+    const rows = real.length
+      ? await tx.salesChannel.findMany({
+          where: { id: { in: real } },
+          select: { id: true, name: true },
+        })
+      : [];
+    return new Map(rows.map((r) => [r.id, r.name]));
+  }
+
+  // ───── Warteschlange ─────
+
+  /**
+   * Aufträge, die an einem Packplatz zum Packen bereitstehen (älteste zuerst), gefiltert nach den
+   * Packregeln des Platzes. Zähler je Kanal für die Reiter. Höchstens QUEUE_SCAN Aufträge werden geprüft.
+   */
+  queue(t: TenantContext, q: PackingQueueQuery) {
+    return this.cdb.run(t, async (tx) => {
+      const { rules } = await this.stationRules(tx, q.stationId);
+      if (q.allChannels && rules.locked)
+        throw new AppError(409, 'CONFLICT', 'Dieser Packplatz ist auf seine Kanäle festgelegt');
+      const channelIds = q.allChannels ? [] : rules.channelIds;
+      if (q.channelId && channelIds.length && !channelIds.includes(q.channelId))
+        throw new AppError(
+          422,
+          'VALIDATION_FAILED',
+          'Dieser Kanal gehört nicht zu den Regeln des Packplatzes',
+        );
+      const candidates = await tx.salesOrder.findMany({
+        where: {
+          status: { in: QUEUE_STATUSES[q.stage] },
+          ...this.channelWhere(channelIds),
+        },
+        orderBy: [{ orderDate: 'asc' }, { id: 'asc' }],
+        take: QUEUE_SCAN + 1,
+        select: {
+          id: true,
+          number: true,
+          status: true,
+          orderDate: true,
+          channelId: true,
+          customerSnapshot: true,
+          shippingMethod: true,
+          externalNumber: true,
+        },
+      });
+      const truncated = candidates.length > QUEUE_SCAN;
+      const scanned = candidates.slice(0, QUEUE_SCAN);
+      const subjects = await loadSubjects(tx, scanned);
+      const { include, exclude } = await categorySets(tx, rules);
+      const matching = scanned.filter(
+        (o) => checkRules(subjects.get(o.id)!, { channelIds: [] }, include, exclude).ok,
+      );
+      const names = await this.channelNames(
+        tx,
+        matching.map((o) => o.channelId),
+      );
+      const counts = new Map<string, number>();
+      for (const o of matching) {
+        const k = o.channelId ?? NO_CHANNEL;
+        counts.set(k, (counts.get(k) ?? 0) + 1);
+      }
+      const selected = q.channelId
+        ? matching.filter((o) => (o.channelId ?? NO_CHANNEL) === q.channelId)
+        : matching;
+      return {
+        rules,
+        channels: [...counts.entries()]
+          .map(([id, count]) => ({
+            id,
+            name: id === NO_CHANNEL ? 'Ohne Kanal' : (names.get(id) ?? 'Unbekannter Kanal'),
+            count,
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name, 'de')),
+        total: matching.length,
+        truncated,
+        items: selected.slice(0, QUEUE_ITEMS).map((o) => ({
+          id: o.id,
+          number: o.number,
+          status: o.status,
+          orderDate: o.orderDate,
+          externalNumber: o.externalNumber,
+          shippingMethod: o.shippingMethod,
+          customerName: (o.customerSnapshot as unknown as CustomerSnapshot).displayName,
+          channelId: o.channelId,
+          channelName: o.channelId ? (names.get(o.channelId) ?? null) : null,
+          positions: subjects.get(o.id)!.categoryIds.length,
+        })),
+      };
+    });
+  }
+
+  private channelWhere(channelIds: string[]): Prisma.SalesOrderWhereInput {
+    if (!channelIds.length) return {};
+    const real = channelIds.filter((x) => x !== NO_CHANNEL);
+    const or: Prisma.SalesOrderWhereInput[] = [];
+    if (real.length) or.push({ channelId: { in: real } });
+    if (channelIds.includes(NO_CHANNEL)) or.push({ channelId: null });
+    return { OR: or };
+  }
+
+  /** Prüft einen Auftrag gegen die Regeln eines Packplatzes. */
+  private async checkOrder(
+    tx: Tx,
+    order: { id: string; channelId: string | null },
+    rules: PackingRules,
+  ): Promise<{ ok: boolean; message: string | null }> {
+    const subject = (await loadSubjects(tx, [order])).get(order.id)!;
+    const { include, exclude } = await categorySets(tx, rules);
+    const r = checkRules(subject, rules, include, exclude);
+    if (r.ok) return { ok: true, message: null };
+    const names = await this.channelNames(tx, [order.channelId]);
+    return {
+      ok: false,
+      message: ruleMessage(r.reason, order.channelId ? (names.get(order.channelId) ?? null) : null),
+    };
+  }
+
   // ───── Packen ─────
 
   /** Auftrag zum Packen laden (per ID oder gescannter Auftragsnummer). */
-  prepare(t: TenantContext, ref: string) {
+  prepare(t: TenantContext, ref: string, stationId?: string | null) {
     return this.cdb.run(t, async (tx) => {
       const isId = /^[0-9a-f-]{36}$/i.test(ref);
       const order = await tx.salesOrder.findFirst({
         where: isId ? { id: ref } : { number: { equals: ref.trim(), mode: 'insensitive' } },
       });
       if (!order) throw Errors.notFound('Auftrag nicht gefunden');
+      const { rules } = await this.stationRules(tx, stationId);
+      const rule = { ...(await this.checkOrder(tx, order, rules)), mismatch: rules.mismatch };
+      const channelName = order.channelId
+        ? ((await this.channelNames(tx, [order.channelId])).get(order.channelId) ?? null)
+        : null;
       const demands = await this.orders.demands(tx, order.id);
       const articles = await tx.article.findMany({
         where: { id: { in: [...new Set(demands.map((d) => d.articleId))] } },
@@ -133,7 +325,11 @@ export class PackingService {
           shippingAddress: snap.shipping,
           shippingMethod: order.shippingMethod,
           notes: order.notes,
+          channelId: order.channelId,
+          channelName,
         },
+        /** Passt der Auftrag zu den Regeln des Packplatzes? (mismatch: warn | block) */
+        rule,
         items: demands.map((d) => {
           const a = articles.find((x) => x.id === d.articleId);
           const pick = picks.find((p) => p.orderLineId === d.lineId && p.articleId === d.articleId);
@@ -180,6 +376,13 @@ export class PackingService {
         : null;
       if (input.stationId && (!station || station.archivedAt))
         throw new AppError(422, 'VALIDATION_FAILED', 'Packplatz nicht gefunden');
+      if (station) {
+        const rules = readRules(station.settings);
+        if (rules.mismatch === 'block') {
+          const r = await this.checkOrder(tx, order, rules);
+          if (!r.ok) throw new AppError(409, 'CONFLICT', r.message!);
+        }
+      }
 
       await this.orders.shipInTx(
         tx,

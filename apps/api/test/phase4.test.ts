@@ -9,7 +9,7 @@ beforeAll(async () => {
 });
 afterAll(async () => app.close());
 
-async function setup(opts: { plan?: 'business'; invoiceReady?: boolean } = {}) {
+async function setup(opts: { plan?: 'business' | 'professional'; invoiceReady?: boolean } = {}) {
   const s = await signUp(app, 'Logistik GmbH');
   s.client.companyId = s.companyId;
   if (opts.plan)
@@ -421,6 +421,176 @@ describe('Retouren', () => {
         })
       ).status,
     ).toBe(409);
+  });
+});
+
+describe('Packregeln nach Kanal und Kategorie', () => {
+  /** Setzt den Verkaufskanal eines Auftrags direkt (wie bei einer Bestellung über den Kanal). */
+  const setChannel = (
+    s: { accountId: string; companyId: string },
+    orderId: string,
+    channelId: string | null,
+  ) =>
+    asTenant(s.accountId, async (tx) => {
+      await tx.$executeRaw`SELECT set_config('app.company_id', ${s.companyId}, true)`;
+      await tx.salesOrder.update({ where: { id: orderId }, data: { channelId } });
+    });
+
+  async function world() {
+    const s = await setup({ plan: 'professional' });
+    const { client, hl } = s;
+    const shopify = (await client.post('/channels', { name: 'Shopify', type: 'api' })).body.id;
+    const amazon = (await client.post('/channels', { name: 'Amazon', type: 'api' })).body.id;
+    const cat = async (name: string, parentId?: string) => {
+      const r = await client.post('/company/categories', { name, parentId });
+      expect(r.status).toBe(201);
+      return r.body.id as string;
+    };
+    const sweets = await cat('Süßwaren');
+    const choc = await cat('Schokolade', sweets);
+    const cold = await cat('Kühlware');
+    const schoko = await article(client, { name: 'Tafel', categoryId: choc });
+    const eis = await article(client, { name: 'Eis', categoryId: cold });
+    for (const a of [schoko, eis])
+      await book(client, { articleId: a.id, warehouseId: hl, quantity: '20' });
+    const k = await customer(client);
+    const mk = async (channelId: string | null, ids: string[]) => {
+      const o = await order(
+        client,
+        k.id,
+        ids.map((articleId) => ({ articleId, quantity: '1' })),
+      );
+      await setChannel(s, o.id, channelId);
+      return o;
+    };
+    const A = await mk(shopify, [schoko.id]); // Shopify, nur Schokolade
+    const B = await mk(amazon, [eis.id]); // Amazon, nur Kühlware
+    const C = await mk(amazon, [schoko.id, eis.id]); // Amazon, gemischt
+    const D = await mk(null, [schoko.id]); // ohne Kanal
+    const station = async (name: string, rules: Record<string, unknown>) => {
+      const r = await client.post('/packing/stations', { name, rules });
+      expect(r.status).toBe(201);
+      return r.body.id as string;
+    };
+    const ids = (r: { body: { items: { number: string }[] } }) =>
+      r.body.items.map((i) => i.number).sort();
+    return { ...s, shopify, amazon, sweets, cold, schoko, A, B, C, D, station, ids };
+  }
+
+  it('filtert die Warteschlange nach Kanal und Kategorie (inkl. Unterkategorien, gemischte Aufträge)', async () => {
+    const w = await world();
+    const { client, A, B, C, D, ids } = w;
+    const all = await client.get('/packing/queue?stage=all');
+    expect(all.status).toBe(200);
+    expect(ids(all)).toEqual([A, B, C, D].map((o) => o.number).sort());
+    expect(
+      all.body.channels.map((c: { name: string; count: number }) => [c.name, c.count]),
+    ).toEqual([
+      ['Amazon', 2],
+      ['Ohne Kanal', 1],
+      ['Shopify', 1],
+    ]);
+    expect(ids(await client.get('/packing/queue?stage=all&channelId=none'))).toEqual([D.number]);
+    // Stufe „packing“: neue Aufträge sind noch nicht packbereit
+    expect((await client.get('/packing/queue')).body.items).toEqual([]);
+
+    const amazonOnly = await w.station('Amazon', { channelIds: [w.amazon] });
+    expect(ids(await client.get(`/packing/queue?stage=all&stationId=${amazonOnly}`))).toEqual(
+      [B, C].map((o) => o.number).sort(),
+    );
+    const cold = await w.station('Kühl', { categoryIds: [w.cold] });
+    expect(ids(await client.get(`/packing/queue?stage=all&stationId=${cold}`))).toEqual([B.number]);
+    const rest = await w.station('Rest', { excludeCategoryIds: [w.cold] });
+    expect(ids(await client.get(`/packing/queue?stage=all&stationId=${rest}`))).toEqual(
+      [A, C, D].map((o) => o.number).sort(),
+    );
+    // Oberkategorie schließt Unterkategorien ein
+    const sweets = await w.station('Süß', { categoryIds: [w.sweets] });
+    expect(ids(await client.get(`/packing/queue?stage=all&stationId=${sweets}`))).toEqual(
+      [A, D].map((o) => o.number).sort(),
+    );
+    // Kanal außerhalb der Regeln: abgelehnt; „auch andere Kanäle“ nur ohne Festlegung
+    expect(
+      (await client.get(`/packing/queue?stage=all&stationId=${amazonOnly}&channelId=${w.shopify}`))
+        .status,
+    ).toBe(422);
+    expect(
+      ids(await client.get(`/packing/queue?stage=all&stationId=${amazonOnly}&allChannels=true`)),
+    ).toHaveLength(4);
+    const locked = await w.station('Fest', { channelIds: [w.amazon], locked: true });
+    expect(
+      (await client.get(`/packing/queue?stage=all&stationId=${locked}&allChannels=true`)).status,
+    ).toBe(409);
+  });
+
+  it('prüft Regeln beim Laden und sperrt fremde Aufträge, wenn eingestellt', async () => {
+    const w = await world();
+    const { client, A } = w;
+    const warn = await w.station('Amazon warnt', { channelIds: [w.amazon] });
+    const block = await w.station('Amazon sperrt', { channelIds: [w.amazon], mismatch: 'block' });
+    const prep = (await client.get(`/packing/orders?code=${A.number}&stationId=${warn}`)).body;
+    expect(prep.order).toMatchObject({ channelId: w.shopify, channelName: 'Shopify' });
+    expect(prep.rule).toMatchObject({ ok: false, mismatch: 'warn' });
+    expect(prep.rule.message).toContain('Shopify');
+    const body = {
+      carrier: 'manual',
+      parcels: [{ weightKg: '1' }],
+      items: [{ orderLineId: A.lines[0]!.id, articleId: w.schoko.id, quantity: '1' }],
+    };
+    const blocked = await client.post(`/packing/orders/${A.id}/complete`, {
+      ...body,
+      stationId: block,
+    });
+    expect(blocked.status).toBe(409);
+    expect((await client.get(`/orders/${A.id}`)).body.status).not.toBe('shipped');
+    const ok = await client.post(`/packing/orders/${A.id}/complete`, { ...body, stationId: warn });
+    expect(ok.status).toBe(201);
+  });
+
+  it('prüft Kanäle und Kategorien beim Speichern, Regeln bleiben bei Änderungen erhalten', async () => {
+    const w = await world();
+    const { client } = w;
+    const bad = (rules: Record<string, unknown>) =>
+      client.post('/packing/stations', { name: `X${Math.random()}`, rules });
+    expect((await bad({ channelIds: [crypto.randomUUID()] })).status).toBe(422);
+    expect((await bad({ categoryIds: [crypto.randomUUID()] })).status).toBe(422);
+    expect((await bad({ categoryIds: [w.cold], excludeCategoryIds: [w.cold] })).status).toBe(422);
+    expect((await bad({ channelIds: ['none'] })).status).toBe(201);
+    // Alte Packplätze ohne Regeln: alles erlaubt
+    const plain = (await client.post('/packing/stations', { name: 'Alt' })).body;
+    expect(plain.settings.rules).toMatchObject({ channelIds: [], mismatch: 'warn' });
+  });
+
+  it('Kanäle und Kategorien anderer Firmen sind nicht nutzbar, Aufträge nicht sichtbar', async () => {
+    const w = await world();
+    const other = await setup({ plan: 'professional' });
+    expect(
+      (
+        await other.client.post('/packing/stations', {
+          name: 'Fremd',
+          rules: { channelIds: [w.amazon] },
+        })
+      ).status,
+    ).toBe(422);
+    expect(
+      (
+        await other.client.post('/packing/stations', {
+          name: 'Fremd2',
+          rules: { categoryIds: [w.cold] },
+        })
+      ).status,
+    ).toBe(422);
+    expect((await other.client.get('/packing/queue?stage=all')).body.items).toEqual([]);
+    const mine = await w.station('Meins', {});
+    expect((await other.client.get(`/packing/queue?stationId=${mine}`)).status).toBe(422);
+    // Zweite Firma im selben Account
+    const two = (await w.client.post('/admin/companies', { name: 'Filiale', country: 'DE' })).body;
+    w.client.companyId = two.id;
+    expect((await w.client.get('/packing/queue?stage=all')).body.items).toEqual([]);
+    expect(
+      (await w.client.post('/packing/stations', { name: 'F', rules: { channelIds: [w.amazon] } }))
+        .status,
+    ).toBe(422);
   });
 });
 

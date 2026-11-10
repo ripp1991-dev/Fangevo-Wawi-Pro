@@ -10,6 +10,7 @@ import {
   Dialog,
   Input,
   PageHeader,
+  Select,
   Spinner,
   TBody,
   TD,
@@ -25,7 +26,7 @@ import { errorMessage, http } from '../../lib/api';
 import { formatDate, formatDateTime } from '../../lib/format';
 import { formatMoney, formatQty, toInput } from '../../lib/master-data';
 import { ORDER_TONE, orderStatusLabel } from '../../lib/sales';
-import { useSession } from '../../lib/session';
+import { useCan, useSession } from '../../lib/session';
 
 interface PickListRow {
   id: string;
@@ -199,15 +200,58 @@ function NewPickList({ onCreated }: { onCreated: (id: string) => void }) {
         `/orders?pageSize=200&sort=orderDate:asc&filters=${encodeURIComponent(JSON.stringify(filters))}`,
       ),
   });
+  const can = useCan();
+  const withRules = can('packing.execute');
+  const stations = useQuery({
+    queryKey: ['packing-stations'],
+    enabled: withRules,
+    retry: false,
+    queryFn: () =>
+      http.get<{ id: string; name: string; archivedAt: string | null }[]>('/packing/stations'),
+  });
+  const [stationId, setStationId] = useState('');
+  // Packregeln eines Packplatzes (Kanal/Kategorie) auf die kommissionierbaren Aufträge anwenden
+  const allowed = useQuery({
+    queryKey: ['packing-queue', 'pickable', stationId],
+    enabled: !!stationId,
+    queryFn: () =>
+      http.get<{ items: { id: string }[] }>(
+        `/packing/queue?stage=pickable&stationId=${encodeURIComponent(stationId)}`,
+      ),
+  });
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  if (!q.data) return <Spinner />;
-  if (!q.data.items.length)
+  if (!q.data || (stationId && !allowed.data)) return <Spinner />;
+  const allowedIds = stationId ? new Set(allowed.data!.items.map((o) => o.id)) : null;
+  const items = allowedIds ? q.data.items.filter((o) => allowedIds.has(o.id)) : q.data.items;
+  const activeStations = (stations.data ?? []).filter((x) => !x.archivedAt);
+  const stationSelect = activeStations.length > 0 && (
+    <Select
+      aria-label="Nach Packregeln filtern"
+      className="w-64"
+      value={stationId}
+      onChange={(e) => {
+        setStationId(e.target.value);
+        setSel(new Set());
+      }}
+    >
+      <option value="">Alle Aufträge</option>
+      {activeStations.map((x) => (
+        <option key={x.id} value={x.id}>
+          Regeln von {x.name}
+        </option>
+      ))}
+    </Select>
+  );
+  if (!items.length)
     return (
-      <p className="py-8 text-center text-sm text-muted">
-        Keine Aufträge, die kommissioniert werden können.
-      </p>
+      <div className="space-y-3">
+        {stationSelect}
+        <p className="py-8 text-center text-sm text-muted">
+          Keine Aufträge, die kommissioniert werden können.
+        </p>
+      </div>
     );
   const create = async () => {
     setBusy(true);
@@ -235,9 +279,10 @@ function NewPickList({ onCreated }: { onCreated: (id: string) => void }) {
         >
           <ListChecks /> Pickliste erstellen ({sel.size})
         </Button>
-        <Button variant="secondary" onClick={() => setSel(new Set(q.data.items.map((o) => o.id)))}>
+        <Button variant="secondary" onClick={() => setSel(new Set(items.map((o) => o.id)))}>
           Alle auswählen
         </Button>
+        {stationSelect}
       </div>
       <p className="text-sm text-muted">
         Aufträge ohne ausreichenden Bestand werden abgelehnt (ältere Aufträge haben Vorrang).
@@ -254,7 +299,7 @@ function NewPickList({ onCreated }: { onCreated: (id: string) => void }) {
           </TR>
         </THead>
         <TBody>
-          {q.data.items.map((o) => (
+          {items.map((o) => (
             <TR key={o.id}>
               <TD>
                 <Checkbox

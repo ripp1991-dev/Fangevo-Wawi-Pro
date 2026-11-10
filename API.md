@@ -132,7 +132,7 @@ Ebenfalls mit Header **`X-Company-Id`** und gebuchtem Modul (`orders`, `document
 | `GET /scan?code=` (Artikel oder Lagerplatz mit Bestand je Platz/Charge/SN)                                            | `inventory.read` / Lager            |
 | `GET/POST /articles/:id/barcodes`, `DELETE /articles/:id/barcodes/:barcodeId`                                         | `articles.read` / `articles.manage` |
 | `GET /pick-lists`, `GET /pick-lists/:id`, `POST /pick-lists` `{orderIds}`, `POST …/confirm`, `…/complete`, `…/cancel` | `picking.execute` / Lager           |
-| `GET /packing/stations`, `GET /packing/orders?code=`, `POST /packing/orders/:id/complete`                             | `packing.execute` / Pack            |
+| `GET /packing/stations`, `GET /packing/queue?stationId=&channelId=&stage=&allChannels=`, `GET /packing/orders?code=&stationId=`, `POST /packing/orders/:id/complete` | `packing.execute` / Pack            |
 | `POST/PUT /packing/stations…`, `POST …/archive`                                                                       | `shipping.manage` / Pack            |
 | `GET /packing/shipments`, `PUT /packing/shipments/:id/tracking`, `GET /packing/shipments/:id/label`                   | `packing.execute` / Pack            |
 | `GET /returns`, `GET /returns/:id`, `GET /returns/returnable/:orderId`                                                | `returns.read` / Retouren           |
