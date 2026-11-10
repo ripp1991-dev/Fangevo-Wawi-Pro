@@ -6,7 +6,7 @@ Modulare, mandantenfähige SaaS-Warenwirtschaft (ERP / E-Commerce) für kleine, 
 
 ## Schnellstart (lokale Entwicklung)
 
-Voraussetzungen: Node.js 22, pnpm 10 (`corepack enable`), Docker (für PostgreSQL, Redis, MinIO, Mailpit).
+Voraussetzungen: Node.js 22, pnpm 10 (`corepack enable`), Docker (für PostgreSQL, Redis, Mailpit).
 
 ```bash
 cp .env.example .env            # Werte prüfen, APP_ENCRYPTION_KEY erzeugen (siehe Kommentar)

@@ -8,6 +8,10 @@
 - **Warteschlange am Packtisch** (GET /packing/queue): packbereite Aufträge nach den Regeln des Platzes, älteste zuerst, mit Kanal-Reitern und Zählern; Klick lädt den Auftrag zum Packen.
 - **Picklisten nach Packregeln:** Beim Anlegen einer Pickliste lassen sich die Aufträge mit den Regeln eines Packplatzes vorfiltern.
 
+### Behoben
+
+- **Entwicklungsumgebung startet wieder:** MinIO veröffentlicht keine Container-Abbilder mehr, `docker compose up` brach deshalb ab. Der Objektspeicher ist aus `infrastructure/docker/docker-compose.yml` entfernt, weil FangEvo derzeit keinen S3-Speicher nutzt (Belege in der Datenbank, ADR-008).
+
 ## [0.9.0] – 2026-11-09 – Phase 8: Produktionsreife
 
 ### Hinzugefügt
