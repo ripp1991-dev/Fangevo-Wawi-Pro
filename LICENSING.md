@@ -46,6 +46,10 @@ Die Module **Aufträge** und **Dokumente** (Belege) sind verfügbar und im Paket
 
 Picklisten und die mobile Scan-Seite gehören zum Modul **Lager** (alle Pakete). **FangEvo Pack**, **Versand** und **Retouren** sind ab Paket **Business** enthalten.
 
+## Hinweis Phase 5
+
+**FangEvo Import** ist ab Paket Business enthalten, **Öffentliche API** und **Multichannel** ab Professional. API-Schlüssel funktionieren nur, solange das Modul „Öffentliche API“ gebucht ist.
+
 ## Status und Zugriff
 
 | Status                  | Zugriff                                                                                                             |

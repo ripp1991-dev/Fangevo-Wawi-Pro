@@ -1,6 +1,18 @@
 # Changelog
 
-## [0.5.0] – 2026-11-09 – Phase 4: Logistik
+## [0.6.0] – 2026-11-09 – Phase 5: Import und Multichannel
+
+### Hinzugefügt
+
+- **FangEvo Import:** CSV (Trennzeichen und Zeichensatz werden erkannt, z. B. JTL-Export) und Excel; Datenarten Artikel, Kunden, Lieferanten, Bestände, Preise, Kategorien; automatischer Spaltenvorschlag, Standardwerte, Vorgehen (neu/ändern/beides), Prüflauf ohne Speichern mit Fehlern je Zeile, Ausführung im Hintergrund mit Fortschritt, Verlauf, Vorlagen, Rückgängig für neu angelegte Stammdaten; fehlende Kategorien/Hersteller/Lagerplätze auf Wunsch anlegen.
+- **Export** von Artikeln, Kunden, Lieferanten und Beständen als CSV (Excel-tauglich, passt wieder zum Import).
+- **Hintergrundaufgaben** (`job_queue`) mit Wiederholungen und Fortsetzung nach Abbruch.
+- **Öffentliche API:** API-Schlüssel je Firma mit ausgewählten Rechten, Ablaufdatum, Sperren, Rate-Limit, letzte Nutzung; Anmeldung per `Authorization: Bearer fe_live_…`.
+- **Verkaufskanäle:** Kanal „Eigener Shop über API“ – Bestellungen übernehmen (doppelte Übergabe erkannt, Kunde über E-Mail/externe ID), Bestände und Preise je Kanal abrufen, Status und Trackingnummern abrufen; Artikel je Kanal (aktiv, eigener Preis); Protokoll mit Fehlern. Geplante Marktplätze werden angezeigt, aber nicht als verfügbar ausgegeben.
+- Neue Rechte `import.execute`, `api_keys.manage`, `channels.read/manage`; Module Import (ab Business), Öffentliche API und Multichannel (ab Professional) freigeschaltet.
+- 6. Browser-E2E-Ablauf (Import → API-Schlüssel → Kanal → Shop-Bestellung).
+
+– 2026-11-09 – Phase 4: Logistik
 
 ### Hinzugefügt
 

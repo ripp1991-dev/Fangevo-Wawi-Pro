@@ -139,3 +139,17 @@ Ebenfalls mit Header **`X-Company-Id`** und gebuchtem Modul (`orders`, `document
 | `POST /returns`, `POST /returns/:id/receive` (`createCreditNote` zusätzlich `documents.manage`), `…/cancel`           | `returns.manage` / Retouren         |
 
 Umlagerung und Inventur nehmen jetzt `batch` und `serialNumber` an. Bei Artikeln mit Seriennummer verlangt `POST /orders/:id/ship` den Packtisch (`409`).
+
+## Endpunkte (Phase 5)
+
+| Endpunkt                                                                                                                            | Recht / Modul                                      |
+| ----------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `POST /imports` `{entity, fileName, contentBase64}`, `GET /imports`, `GET /imports/:id`, `POST …/validate`, `…/start`, `…/rollback` | `import.execute` / Import                          |
+| `GET/POST /imports/templates`, `DELETE /imports/templates/:id`, `GET /imports/export/:entity` (CSV)                                 | `import.execute` / Import                          |
+| `GET /api-keys`, `GET /api-keys/permissions`, `POST /api-keys`, `POST /api-keys/:id/revoke`                                         | `api_keys.manage` / API                            |
+| `GET/POST/PUT /channels…`, `GET/PUT /channels/:id/listings…`                                                                        | `channels.read` / `channels.manage` / Multichannel |
+| `POST /channels/:id/orders` (Shop-Bestellung, idempotent je `externalId`)                                                           | `channels.read` + `orders.manage`                  |
+| `GET /channels/:id/stock?cursor=&limit=`                                                                                            | `channels.read` + `inventory.read`                 |
+| `GET /channels/:id/orders/:externalId`                                                                                              | `channels.read` + `orders.read`                    |
+
+**Anmeldung mit API-Schlüssel:** `Authorization: Bearer fe_live_…`. Kein Cookie, kein CSRF-Header nötig; `X-Company-Id` kann entfallen (Firma des Schlüssels). `401` bei ungültigem/gesperrtem/abgelaufenem Schlüssel, `429` bei mehr als 600 Anfragen pro Minute.

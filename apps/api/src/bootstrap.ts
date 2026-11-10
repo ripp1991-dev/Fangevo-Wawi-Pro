@@ -20,6 +20,14 @@ export async function createApp(config: AppConfig): Promise<NestFastifyApplicati
     { bufferLogs: true },
   );
   app.useLogger(app.get(PinoLogger));
+  // Datei-Uploads (Import) dürfen größer sein als normale Anfragen (1 MB)
+  app
+    .getHttpAdapter()
+    .getInstance()
+    .addHook('onRoute', (route) => {
+      if (route.method === 'POST' && route.url === '/api/v1/imports')
+        route.bodyLimit = 15 * 1024 * 1024;
+    });
   app.setGlobalPrefix('api/v1', { exclude: ['health'] });
 
   await app.register(cookie);
@@ -56,7 +64,13 @@ export async function createApp(config: AppConfig): Promise<NestFastifyApplicati
       if (
         !SAFE.has(req.method) &&
         req.url.startsWith('/api/') &&
-        req.headers[CSRF_HEADER] !== '1'
+        req.headers[CSRF_HEADER] !== '1' &&
+        // API-Schlüssel ohne Cookie: kein Browser-Kontext, daher kein CSRF-Risiko
+        !(
+          !req.headers.cookie &&
+          typeof req.headers.authorization === 'string' &&
+          req.headers.authorization.startsWith('Bearer fe_live_')
+        )
       ) {
         await reply
           .status(403)

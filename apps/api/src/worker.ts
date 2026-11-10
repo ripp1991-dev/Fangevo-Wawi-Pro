@@ -7,9 +7,11 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { loadConfig } from './config';
 import { EventDispatcher } from './core/events/dispatcher.service';
+import { JobQueue } from './core/jobs/job-queue.service';
 
 const app = await NestFactory.createApplicationContext(AppModule.forRoot(loadConfig()), {
   bufferLogs: true,
 });
 app.enableShutdownHooks();
 app.get(EventDispatcher).start();
+app.get(JobQueue).start();

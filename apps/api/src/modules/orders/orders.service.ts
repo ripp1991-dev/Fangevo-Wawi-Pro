@@ -157,29 +157,43 @@ export class OrdersService {
   // ───── Anlage und Bearbeitung ─────
 
   create(t: TenantContext, input: OrderInput) {
-    return this.cdb.run(t, async (tx, c) => {
-      const prepared = await this.prepare(tx, input);
-      const id = uuidv7();
-      const number = await this.cdb.nextNumber(tx, c.companyId, 'order');
-      const order = await tx.salesOrder.create({
-        data: {
-          id,
-          accountId: c.account.id,
-          companyId: c.companyId,
-          number,
-          status: 'new',
-          ...prepared.header,
-          createdBy: c.user.id,
-          updatedBy: c.user.id,
-        },
-      });
-      await this.writeLines(tx, c, id, prepared.lines);
-      await this.history(tx, c, id, null, 'new', null);
-      await this.reserve(tx, c, order);
-      await this.audit.record(tx, this.entry(c, 'order.created', order, { number }));
-      await this.index(tx, order);
-      return this.load(tx, c, id);
+    return this.cdb.run(t, async (tx, c) =>
+      this.load(tx, c, (await this.createInTx(tx, c, input)).id),
+    );
+  }
+
+  /** Auftrag in einer laufenden Transaktion anlegen (auch für Verkaufskanäle). */
+  async createInTx(
+    tx: Tx,
+    c: CompanyContext,
+    input: OrderInput,
+    origin: { channelId?: string | null; note?: string | null } = {},
+  ): Promise<SalesOrder> {
+    const prepared = await this.prepare(tx, input);
+    const id = uuidv7();
+    const number = await this.cdb.nextNumber(tx, c.companyId, 'order');
+    const order = await tx.salesOrder.create({
+      data: {
+        id,
+        accountId: c.account.id,
+        companyId: c.companyId,
+        number,
+        status: 'new',
+        ...prepared.header,
+        channelId: origin.channelId ?? null,
+        createdBy: c.user.id,
+        updatedBy: c.user.id,
+      },
     });
+    await this.writeLines(tx, c, id, prepared.lines);
+    await this.history(tx, c, id, null, 'new', origin.note ?? null);
+    await this.reserve(tx, c, order);
+    await this.audit.record(
+      tx,
+      this.entry(c, 'order.created', order, { number, channelId: origin.channelId ?? undefined }),
+    );
+    await this.index(tx, order);
+    return order;
   }
 
   update(t: TenantContext, id: string, input: OrderInput, version: number) {
