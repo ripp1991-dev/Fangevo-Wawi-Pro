@@ -2,7 +2,7 @@
 
 Modulare, mandantenfähige SaaS-Warenwirtschaft (ERP / E-Commerce) für kleine, mittlere und große Handelsunternehmen.
 
-> **Status:** Phase 1 (Fundament), Phase 2 (Dashboard und Werkzeuge) und Phase 3 (Warenwirtschaft: Artikel, Kunden, Lieferanten, Lager, Aufträge, Belege mit PDF, Einkauf) Phase 4 (Logistik: Picklisten, Packtisch, Versand, Retouren, mobiler Scanner) Phase 5 (Import/Export, öffentliche API, Verkaufskanäle) Phase 6 (Automatisierung: Webhooks, Regeln) und Phase 7 (Kommerzialisierung: Abo, Rechnungen, Marketplace, Support, Plattform-Verwaltung) sind umgesetzt. Details: [Entwicklungsplan](DEVELOPMENT_ROADMAP.md).
+> **Status:** Phase 1 (Fundament), Phase 2 (Dashboard und Werkzeuge) und Phase 3 (Warenwirtschaft: Artikel, Kunden, Lieferanten, Lager, Aufträge, Belege mit PDF, Einkauf) Phase 4 (Logistik: Picklisten, Packtisch, Versand, Retouren, mobiler Scanner) Phase 5 (Import/Export, öffentliche API, Verkaufskanäle) Phase 6 (Automatisierung: Webhooks, Regeln) Phase 7 (Kommerzialisierung: Abo, Rechnungen, Marketplace, Support, Plattform-Verwaltung) und Phase 8 (Produktionsreife: Sicherheits-, Last-, Migrations- und Wiederherstellungstests, Container-Images, Betriebshandbuch) sind umgesetzt. Nächster Schritt: Pilotkunden ([PILOT.md](PILOT.md)). Details: [Entwicklungsplan](DEVELOPMENT_ROADMAP.md).
 
 ## Schnellstart (lokale Entwicklung)
 
@@ -23,19 +23,23 @@ pnpm dev                        # API auf :3000 (inkl. Ereignis-Verteiler), Web 
 
 ## Betrieb (Produktion)
 
+Ausführlich im [Betriebshandbuch](OPERATIONS.md) (Container-Images, Docker Compose für den Pilot, Sicherung, Wiederherstellung, Überwachung).
+
 Zwei Prozesse aus demselben Build: `node apps/api/dist/main.js` (API) und `node apps/api/dist/worker.js` (Ereignis-Verteiler, beliebig viele Instanzen). Pflicht in Produktion: `SMTP_HOST`, `APP_ENCRYPTION_KEY`, getrennte Datenbankrollen (siehe [DATABASE.md](DATABASE.md)). Für Abo-Rechnungen zusätzlich die Absenderdaten `PLATFORM_ISSUER_*`, für Support und Plattform-Verwaltung `SUPPORT_EMAIL` und `PLATFORM_ADMIN_EMAILS` (siehe `.env.example`).
 
 ## Wichtige Befehle
 
-| Befehl                                  | Zweck                                                                                   |
-| --------------------------------------- | --------------------------------------------------------------------------------------- |
-| `pnpm lint` / `pnpm format:check`       | Code-Stil und Modulgrenzen                                                              |
-| `pnpm typecheck`                        | Strenge Typprüfung aller Pakete                                                         |
-| `pnpm test`                             | Unit- und Integrationstests (brauchen PostgreSQL + Redis, Testdatenbank `fangevo_test`) |
-| `pnpm test:e2e`                         | Browser-Test des Kernprozesses (siehe [TESTING.md](TESTING.md))                         |
-| `pnpm build`                            | Produktions-Build von API und Web                                                       |
-| `pnpm --filter @fangevo/api perf:lists` | Lasttest der Listen mit 100.000 Datensätzen (Testdatenbank)                             |
-| `pnpm --filter @fangevo/api perf:wawi`  | Lasttest Warenwirtschaft (100.000 Artikel, 50.000 Aufträge; Testdatenbank)              |
+| Befehl                                                 | Zweck                                                                                   |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| `pnpm lint` / `pnpm format:check`                      | Code-Stil und Modulgrenzen                                                              |
+| `pnpm typecheck`                                       | Strenge Typprüfung aller Pakete                                                         |
+| `pnpm test`                                            | Unit- und Integrationstests (brauchen PostgreSQL + Redis, Testdatenbank `fangevo_test`) |
+| `pnpm test:e2e`                                        | Browser-Test des Kernprozesses (siehe [TESTING.md](TESTING.md))                         |
+| `pnpm build`                                           | Produktions-Build von API und Web                                                       |
+| `pnpm --filter @fangevo/api perf:lists`                | Lasttest der Listen mit 100.000 Datensätzen (Testdatenbank)                             |
+| `pnpm --filter @fangevo/api perf:wawi`                 | Lasttest Warenwirtschaft (100.000 Artikel, 50.000 Aufträge; Testdatenbank)              |
+| `pnpm --filter @fangevo/api perf:http`                 | Lasttest über HTTP mit mehreren Accounts (Testdatenbank)                                |
+| `scripts/db-backup.sh` / `scripts/db-restore-check.sh` | Sicherung / Wiederherstellungs-Probe (siehe OPERATIONS.md)                              |
 
 ## Aufbau
 

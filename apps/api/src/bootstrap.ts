@@ -38,6 +38,8 @@ export async function createApp(config: AppConfig): Promise<NestFastifyApplicati
         imgSrc: ["'self'", 'data:'],
         scriptSrc: ["'self'", "'unsafe-inline'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
+        // API-Antworten dürfen nicht in fremde oder eigene Rahmen eingebettet werden (Clickjacking)
+        frameAncestors: ["'none'"],
       },
     },
   });

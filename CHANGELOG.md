@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.9.0] – 2026-11-09 – Phase 8: Produktionsreife
+
+### Hinzugefügt
+
+- **Sicherheitstests über die gesamte API und Datenbank:** jede Tabelle mit Mandantendaten hat erzwungene Row-Level Security; firmenbezogene Tabellen prüfen die Firma; jeder Endpunkt wird ohne Anmeldung abgewiesen; kein Endpunkt erzeugt mit leeren oder unbekannten Eingaben einen Serverfehler; Sicherheits-Header, Cookie-Flags, CSRF.
+- **Sicherung und Wiederherstellung:** eigene Sicherungsrolle, Skripte für Sicherung, Wiederherstellungs-Probe und Migrations-Probe; alle drei laufen automatisch in CI.
+- **Produktions-Images** (API/Worker distroless ohne Root, Web mit nginx und strenger CSP, Migrationen) und **Pilot-Setup** mit Docker Compose; CI baut die Images, startet das komplette Setup und führt einen Browser-Rauchtest sowie Sicherung/Wiederherstellung im Container aus.
+- **Lasttest über HTTP** (`perf:http`) mit mehreren Accounts, gemischter Last und Prüfung der Mandantentrennung unter Last.
+- **Rauchtest nach Bereitstellung** (`tests/smoke/production-smoke.mjs`).
+- **Betriebshandbuch** (OPERATIONS.md) und **Pilot-Checkliste** (PILOT.md), ADR-013.
+
+### Behoben
+
+- Worker-Logs gingen verloren (gepuffert, nie an den Logger übergeben).
+- Leere Werte in der Konfigurationsdatei (z. B. `SUPPORT_EMAIL=`) verhinderten den Start.
+- API-Antworten dürfen nicht mehr in Rahmen eingebettet werden (`frame-ancestors 'none'`).
+
+### Geändert
+
+- Unbehandelte Fehler in API und Worker werden protokolliert; bei unbehandelten Ausnahmen beendet sich der Prozess, damit der Prozessmanager ihn neu startet.
+- Farbschema-Skript der Web-App als eigene Datei (CSP ohne Inline-Skripte).
+
 ## [0.8.0] – 2026-11-09 – Phase 7: Kommerzialisierung
 
 ### Hinzugefügt

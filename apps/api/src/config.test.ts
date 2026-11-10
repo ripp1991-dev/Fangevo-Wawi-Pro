@@ -36,4 +36,9 @@ describe('Konfiguration', () => {
     expect(c.isPlatformAdmin('ben@evil-support.fangevo.de')).toBe(false);
     expect(loadConfig(base).isPlatformAdmin('anna@fangevo.de')).toBe(false);
   });
+  it('leere Werte gelten als nicht gesetzt (Vorlage .env)', () => {
+    const c = loadConfig({ ...base, SUPPORT_EMAIL: '', SMTP_USER: '', PLATFORM_ISSUER_NAME: '' });
+    expect(c.SUPPORT_EMAIL).toBeUndefined();
+    expect(c.SMTP_USER).toBeUndefined();
+  });
 });

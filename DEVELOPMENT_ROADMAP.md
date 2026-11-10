@@ -276,9 +276,18 @@ Ergebnis Phase 6: alle Arbeitspakete umgesetzt und getestet (phase6.test, E2E `p
 
 Ergebnis Phase 7: alle Arbeitspakete umgesetzt und getestet (phase7.test, billing.test, E2E `phase7-flow.mjs`), ADR-012. **Offen (braucht FangEvo):** Entscheidung und Zugangsdaten für einen Zahlungsanbieter (Stripe/Mollie, Lastschrift/Karte), endgültige Preise, steuerliche Prüfung (OSS, Reverse Charge, Rechnungstexte) durch den Steuerberater, Absenderdaten für Rechnungen (`PLATFORM_ISSUER_*`). Technisch offen: Stornorechnungen für Plattform-Rechnungen.
 
-### Phase 8
+### Phase 8 – Produktionsreife (gestartet 2026-11-09)
 
-Wie im Playbook. Sie werden vor Beginn jeweils in Arbeitspakete wie in Phase 1 zerlegt und zur Freigabe vorgelegt.
+| AP                           | Inhalt                                                                                                                            | Status |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 8.1 Sicherheitstests         | RLS auf allen Mandantentabellen, alle Endpunkte ohne Anmeldung, Robustheit aller Endpunkte, Header, Cookies, CSRF, Abhängigkeiten | fertig |
+| 8.2 Last- und Leistung       | Lasttest über HTTP mit mehreren Accounts, Trennung unter Last; bestehende Lasttests Listen/Warenwirtschaft                        | fertig |
+| 8.3 Datenmigration           | Migrations-Probe auf leerer DB mit Schema-Abgleich (CI); Datenübernahme per Import mit Prüflauf (Phase 5) und Ablauf in PILOT.md  | fertig |
+| 8.4 Backup/Wiederherstellung | Sicherungsrolle, Skripte, automatische Probe (CI, auch im Container)                                                              | fertig |
+| 8.5 Fehlerbehandlung/Betrieb | Prozess-Absicherung, Worker-Logs, Container-Images, Pilot-Setup, Rauchtest, CI-Job                                                | fertig |
+| 8.6 Dokumentation/Pilot      | OPERATIONS.md, PILOT.md, ADR-013                                                                                                  | fertig |
+
+Ergebnis Phase 8: produktionsfähige Version für den Pilotbetrieb. Gefundene und behobene Betriebsfehler: verlorene Worker-Logs, Startabbruch bei leeren Konfigurationswerten, 502 nach API-Neustart hinter nginx, Einbettung der API in Rahmen. **Offen (braucht FangEvo):** Hosting und Domain, Zugangsdaten (SMTP, Rechnungsabsender), Datenschutz (AVV, Löschkonzept), AGB, Steuerberater, externer Penetrationstest, Pilotkunden auswählen (siehe PILOT.md). Weiterhin offene Integrationen: Versanddienstleister, Marktplätze, Zahlungsanbieter, E-Rechnung/DATEV.
 
 ## 6. Offene Fragen an FangEvo
 

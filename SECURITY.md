@@ -25,15 +25,15 @@ Stand: Phase 1. Sicherheit ist Teil der Architektur (Playbook Abschnitt 21).
 
 ## Bekannte offene Punkte
 
-| Punkt                                                                                         | Bewertung / Plan                                                                                           |
-| --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `pnpm audit`: 2 mittlere Funde in `glob`/`minimatch` (über `@fastify/static`, nur Swagger-UI) | Die Swagger-UI ist in Produktion abgeschaltet. Update, sobald die korrigierten Versionen 2 Wochen alt sind |
-| Virenscan für Uploads                                                                         | Es gibt noch keine Datei-Uploads; kommt mit Dateispeicher (Phase 3)                                        |
-| Backups / Wiederherstellungstests                                                             | Teil der Infrastruktur vor Pilotbetrieb (Phase 8)                                                          |
-| Löschkonzept DSGVO (Fristen, Export, Löschung personenbezogener Daten)                        | Muss fachlich definiert werden, bevor Kundendaten (Phase 3) verarbeitet werden                             |
-| SSO (SAML/OIDC) für Enterprise                                                                | Später                                                                                                     |
-| Externer Penetrationstest                                                                     | Vor Go-live (Phase 8)                                                                                      |
-| Zugriffskontext wird pro Anfrage aus der DB geladen                                           | Sicher und aktuell. Caching erst nach Lasttests (Änderungen an Rechten wirken derzeit sofort)              |
+| Punkt                                                                                                                             | Bewertung / Plan                                                                                                                                                                                                                                                      |
+| --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm audit` (Stand Phase 8): 3 mittlere Funde – `glob`/`minimatch` über `@fastify/static` (Swagger-UI) und `uuid` über `exceljs` | Nicht ausnutzbar: Die Swagger-UI ist in Produktion abgeschaltet und nutzt keine Muster aus Anfragen; `exceljs` ruft `uuid` ohne Puffer-Argument auf. CI bricht bei hohen/kritischen Funden ab. Update, sobald korrigierte Versionen der Hauptpakete 2 Wochen alt sind |
+| Virenscan für Uploads                                                                                                             | Es gibt noch keine Datei-Uploads; kommt mit Dateispeicher (Phase 3)                                                                                                                                                                                                   |
+| Backups / Wiederherstellungstests                                                                                                 | Umgesetzt (Phase 8): Sicherungsrolle, Skripte, automatische Probe in CI. Betrieb (täglich, extern, verschlüsselt) richtet FangEvo ein (OPERATIONS.md)                                                                                                                 |
+| Löschkonzept DSGVO (Fristen, Export, Löschung personenbezogener Daten)                                                            | Muss fachlich definiert werden, bevor Kundendaten (Phase 3) verarbeitet werden                                                                                                                                                                                        |
+| SSO (SAML/OIDC) für Enterprise                                                                                                    | Später                                                                                                                                                                                                                                                                |
+| Externer Penetrationstest                                                                                                         | Empfohlen vor dem offenen Verkauf (PILOT.md); automatisierte Prüfungen siehe Ergänzungen Phase 8                                                                                                                                                                      |
+| Zugriffskontext wird pro Anfrage aus der DB geladen                                                                               | Sicher und aktuell. Caching erst nach Lasttests (Änderungen an Rechten wirken derzeit sofort)                                                                                                                                                                         |
 
 ## Schwachstellen melden
 
@@ -108,3 +108,19 @@ Bitte nicht öffentlich als Issue melden, sondern direkt an das FangEvo-Team.
 - **Rechnungen** sind per Datenbank-Trigger unveränderlich (nur Status/Zahlungsdatum) und nicht löschbar; PDF mit SHA-256-Prüfsumme.
 - Neue Rechte `billing.manage` und `support.manage` gehören zum Core und können **nicht** an API-Schlüssel vergeben werden. Abo und Support bleiben im Lesemodus erreichbar.
 - Keine Zahlungsdaten im System: Zahlart ist Überweisung. Support-Formular weist darauf hin, keine Passwörter oder Zahlungsdaten zu senden.
+
+## Ergänzungen Phase 8
+
+- **Automatische Sicherheitsprüfungen** (`test/phase8-security.test.ts`). Neue Tabellen und Endpunkte werden automatisch mitgeprüft:
+  - erzwungene RLS auf jeder Tabelle mit `account_id` (Ausnahmen: dokumentierte globale Tabellen)
+  - Firmenprüfung in firmenbezogenen Richtlinien
+  - Anwendungsrolle ohne `BYPASSRLS`
+  - alle Endpunkte ohne Anmeldung abgewiesen
+  - keine Serverfehler bei leeren Eingaben
+  - keine internen Details in Fehlerantworten
+  - Sicherheits-Header, Cookie `HttpOnly` und `SameSite`, CSRF-Header
+- **Clickjacking:** API `frame-ancestors 'none'`, Web `X-Frame-Options: DENY` und CSP ohne Inline-Skripte.
+- **Container:** API/Worker laufen distroless ohne Root und ohne Shell; Images per Version bzw. Digest gepinnt.
+- **Sicherungsrolle** `fangevo_backup` umgeht RLS (nötig für vollständige Sicherungen), kann aber nichts ändern. Zugangsdaten nur im Backup-Job.
+- **Prozess-Absicherung:** unbehandelte Fehler werden protokolliert; bei Abstürzen Neustart durch den Prozessmanager.
+- Mandantentrennung zusätzlich **unter Last** geprüft (`perf:http`: Fremdzugriffe liefern 404).

@@ -1,0 +1,6 @@
+# Nur für den automatischen Rauchtest (CI): Mailpit fängt E-Mails ab.
+#   docker compose -f docker-compose.yml -f docker-compose.smoke.yml --env-file … up -d --build --wait
+services:
+  mailpit:
+    image: axllent/mailpit:v1.27.4
+    ports: ['8025:8025']

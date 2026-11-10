@@ -88,3 +88,30 @@ Ausführen: `pnpm --filter @fangevo/api perf:lists` (nur gegen `*_test`-Datenban
 ## Phase 7 (Stand 2026-11-09)
 
 `test/phase7.test.ts` prüft: Aktivierung mit Rechnung (Beträge, PDF, E-Mail, Unveränderlichkeit), Hochstufen mit anteiliger Rechnung, Herabstufen und Verlängerung im Abrechnungslauf (ohne doppelte Rechnung), Zusatzmodul-Test und Umstellung, Kündigung und Lesemodus, Zahlungsverzug (30 Tage), Rechte und Account-Trennung, Support mit Antwort und Benachrichtigung, Plattform-Zugang nur mit Freigabe und 2FA, Lizenzänderung und Sperre, Zahlung markieren. Preis- und Lizenzregeln: `packages/licensing/src/billing.test.ts`. Zeitabhängige Abläufe werden mit `BillingService.processAccount(accountId, zeitpunkt)` simuliert.
+
+## Phase 8: Produktionsreife (Stand 2026-11-09)
+
+| Prüfung                               | Befehl                                                                   | Wo                            |
+| ------------------------------------- | ------------------------------------------------------------------------ | ----------------------------- |
+| Sicherheit/Robustheit aller Endpunkte | `pnpm test` (`phase8-security.test.ts`)                                  | lokal, CI                     |
+| Migrationen auf leerer Datenbank      | `MIGRATE_ADMIN_URL=… scripts/db-migration-check.sh`                      | lokal, CI                     |
+| Sicherung + Wiederherstellung         | `scripts/db-backup.sh`, `scripts/db-restore-check.sh`                    | lokal, CI (2×)                |
+| Produktions-Images + Rauchtest        | `docker compose … up --build --wait`, `tests/smoke/production-smoke.mjs` | CI (Job „Produktions-Images“) |
+| Lasttest HTTP                         | `pnpm --filter @fangevo/api perf:http`                                   | lokal (Testdatenbank)         |
+
+**Lasttest HTTP** (Cloud-Container, 4 CPU, ein API-Prozess, Lastgenerator im selben Prozess, 8 Accounts mit Artikeln, Kunden und Aufträgen; Mischung aus Listen, Details, Suche, Benachrichtigungen, 8 % neue Aufträge, 2 % Fremdzugriffe):
+
+| Benutzer gleichzeitig | Anfragen/s | p50 Lesen | p95 Lesen | p95 Auftrag anlegen | Fehler | Fremdzugriffe korrekt abgewiesen |
+| --------------------- | ---------- | --------- | --------- | ------------------- | ------ | -------------------------------- |
+| 1                     | 52         | 17 ms     | 25 ms     | 49 ms               | 0      | 8 / 8                            |
+| 40                    | 196        | 200 ms    | 246 ms    | 304 ms              | 0      | 61 / 61                          |
+
+Bei 40 gleichzeitigen Benutzern ist der eine Prozess ausgelastet. Die Antwortzeit besteht dann überwiegend aus Wartezeit, nicht aus Rechenzeit. Für mehr Last werden weitere API-Instanzen gestartet; die API ist zustandslos.
+
+**Rauchtest** gegen eine Installation:
+
+```bash
+SMOKE_BASE=https://wawi.example.de node tests/smoke/production-smoke.mjs
+```
+
+Ohne `SMOKE_MAILPIT` werden keine Daten angelegt.

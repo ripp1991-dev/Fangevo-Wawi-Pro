@@ -15,3 +15,5 @@
 | [ADR-011](docs/decisions/ADR-011_AUTOMATISIERUNG.md)                | Webhooks (signiert, Wiederholungen, SSRF-Schutz) und Regeln mit Versionen, Protokoll, Schleifenschutz, Zeitsteuerung | angenommen                                         |
 
 | [ADR-012](docs/decisions/ADR-012_KOMMERZIALISIERUNG.md) | Abo als Quelle der Lizenz, Rechnungen von FangEvo (Überweisung), Marketplace, Support, Plattform-Verwaltung mit 2FA | angenommen (Preise/Steuer vorläufig) |
+
+| [ADR-013](docs/decisions/ADR-013_BETRIEB_BACKUP.md) | Betrieb: Container-Images (distroless), Sicherungsrolle mit BYPASSRLS, automatische Migrations-, Wiederherstellungs- und Rauchtests | angenommen |

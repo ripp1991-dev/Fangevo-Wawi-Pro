@@ -13,7 +13,8 @@
     "worker": "dotenv -e ../../.env -- tsx src/worker.ts",
     "start:worker": "node dist/worker.js",
     "perf:lists": "tsx scripts/perf-lists.ts",
-    "perf:wawi": "tsx scripts/perf-wawi.ts"
+    "perf:wawi": "tsx scripts/perf-wawi.ts",
+    "perf:http": "tsx scripts/perf-http.ts"
   },
   "dependencies": {
     "@fangevo/database": "workspace:*",
