@@ -8,15 +8,15 @@ Eine Testumgebung, die sich wie der spätere Betrieb verhält: dieselben Produkt
 
 ## Was drin ist
 
-| Bereich        | Testdaten                                                                                                                           |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Firma          | FangEvo Test GmbH mit Adresse, Steuernummer und Bank (damit Rechnungen festgeschrieben werden können)                               |
-| Artikel        | 18 Artikel in Kategorien (Süßwaren → Schokolade/Lakritz/Fruchtgummi, Chips & Snacks, Kühlware → Eis, Getränke), mit EAN und Bestand |
-| Lieferanten    | 3 Testlieferanten                                                                                                                   |
-| Verkaufskanäle | Shopify, Amazon, eBay, Kaufland.de, Kaufland.at, Temu (Bestellungen kommen über die Kanal-Schnittstelle wie von echten Shops)       |
-| Aufträge       | ca. 40 in allen Ständen: neu, in Bearbeitung, auf Pickliste, versandbereit, versendet mit Lieferschein und Rechnung                 |
-| Packplätze     | Platz 1 Shopify · Platz 2 Marktplätze ohne Kühlware · Platz 3 nur Kühlware (sperrt fremde Aufträge) · Platz 4 Rest/Gemischt         |
-| Sonstiges      | eine offene Pickliste, eine angemeldete Retoure                                                                                     |
+| Bereich        | Testdaten                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Firma          | FangEvo Test GmbH mit Adresse, Steuernummer und Bank (damit Rechnungen festgeschrieben werden können)                                                                                                                                                                                                                                                                                                                                                                              |
+| Artikel        | **Echtes Sortiment:** die 150 meistverkauften Produkte aus dem Shopify-Bericht „Gesamtumsatz nach Produkt“ (Titel, Hersteller, Durchschnittspreis netto), automatisch in Kategorien sortiert (Süßwaren → Lakritz/Schokolade/Fruchtgummi/Bonbons/Gebäck, Chips & Snacks, Getränke, Lebensmittel → Hot Dogs/Marmelade, Kühlware → Eis). Artikelnummern (NFS-0001 …), EAN und Bestand sind Testwerte; dazu 3 Eis-Testartikel für den Kühlware-Platz. Ohne Bericht: 18 Beispielartikel |
+| Lieferanten    | 3 Testlieferanten                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Verkaufskanäle | Shopify, Amazon, eBay, Kaufland.de, Kaufland.at, Temu (Bestellungen kommen über die Kanal-Schnittstelle wie von echten Shops)                                                                                                                                                                                                                                                                                                                                                      |
+| Aufträge       | ca. 40 in allen Ständen: neu, in Bearbeitung, auf Pickliste, versandbereit, versendet mit Lieferschein und Rechnung. Die Artikel verteilen sich nach den echten Verkaufszahlen; Kunden sind ausgedacht                                                                                                                                                                                                                                                                             |
+| Packplätze     | Platz 1 Shopify · Platz 2 Marktplätze ohne Kühlware · Platz 3 nur Kühlware (sperrt fremde Aufträge) · Platz 4 Rest/Gemischt                                                                                                                                                                                                                                                                                                                                                        |
+| Sonstiges      | eine offene Pickliste, eine angemeldete Retoure                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 
 ## Testablauf (ca. 20 Minuten)
 
@@ -64,7 +64,7 @@ LICENSE_CMD="docker compose -p fangevo-test -f infrastructure/production/docker-
 node scripts/demo-data.mjs ../TESTUMGEBUNG-LOGIN.txt
 ```
 
-Das Skript legt ein neues Konto an (Paket Professional), schreibt die Zugangsdaten in die angegebene Datei und erzeugt alle Testdaten über die normale API.
+Das Skript legt ein neues Konto an (Paket Professional), schreibt die Zugangsdaten in die angegebene Datei und erzeugt alle Testdaten über die normale API. Mit `PRODUCTS_CSV=<Shopify-Bericht „Gesamtumsatz nach Produkt“ als CSV>` (optional `PRODUCTS_LIMIT=150`) wird das echte Sortiment übernommen. Der Bericht enthält nur Produktdaten, keine Kunden. Die Datei bleibt lokal und gehört nicht ins Repository. Das Anfrage-Limit der API bremst das Skript; ein Lauf dauert einige Minuten.
 
 ## Grenzen der Testumgebung
 

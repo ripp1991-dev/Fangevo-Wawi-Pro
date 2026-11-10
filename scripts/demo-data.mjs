@@ -42,13 +42,18 @@ async function call(method, path, body, extra = {}) {
       'x-fangevo-csrf': '1',
       ...(cookie ? { cookie } : {}),
       ...(companyId ? { 'x-company-id': companyId } : {}),
-      ...extra,
+      ...Object.fromEntries(Object.entries(extra).filter(([k]) => k !== 'attempt')),
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const sc = r.headers.get('set-cookie');
   if (sc && sc.includes('fe_session=')) cookie = sc.split(';')[0];
   const text = await r.text();
+  // Anfrage-Limit der API: warten und erneut versuchen (nicht bei der Registrierung, die ist stündlich begrenzt)
+  if (r.status === 429 && path !== '/auth/register' && (extra.attempt ?? 0) < 30) {
+    await sleep(Math.max(1, Number(r.headers.get('retry-after') ?? 2)) * 1000);
+    return call(method, path, body, { ...extra, attempt: (extra.attempt ?? 0) + 1 });
+  }
   if (!r.ok) throw new Error(`${method} ${path}: ${r.status} ${text}`);
   return text ? JSON.parse(text) : null;
 }
@@ -112,12 +117,17 @@ const sweets = await cat('Süßwaren');
 const cats = {
   Schokolade: await cat('Schokolade', sweets),
   Lakritz: await cat('Lakritz', sweets),
-  Fruchtgummi: await cat('Fruchtgummi', sweets),
+  Fruchtgummi: await cat('Fruchtgummi & Weingummi', sweets),
+  Bonbons: await cat('Bonbons & Pastillen', sweets),
+  Gebäck: await cat('Kekse & Gebäck', sweets),
   Chips: await cat('Chips & Snacks'),
 };
 const cold = await cat('Kühlware');
 cats.Eis = await cat('Eis', cold);
 cats.Getränke = await cat('Getränke');
+const food = await cat('Lebensmittel');
+cats.HotDog = await cat('Hot Dogs', food);
+cats.Marmelade = await cat('Marmelade & Aufstrich', food);
 
 const suppliers = {};
 for (const [number, name] of [
@@ -147,15 +157,99 @@ const ARTICLES = [
   ['GET-02', 'Cola 0,33l', 'Getränke', '0.89', 480],
   ['GET-03', 'Eistee Pfirsich 0,5l', 'Getränke', '1.19', 240],
 ];
+// Optional: echtes Sortiment aus einem Shopify-Bericht „Gesamtumsatz nach Produkt“ (CSV).
+// Es werden nur Produktdaten gelesen (Titel, Hersteller, Stückzahl, Umsatz), keine Kundendaten.
+const weights = {};
+const makers = {};
+if (process.env.PRODUCTS_CSV) {
+  const { readFileSync } = await import('node:fs');
+  const rows = readFileSync(process.env.PRODUCTS_CSV, 'utf8')
+    .replace(/^\uFEFF/, '')
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map((line) =>
+      [...line.matchAll(/("([^"]*(?:""[^"]*)*)"|[^,]*)(,|$)/g)]
+        .map((m) => (m[2] ?? m[1]).replace(/""/g, '"'))
+        .slice(0, -1),
+    );
+  const head = rows.shift();
+  const col = (n) => head.indexOf(n);
+  const SKIP = /pfand|versand|gutschein|trinkgeld|geschenkkarte|spende|tip/i;
+  // Reihenfolge zählt: die erste passende Regel gewinnt
+  const RULES = [
+    ['HotDog', /hot-?dog|würstchen/i],
+    ['Marmelade', /den gamle fabrik|marmelade|konfitüre|aufstrich/i],
+    [
+      'Getränke',
+      /cider|\bbier\b|limo|\bcola\b|soda|saft|wasser|vol\.|sirup|drink|0,\d+ ?l\b|1,5l|energy|faxe|cocio/i,
+    ],
+    ['Eis', /\beis\b(?!tee)|ice ?cream|wassereis|magnum|cornetto/i],
+    [
+      'Lakritz',
+      /lakritz|lakrids|lakrits|licorice|liquorice|salmiak|piratos|matador|skipper|ga-jol|salt pastill|djungelvr|super flyers|pingvin (double )?salt/i,
+    ],
+    [
+      'Schokolade',
+      /schoko|choklad|chocolate|marabou|toblerone|anthon berg|marzipan|praline|riegel|kinder|daim|freia|fazer|dumle|toms|guld ?barre|maltesers|kakao/i,
+    ],
+    ['Chips', /speckkrusten|svaer|\bkims\b|pretzel/i],
+    [
+      'Bonbons',
+      /läkerol|polo mint|bolche|bonbon|pastill|pebermix|fudge|karamel|caramel|marshmallow/i,
+    ],
+    ['Gebäck', /karen volf|keks|cookie|kage|waffel|gebäck/i],
+    [
+      'Chips',
+      /chips|kims|speckkrusten|svaer|pretzel|snack|nuss|nüsse|nuts|popcorn|pub mix|crisps|cracker/i,
+    ],
+  ];
+  const catOf = (t) => RULES.find(([, re]) => re.test(t))?.[0] ?? 'Fruchtgummi';
+  const real = rows
+    .map((r) => ({
+      title: r[col('Produkttitel')]?.trim(),
+      vendor: r[col('Produktanbieter')]?.trim() || null,
+      units: Number(r[col('Netto verkaufte Artikel')]),
+      gross: Number(r[col('Bruttoumsatz')]),
+    }))
+    .filter((p) => p.title && p.units > 0 && p.gross > 0 && !SKIP.test(p.title))
+    .sort((a, b) => b.units - a.units)
+    .slice(0, Number(process.env.PRODUCTS_LIMIT ?? 150));
+  ARTICLES.length = 0;
+  for (const [i, p] of real.entries()) {
+    const number = `NFS-${String(i + 1).padStart(4, '0')}`;
+    ARTICLES.push([
+      number,
+      p.title.slice(0, 200),
+      catOf(p.title),
+      (p.gross / p.units).toFixed(2),
+      Math.max(24, Math.ceil(p.units / 6)),
+      p.vendor,
+    ]);
+    weights[number] = p.units;
+  }
+  // Kühlware-Testartikel, falls das Sortiment kein Eis enthält (für den Kühlware-Packplatz)
+  if (!ARTICLES.some((a) => a[2] === 'Eis'))
+    for (const [n, name, price] of [
+      ['EIS-01', 'Vanilleeis 500ml (Testartikel)', '3.49'],
+      ['EIS-02', 'Wassereis Mix 10er (Testartikel)', '2.99'],
+      ['EIS-03', 'Eis am Stiel Schoko 4er (Testartikel)', '3.99'],
+    ])
+      ARTICLES.push([n, name, 'Eis', price, 40, null]);
+  for (const v of new Set(ARTICLES.map((a) => a[5]).filter(Boolean)))
+    makers[v] = (await call('POST', '/company/manufacturers', { name: v.slice(0, 120) })).id;
+}
+const rate = (r) => md.taxRates.find((t) => Number(t.rate) === r)?.id;
 const arts = {};
 let eanBase = 400000000100;
-for (const [number, name, c, price, stock] of ARTICLES) {
+for (const [number, name, c, price, stock, vendor] of ARTICLES) {
   const a = await call('POST', '/articles', {
     number,
     name,
     gtin: ean(String(eanBase++)),
     categoryId: cats[c],
     salePriceNet: price,
+    ...(vendor && makers[vendor] ? { manufacturerId: makers[vendor] } : {}),
+    ...(rate(c === 'Getränke' ? 19 : 7) ? { taxRateId: rate(c === 'Getränke' ? 19 : 7) } : {}),
   });
   arts[number] = a;
   await call('POST', '/inventory/bookings', {
@@ -193,15 +287,23 @@ const CITY = [
 const WEIGHT = { Shopify: 3, Amazon: 4, eBay: 2, 'Kaufland.de': 2, 'Kaufland.at': 1, Temu: 1 };
 const channelBag = Object.entries(WEIGHT).flatMap(([c, w]) => Array(w).fill(c));
 const numbers = Object.keys(arts);
+const catOfNumber = Object.fromEntries(ARTICLES.map((a) => [a[0], a[2]]));
+const sellable = numbers.filter((n) => catOfNumber[n] !== 'Eis');
+const coldNumbers = numbers.filter((n) => catOfNumber[n] === 'Eis');
+const totalWeight = sellable.reduce((s, n) => s + (weights[n] ?? 1), 0);
+/** Artikel nach echter Verkaufshäufigkeit (ohne Bericht: gleich verteilt) */
+const pickArticle = () => {
+  let x = rnd() * totalWeight;
+  for (const n of sellable) if ((x -= weights[n] ?? 1) <= 0) return n;
+  return sellable[0];
+};
 const orders = [];
 for (let i = 1; i <= 36; i++) {
   const channel = i % 9 === 0 ? 'Kaufland.at' : pick(channelBag);
   const [postalCode, city, country] = channel === 'Kaufland.at' ? CITY[5] : pick(CITY.slice(0, 5));
   const first = pick(FIRST);
   const last = pick(LAST);
-  const lines = [
-    ...new Set(Array.from({ length: 1 + Math.floor(rnd() * 3) }, () => pick(numbers))),
-  ];
+  const lines = [...new Set(Array.from({ length: 1 + Math.floor(rnd() * 3) }, pickArticle))];
   const r = await call(
     'POST',
     `/channels/${channels[channel]}/orders`,
@@ -229,9 +331,9 @@ for (let i = 1; i <= 36; i++) {
 // Reine Kühlware-Bestellungen (für den Kühlware-Packplatz), gleich versandbereit
 const coldOrders = [];
 for (const [i, [channel, skus]] of [
-  ['Shopify', ['EIS-01', 'EIS-03']],
-  ['Amazon', ['EIS-02']],
-  ['Kaufland.de', ['EIS-01']],
+  ['Shopify', coldNumbers.slice(0, 2)],
+  ['Amazon', coldNumbers.slice(1, 2)],
+  ['Kaufland.de', coldNumbers.slice(0, 1)],
 ].entries()) {
   const r = await call(
     'POST',
@@ -253,14 +355,15 @@ const b2b = await call('POST', '/customers', {
   companyName: 'Kiosk am Hafen (Test)',
   addresses: [{ kind: 'billing', street: 'Hafenstraße 3', postalCode: '25813', city: 'Husum' }],
 });
+const top = [...sellable].sort((a, b) => (weights[b] ?? 0) - (weights[a] ?? 0));
 for (const lines of [
   [
-    ['LAK-03', 5],
-    ['FRU-03', 10],
+    [top[0], 6],
+    [top[2], 6],
   ],
   [
-    ['GET-01', 48],
-    ['GET-02', 48],
+    [top[1], 12],
+    [top[3], 6],
   ],
 ]) {
   const o = await call('POST', '/orders', {
