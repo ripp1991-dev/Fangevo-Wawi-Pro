@@ -3,11 +3,12 @@
 **Stand:** 2026-11-10 · **Status:** umgesetzt auf Branch `feat/packing-rules-channel-category`. Typprüfung, Lint, Web-Build und Regel-Unit-Tests sind grün. Die API-Integrationstests (`phase4.test.ts`, brauchen PostgreSQL + Redis) sind noch nicht gelaufen.
 
 **Erweitert um Kategorien (Entscheidung FangEvo):** Packregeln je Packplatz kombinieren Kanal und Kategorie.
+
 - „Nur Kategorien“: Aufträge, deren Artikel **alle** aus diesen Kategorien stammen (inkl. Unterkategorien).
 - „Ohne Kategorien“: blendet reine Aufträge dieser Kategorien aus. Gemischte Aufträge bleiben sichtbar, zum Beispiel für einen Allround-Platz.
 - Festlegung: Ein festgelegter Platz verhindert „auch andere Kanäle anzeigen“.
 - Die Packplatz-Auswahl merkt sich der Browser je Arbeitsplatz. Feste Zuordnung je Mitarbeiter ist bewusst noch nicht enthalten.
-**Wunsch FangEvo:** Am Packtisch gezielt nur die Aufträge einer Plattform packen, z. B. „nur Shopify“, „nur Amazon“ oder „nur Kaufland“.
+  **Wunsch FangEvo:** Am Packtisch gezielt nur die Aufträge einer Plattform packen, z. B. „nur Shopify“, „nur Amazon“ oder „nur Kaufland“.
 
 ## Ausgangslage
 
@@ -27,17 +28,17 @@
 
 ## Umsetzung (klein, ohne Datenbank-Migration)
 
-| # | Teil | Änderung |
-| - | ---- | -------- |
-| 1 | API Aufträge | `ORDER_FIELDS` bekommt `channelId` als Filter (Enum, inklusive „ohne Kanal“). Die Auftragsliste liefert zusätzlich `channelName`. |
-| 2 | API Packtisch | Neu: `GET /packing/queue?channelIds=…` liefert packbereite Aufträge (Status aus `ORDER_SHIPPABLE`) mit Kanalname und Zählern je Kanal. Rechte wie beim bestehenden Packen. |
-| 3 | API Packtisch | `prepare()` liefert zusätzlich `order.channelId` und `order.channelName`. |
-| 4 | Packplatz-Einstellung | `packing_stations.settings` (JSON, schon vorhanden) bekommt `channelIds: string[]` und `channelMismatch: "warn" \| "block"`. Beim Speichern wird geprüft, dass die Kanäle zur Firma gehören. |
-| 5 | API Packen | `complete()` lehnt bei `channelMismatch = "block"` Aufträge aus fremden Kanälen ab (409, klarer Text). Die Prüfung läuft serverseitig. |
-| 6 | Oberfläche Packtisch | Kanal-Reiter, Warteschlange, Hinweis bei fremdem Kanal, Kanalwahl in den Packplatz-Einstellungen. |
-| 7 | Oberfläche Picklisten | Kanalfilter in „Neue Pickliste“. |
-| 8 | Tests | Filter je Kanal, „ohne Kanal“, Zähler, Sperre bei fremdem Kanal, ungültige Kanal-IDs beim Speichern, **Mandanten-Trenntest** (Kanäle und Aufträge anderer Firmen nie sichtbar), e2e am Packtisch. |
-| 9 | Doku | API.md, MODULES.md, CHANGELOG.md, TESTING.md, Roadmap-Status. |
+| #   | Teil                  | Änderung                                                                                                                                                                                          |
+| --- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | API Aufträge          | `ORDER_FIELDS` bekommt `channelId` als Filter (Enum, inklusive „ohne Kanal“). Die Auftragsliste liefert zusätzlich `channelName`.                                                                 |
+| 2   | API Packtisch         | Neu: `GET /packing/queue?channelIds=…` liefert packbereite Aufträge (Status aus `ORDER_SHIPPABLE`) mit Kanalname und Zählern je Kanal. Rechte wie beim bestehenden Packen.                        |
+| 3   | API Packtisch         | `prepare()` liefert zusätzlich `order.channelId` und `order.channelName`.                                                                                                                         |
+| 4   | Packplatz-Einstellung | `packing_stations.settings` (JSON, schon vorhanden) bekommt `channelIds: string[]` und `channelMismatch: "warn" \| "block"`. Beim Speichern wird geprüft, dass die Kanäle zur Firma gehören.      |
+| 5   | API Packen            | `complete()` lehnt bei `channelMismatch = "block"` Aufträge aus fremden Kanälen ab (409, klarer Text). Die Prüfung läuft serverseitig.                                                            |
+| 6   | Oberfläche Packtisch  | Kanal-Reiter, Warteschlange, Hinweis bei fremdem Kanal, Kanalwahl in den Packplatz-Einstellungen.                                                                                                 |
+| 7   | Oberfläche Picklisten | Kanalfilter in „Neue Pickliste“.                                                                                                                                                                  |
+| 8   | Tests                 | Filter je Kanal, „ohne Kanal“, Zähler, Sperre bei fremdem Kanal, ungültige Kanal-IDs beim Speichern, **Mandanten-Trenntest** (Kanäle und Aufträge anderer Firmen nie sichtbar), e2e am Packtisch. |
+| 9   | Doku                  | API.md, MODULES.md, CHANGELOG.md, TESTING.md, Roadmap-Status.                                                                                                                                     |
 
 ## Bewusst nicht enthalten
 

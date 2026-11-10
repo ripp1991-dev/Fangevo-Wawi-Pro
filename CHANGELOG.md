@@ -7,6 +7,7 @@
 - **Packregeln je Packplatz:** Ein Packplatz kann auf Verkaufskanäle (z. B. nur Shopify, nur Amazon, auch „ohne Kanal“) und auf Kategorien festgelegt werden („nur Kategorien“: alle Artikel des Auftrags aus diesen Kategorien inkl. Unterkategorien; „ohne Kategorien“: reine Aufträge dieser Kategorien ausblenden, gemischte bleiben). Bei Aufträgen, die nicht passen: warnen oder Packen sperren (serverseitig geprüft). Optional festgelegt, sonst können Packer „auch andere Kanäle“ einblenden.
 - **Warteschlange am Packtisch** (GET /packing/queue): packbereite Aufträge nach den Regeln des Platzes, älteste zuerst, mit Kanal-Reitern und Zählern; Klick lädt den Auftrag zum Packen.
 - **Picklisten nach Packregeln:** Beim Anlegen einer Pickliste lassen sich die Aufträge mit den Regeln eines Packplatzes vorfiltern.
+
 ## [0.9.0] – 2026-11-09 – Phase 8: Produktionsreife
 
 ### Hinzugefügt
