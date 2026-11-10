@@ -21,6 +21,10 @@ pnpm dev                        # API auf :3000 (inkl. Ereignis-Verteiler), Web 
 - API-Doku (Swagger): http://localhost:3000/api/docs, OpenAPI: [docs/api/openapi.json](docs/api/openapi.json)
 - Lizenz eines Accounts ändern (Plattform-Werkzeug): `pnpm --filter @fangevo/database license:set -- --account <id> --plan business`
 
+## Testumgebung
+
+Produktionsnahe Testumgebung mit realistischen Testdaten und Testablauf für das Team: [docs/TESTUMGEBUNG.md](docs/TESTUMGEBUNG.md).
+
 ## Betrieb (Produktion)
 
 Ausführlich im [Betriebshandbuch](OPERATIONS.md) (Container-Images, Docker Compose für den Pilot, Sicherung, Wiederherstellung, Überwachung).
