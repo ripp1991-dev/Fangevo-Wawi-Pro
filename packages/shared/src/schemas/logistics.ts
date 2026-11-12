@@ -82,6 +82,8 @@ export const packingStationInputSchema = z.object({
   warehouseId: uuid.nullable().default(null),
   autoInvoice: z.boolean().default(false),
   autoDeliveryNote: z.boolean().default(true),
+  /** Touch-Packtisch: Etikett und Belege nach „Fertig“ sofort drucken (Standarddrucker des Geräts) */
+  autoPrint: z.boolean().default(false),
   rules: packingRulesSchema.prefault({}),
 });
 

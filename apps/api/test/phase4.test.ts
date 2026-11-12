@@ -559,6 +559,9 @@ describe('Packregeln nach Kanal und Kategorie', () => {
     // Alte Packplätze ohne Regeln: alles erlaubt
     const plain = (await client.post('/packing/stations', { name: 'Alt' })).body;
     expect(plain.settings.rules).toMatchObject({ channelIds: [], mismatch: 'warn' });
+    expect(plain.settings.autoPrint).toBe(false);
+    const printing = await client.post('/packing/stations', { name: 'Druck', autoPrint: true });
+    expect(printing.body.settings.autoPrint).toBe(true);
   });
 
   it('Packplatz im Lager: Warteschlange nur aus diesem Lager, fremde Lager sind gesperrt', async () => {

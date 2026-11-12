@@ -72,7 +72,12 @@ interface Station {
   name: string;
   defaultCarrier: Carrier;
   warehouseId: string | null;
-  settings: { autoInvoice?: boolean; autoDeliveryNote?: boolean; rules?: Partial<Rules> };
+  settings: {
+    autoInvoice?: boolean;
+    autoDeliveryNote?: boolean;
+    autoPrint?: boolean;
+    rules?: Partial<Rules>;
+  };
   archivedAt: string | null;
 }
 
@@ -1175,6 +1180,7 @@ function Stations() {
     warehouseId: null as string | null,
     autoInvoice: false,
     autoDeliveryNote: true,
+    autoPrint: false,
     rules: EMPTY_RULES,
   });
   const [editing, setEditing] = useState<string | null>(null);
@@ -1219,6 +1225,7 @@ function Stations() {
             <TH>Versandart</TH>
             <TH>Lieferschein</TH>
             <TH>Rechnung</TH>
+            <TH>Druck</TH>
             <TH>Packregeln</TH>
           </TR>
         </THead>
@@ -1232,6 +1239,7 @@ function Stations() {
                 warehouseId: s.warehouseId,
                 autoInvoice: !!s.settings.autoInvoice,
                 autoDeliveryNote: !!s.settings.autoDeliveryNote,
+                autoPrint: !!s.settings.autoPrint,
                 rules: rulesOf(s),
               };
               return (
@@ -1268,6 +1276,13 @@ function Stations() {
                     />
                   </TD>
                   <TD>
+                    <Checkbox
+                      label={<span className="sr-only">Automatisch drucken</span>}
+                      checked={body.autoPrint}
+                      onChange={(e) => save(s.id, { ...body, autoPrint: e.target.checked })}
+                    />
+                  </TD>
+                  <TD>
                     <span className="text-sm">{summary(body.rules)}</span>{' '}
                     <Button size="sm" variant="link" onClick={() => setEditing(s.id)}>
                       Bearbeiten
@@ -1299,6 +1314,7 @@ function Stations() {
                   warehouseId: s.warehouseId,
                   autoInvoice: !!s.settings.autoInvoice,
                   autoDeliveryNote: !!s.settings.autoDeliveryNote,
+                  autoPrint: !!s.settings.autoPrint,
                   rules,
                 });
                 if (ok) setEditing(null);
@@ -1360,6 +1376,12 @@ function Stations() {
               label="Rechnung beim Abschluss erstellen und festschreiben"
               checked={v.autoInvoice}
               onChange={(e) => setV({ ...v, autoInvoice: e.target.checked })}
+            />
+            <Checkbox
+              label="Etikett und Belege am Touch-Packtisch automatisch drucken"
+              description="Ohne Druckdialog, wenn Chrome mit --kiosk-printing gestartet ist (siehe Anleitung)."
+              checked={v.autoPrint}
+              onChange={(e) => setV({ ...v, autoPrint: e.target.checked })}
             />
           </div>
           <Button className="mt-3" disabled={!v.name} onClick={() => save(null, v)}>
