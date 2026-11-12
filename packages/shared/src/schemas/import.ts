@@ -56,12 +56,12 @@ export const IMPORT_FIELDS: Record<ImportEntity, ImportField[]> = {
     {
       key: 'salePriceNet',
       label: 'Verkaufspreis netto',
-      aliases: ['vknetto', 'verkaufspreisnetto', 'fvknetto', 'preisnetto', 'netprice'],
+      aliases: ['vknetto', 'nettovk', 'verkaufspreisnetto', 'fvknetto', 'preisnetto', 'netprice'],
     },
     {
       key: 'purchasePriceNet',
       label: 'Einkaufspreis netto',
-      aliases: ['eknetto', 'einkaufspreisnetto', 'fekNetto'.toLowerCase(), 'ek', 'cost'],
+      aliases: ['eknetto', 'nettoek', 'einkaufspreisnetto', 'fekNetto'.toLowerCase(), 'ek', 'cost'],
     },
     {
       key: 'taxRate',
@@ -100,7 +100,7 @@ export const IMPORT_FIELDS: Record<ImportEntity, ImportField[]> = {
     {
       key: 'stockTracked',
       label: 'Bestand führen',
-      aliases: ['lagerartikel', 'bestandfuehren', 'clagerartikel'],
+      aliases: ['lagerartikel', 'bestandfuehren', 'bestandsfuehrungaktiv', 'clagerartikel'],
     },
   ],
   customers: [
@@ -186,7 +186,7 @@ export const IMPORT_FIELDS: Record<ImportEntity, ImportField[]> = {
       key: 'quantity',
       label: 'Menge',
       required: true,
-      aliases: ['menge', 'bestand', 'quantity', 'fbestand', 'stock'],
+      aliases: ['menge', 'bestand', 'lagerbestandeigen', 'quantity', 'fbestand', 'stock'],
     },
     { key: 'batch', label: 'Charge', aliases: ['charge', 'batch', 'ccharge'] },
     {

@@ -238,6 +238,88 @@ if (process.env.PRODUCTS_CSV) {
   for (const v of new Set(ARTICLES.map((a) => a[5]).filter(Boolean)))
     makers[v] = (await call('POST', '/company/manufacturers', { name: v.slice(0, 120) })).id;
 }
+// Optional: Artikelstamm über FangEvo Import (wie bei einer echten Datenübernahme, z. B. aus einer
+// Warenwirtschaft). Erwartet eine aufbereitete CSV (UTF-8, „;“) mit den Spalten Artikelnummer, Artikelname,
+// Kategorie (Pfad mit „>“), Steuersatz, Netto-VK, Ø Netto-EK, Bestandsführung aktiv, Aktiv sowie optional
+// eine Bestands-CSV (Artikelnummer; Menge). Die Dateien bleiben lokal.
+const imported = [];
+async function importFile(entity, path, fields, config = {}) {
+  const { readFileSync } = await import('node:fs');
+  const buf = readFileSync(path);
+  const job = await call('POST', '/imports', {
+    entity,
+    fileName: path.split(/[\\/]/).pop(),
+    contentBase64: buf.toString('base64'),
+  });
+  const norm = (h) => h.toLowerCase().replace(/[^a-z0-9äöüß]/g, '');
+  const mapping = {};
+  for (const [key, header] of Object.entries(fields)) {
+    const i = job.headers.findIndex((h) => norm(h) === norm(header));
+    if (i >= 0) mapping[key] = i;
+  }
+  const dry = await call('POST', `/imports/${job.id}/validate`, { mapping, ...config });
+  if (dry.error)
+    process.stderr.write(
+      `Prüflauf ${entity}: ${dry.error} Fehler, z. B. ${JSON.stringify(dry.errors.slice(0, 3))}\n`,
+    );
+  await call('POST', `/imports/${job.id}/start`);
+  let s;
+  for (let i = 0; i < 600; i++) {
+    s = await call('GET', `/imports/${job.id}`);
+    if (['done', 'failed'].includes(s.status)) break;
+    await sleep(2000);
+  }
+  if (s.status !== 'done') throw new Error(`Import ${entity}: ${s.status}`);
+  return { ok: s.okRows, errors: s.errorRows, dry };
+}
+if (process.env.ARTICLES_IMPORT_CSV) {
+  const r = await importFile(
+    'articles',
+    process.env.ARTICLES_IMPORT_CSV,
+    {
+      number: 'Artikelnummer',
+      name: 'Artikelname',
+      category: 'Kategorie',
+      taxRate: 'Steuersatz',
+      salePriceNet: 'Netto-VK',
+      purchasePriceNet: 'Ø Netto-EK',
+      stockTracked: 'Bestandsführung aktiv',
+      active: 'Aktiv',
+    },
+    { mode: 'upsert', createMissing: true },
+  );
+  imported.push(`Artikel-Import: ${r.ok} übernommen, ${r.errors} Fehler`);
+  if (process.env.STOCK_IMPORT_CSV) {
+    const s = await importFile(
+      'stock',
+      process.env.STOCK_IMPORT_CSV,
+      { article: 'Artikelnummer', quantity: 'Lagerbestand (eigen)' },
+      { mode: 'upsert', stockMode: 'set' },
+    );
+    imported.push(`Bestands-Import: ${s.ok} übernommen, ${s.errors} Fehler`);
+    // Testaufträge mit Artikeln, die Bestand haben (nach Menge gewichtet)
+    const { readFileSync } = await import('node:fs');
+    const stockRows = readFileSync(process.env.STOCK_IMPORT_CSV, 'utf8')
+      .replace(/^\uFEFF/, '')
+      .split(/\r?\n/)
+      .slice(1)
+      .map((l) => l.split(';'))
+      .map(([nr, q, kat = '']) => [
+        nr.replace(/^"|"$/g, ''),
+        Number(String(q).replace(',', '.')),
+        kat,
+      ])
+      // Verpackungs- und Versandmaterial bestellt kein Kunde
+      // (Bestände über 5000 sind meist Platzhalter oder Sammelartikel)
+      .filter(([, q, kat]) => q >= 10 && q <= 5000 && !/verpackung|versandmaterial/i.test(kat))
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 150);
+    for (const [nr, q] of stockRows) weights[nr] = q;
+  }
+  // Nur die Eis-Testartikel (für den Kühlware-Packplatz) einzeln anlegen
+  ARTICLES.splice(0, ARTICLES.length, ...ARTICLES.filter((a) => a[2] === 'Eis'));
+  for (const a of ARTICLES) a[1] = `${a[1]} (Testartikel)`;
+}
 const rate = (r) => md.taxRates.find((t) => Number(t.rate) === r)?.id;
 const arts = {};
 let eanBase = 400000000100;
@@ -286,7 +368,7 @@ const CITY = [
 ];
 const WEIGHT = { Shopify: 3, Amazon: 4, eBay: 2, 'Kaufland.de': 2, 'Kaufland.at': 1, Temu: 1 };
 const channelBag = Object.entries(WEIGHT).flatMap(([c, w]) => Array(w).fill(c));
-const numbers = Object.keys(arts);
+const numbers = [...new Set([...Object.keys(arts), ...Object.keys(weights)])];
 const catOfNumber = Object.fromEntries(ARTICLES.map((a) => [a[0], a[2]]));
 const sellable = numbers.filter((n) => catOfNumber[n] !== 'Eis');
 const coldNumbers = numbers.filter((n) => catOfNumber[n] === 'Eis');
@@ -368,7 +450,16 @@ for (const lines of [
 ]) {
   const o = await call('POST', '/orders', {
     customerId: b2b.id,
-    lines: lines.map(([n, q]) => ({ articleId: arts[n].id, quantity: String(q) })),
+    lines: await Promise.all(
+      lines.map(async ([n, q]) => ({
+        articleId:
+          arts[n]?.id ??
+          (await call('GET', `/articles?q=${encodeURIComponent(n)}&pageSize=5`)).items.find(
+            (a) => a.number === n,
+          ).id,
+        quantity: String(q),
+      })),
+    ),
   });
   orders.push({ id: o.id, channel: null });
 }
@@ -427,6 +518,7 @@ writeFileSync(
     '',
   ].join('\n'),
 );
+for (const line of imported) process.stdout.write(`${line}\n`);
 process.stdout.write(
   `OK: ${ARTICLES.length} Artikel, ${CHANNELS.length} Kanäle, ${orders.length} Aufträge, Retoure ${ret.number}, 4 Packplätze. Login: ${loginFile}\n`,
 );
