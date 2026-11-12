@@ -1116,12 +1116,15 @@ model PackingStation {
   companyId      String    @map("company_id") @db.Uuid
   name           String
   defaultCarrier String    @default("manual") @map("default_carrier")
+  /// Lager, in dem der Packplatz steht (null = alle Lager der Firma, Altbestand)
+  warehouseId    String?   @map("warehouse_id") @db.Uuid
   /// z. B. {"autoInvoice":true,"autoDeliveryNote":true}
   settings       Json      @default("{}")
   archivedAt     DateTime? @map("archived_at")
   createdAt      DateTime  @default(now()) @map("created_at")
 
   @@unique([companyId, name])
+  @@index([companyId, warehouseId])
   @@map("packing_stations")
 }
 

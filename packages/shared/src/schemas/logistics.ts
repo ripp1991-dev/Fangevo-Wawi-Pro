@@ -78,6 +78,8 @@ export type PackingRules = z.infer<typeof packingRulesSchema>;
 export const packingStationInputSchema = z.object({
   name: z.string().trim().min(1, 'Name fehlt').max(80),
   defaultCarrier: z.enum(Object.keys(CARRIERS) as [Carrier, ...Carrier[]]).default('manual'),
+  /** Lager, in dem der Packplatz steht. Leer = alle Lager (nur sinnvoll bei einem Lager). */
+  warehouseId: uuid.nullable().default(null),
   autoInvoice: z.boolean().default(false),
   autoDeliveryNote: z.boolean().default(true),
   rules: packingRulesSchema.prefault({}),

@@ -133,10 +133,12 @@ Ebenfalls mit Header **`X-Company-Id`** und gebuchtem Modul (`orders`, `document
 | `GET/POST /articles/:id/barcodes`, `DELETE /articles/:id/barcodes/:barcodeId`                                                                                        | `articles.read` / `articles.manage` |
 | `GET /pick-lists`, `GET /pick-lists/:id`, `POST /pick-lists` `{orderIds}`, `POST …/confirm`, `…/complete`, `…/cancel`                                                | `picking.execute` / Lager           |
 | `GET /packing/stations`, `GET /packing/queue?stationId=&channelId=&stage=&allChannels=`, `GET /packing/orders?code=&stationId=`, `POST /packing/orders/:id/complete` | `packing.execute` / Pack            |
-| `POST/PUT /packing/stations…`, `POST …/archive`                                                                                                                      | `shipping.manage` / Pack            |
-| `GET /packing/shipments`, `PUT /packing/shipments/:id/tracking`, `GET /packing/shipments/:id/label`                                                                  | `packing.execute` / Pack            |
-| `GET /returns`, `GET /returns/:id`, `GET /returns/returnable/:orderId`                                                                                               | `returns.read` / Retouren           |
-| `POST /returns`, `POST /returns/:id/receive` (`createCreditNote` zusätzlich `documents.manage`), `…/cancel`                                                          | `returns.manage` / Retouren         |
+
+Packplätze haben ein optionales Lager (`warehouseId`, leer = alle Lager). Mit Lager liefert die Warteschlange nur Aufträge aus diesem Lager; `GET /packing/orders` meldet Aufträge aus einem anderen Lager mit `rule: { ok: false, mismatch: 'block' }`, `POST …/complete` antwortet dann mit `409`. Unbekannte, fremde oder archivierte Lager: `422`.
+| `POST/PUT /packing/stations…`, `POST …/archive` | `shipping.manage` / Pack |
+| `GET /packing/shipments`, `PUT /packing/shipments/:id/tracking`, `GET /packing/shipments/:id/label` | `packing.execute` / Pack |
+| `GET /returns`, `GET /returns/:id`, `GET /returns/returnable/:orderId` | `returns.read` / Retouren |
+| `POST /returns`, `POST /returns/:id/receive` (`createCreditNote` zusätzlich `documents.manage`), `…/cancel` | `returns.manage` / Retouren |
 
 Umlagerung und Inventur nehmen jetzt `batch` und `serialNumber` an. Bei Artikeln mit Seriennummer verlangt `POST /orders/:id/ship` den Packtisch (`409`).
 

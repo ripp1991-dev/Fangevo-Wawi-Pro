@@ -130,7 +130,7 @@ Migration `20261109151957_phase4_logistics`. Alle mit `company_isolation`.
 | `stock_levels` (erweitert)      | `batch`, `serial_number`, `best_before`; Index `stock_levels_slot` jetzt inkl. Charge und Seriennummer |
 | `article_barcodes`              | Zusätzliche Barcodes je Artikel (eindeutig je Firma)                                                   |
 | `pick_lists`, `pick_list_lines` | Picklisten mit Platz-/Chargenvorschlag und gepickter Menge                                             |
-| `packing_stations`              | Packplätze mit Einstellungen                                                                           |
+| `packing_stations`              | Packplätze mit Einstellungen und optionalem Lager (`warehouse_id`, leer = alle Lager)                  |
 | `shipments`                     | Sendungen mit Paketen, gepackten Positionen (inkl. Charge/SN), Etikett-PDF; **nicht löschbar**         |
 | `returns`, `return_lines`       | Retouren mit Zustand je Position und Verweis auf die Gutschrift                                        |
 

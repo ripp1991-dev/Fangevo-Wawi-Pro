@@ -289,6 +289,16 @@ Ergebnis Phase 7: alle Arbeitspakete umgesetzt und getestet (phase7.test, billin
 
 Ergebnis Phase 8: produktionsfähige Version für den Pilotbetrieb. Gefundene und behobene Betriebsfehler: verlorene Worker-Logs, Startabbruch bei leeren Konfigurationswerten, 502 nach API-Neustart hinter nginx, Einbettung der API in Rahmen. **Offen (braucht FangEvo):** Hosting und Domain, Zugangsdaten (SMTP, Rechnungsabsender), Datenschutz (AVV, Löschkonzept), AGB, Steuerberater, externer Penetrationstest, Pilotkunden auswählen (siehe PILOT.md). Weiterhin offene Integrationen: Versanddienstleister, Marktplätze, Zahlungsanbieter, E-Rechnung/DATEV.
 
+### Nach Phase 8 – Wünsche aus dem Pilotbetrieb (gestartet 2026-11-12)
+
+| AP                          | Inhalt                                                                                                                                                     | Status                         |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| P.1 Touch-Packtisch         | Vollbild `/packtisch` für Touchscreen ab 1280 × 720 und USB-Handscanner; Einrichtung je Gerät (Firma → Lager → Packplatz); Packplatz gehört zu einem Lager | fertig (phase4.test, Web-Unit) |
+| P.2 Schnell-Anmeldung (PIN) | Packer melden sich am eingerichteten Gerät mit Name + 4-stelliger PIN an; nur für den Packtisch, Sperre nach Fehlversuchen, nur auf freigegebenen Geräten  | geplant                        |
+| P.3 Probleme melden         | „Artikel fehlt“ / „beschädigt“ am Packtisch: Auftrag mit Notiz zurückstellen                                                                               | geplant                        |
+| P.4 Waage und Drucker       | Gewicht von der USB-Waage übernehmen, Etikett/Lieferschein ohne Druckdialog drucken (braucht Gerätedaten)                                                  | geplant                        |
+| P.5 Import/Export-Zentrale  | Erweiterung von FangEvo Import um weitere Datenarten (z. B. Aufträge), gespeicherte Export-Vorlagen, zeitgesteuerte Exporte                                | wartet auf Liste von FangEvo   |
+
 ## 6. Offene Fragen an FangEvo
 
 1. ~~**Frontend:** Vite (Empfehlung) oder Next.js?~~ Entschieden am 2026-11-09: **Vite** (ADR-003).

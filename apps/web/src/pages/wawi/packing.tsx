@@ -1,5 +1,14 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, FileText, Minus, PackageCheck, Plus, ScanLine, Trash2 } from 'lucide-react';
+import {
+  CheckCircle2,
+  FileText,
+  Minus,
+  MonitorSmartphone,
+  PackageCheck,
+  Plus,
+  ScanLine,
+  Trash2,
+} from 'lucide-react';
 import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CARRIERS,
@@ -62,6 +71,7 @@ interface Station {
   id: string;
   name: string;
   defaultCarrier: Carrier;
+  warehouseId: string | null;
   settings: { autoInvoice?: boolean; autoDeliveryNote?: boolean; rules?: Partial<Rules> };
   archivedAt: string | null;
 }
@@ -158,6 +168,13 @@ export function PackingPage() {
       <PageHeader
         title="Packtisch"
         description="Auftrag scannen, Artikel scannen, Pakete wiegen, abschließen. FangEvo prüft dabei Artikel, Varianten, Mengen und Seriennummern."
+        actions={
+          <a href="/packtisch">
+            <Button variant="secondary">
+              <MonitorSmartphone /> Touch-Packtisch öffnen
+            </Button>
+          </a>
+        }
       />
       <Tabs
         tabs={[
@@ -1083,6 +1100,7 @@ function Stations() {
   const [v, setV] = useState({
     name: '',
     defaultCarrier: 'manual' as Carrier,
+    warehouseId: null as string | null,
     autoInvoice: false,
     autoDeliveryNote: true,
     rules: EMPTY_RULES,
@@ -1105,6 +1123,7 @@ function Stations() {
   const channelName = (id: string) =>
     id === NO_CHANNEL ? 'Ohne Kanal' : (channels.data?.find((c) => c.id === id)?.name ?? '?');
   const paths = categoryPaths(md.data?.categories ?? []);
+  const warehouses = (md.data?.warehouses ?? []).filter((w) => !w.archivedAt);
   const summary = (r: Rules) =>
     [
       r.channelIds.length ? r.channelIds.map(channelName).join(', ') : 'alle Kanäle',
@@ -1124,6 +1143,7 @@ function Stations() {
         <THead>
           <TR>
             <TH>Packplatz</TH>
+            <TH>Lager</TH>
             <TH>Versandart</TH>
             <TH>Lieferschein</TH>
             <TH>Rechnung</TH>
@@ -1137,6 +1157,7 @@ function Stations() {
               const body = {
                 name: s.name,
                 defaultCarrier: s.defaultCarrier,
+                warehouseId: s.warehouseId,
                 autoInvoice: !!s.settings.autoInvoice,
                 autoDeliveryNote: !!s.settings.autoDeliveryNote,
                 rules: rulesOf(s),
@@ -1144,6 +1165,21 @@ function Stations() {
               return (
                 <TR key={s.id}>
                   <TD>{s.name}</TD>
+                  <TD>
+                    <Select
+                      aria-label={`Lager von ${s.name}`}
+                      className="h-8 w-40"
+                      value={s.warehouseId ?? ''}
+                      onChange={(e) => save(s.id, { ...body, warehouseId: e.target.value || null })}
+                    >
+                      <option value="">Alle Lager</option>
+                      {warehouses.map((w) => (
+                        <option key={w.id} value={w.id}>
+                          {w.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </TD>
                   <TD>{CARRIERS[s.defaultCarrier]}</TD>
                   <TD>
                     <Checkbox
@@ -1188,6 +1224,7 @@ function Stations() {
                 const ok = await save(s.id, {
                   name: s.name,
                   defaultCarrier: s.defaultCarrier,
+                  warehouseId: s.warehouseId,
                   autoInvoice: !!s.settings.autoInvoice,
                   autoDeliveryNote: !!s.settings.autoDeliveryNote,
                   rules,
@@ -1220,6 +1257,22 @@ function Stations() {
                   {Object.entries(CARRIERS).map(([k, l]) => (
                     <option key={k} value={k}>
                       {l}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </Field>
+            <Field label="Lager">
+              {(p) => (
+                <Select
+                  {...p}
+                  value={v.warehouseId ?? ''}
+                  onChange={(e) => setV({ ...v, warehouseId: e.target.value || null })}
+                >
+                  <option value="">Alle Lager</option>
+                  {warehouses.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name}
                     </option>
                   ))}
                 </Select>
