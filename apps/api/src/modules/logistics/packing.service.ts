@@ -98,6 +98,7 @@ export class PackingService {
         settings: {
           autoInvoice: input.autoInvoice,
           autoDeliveryNote: input.autoDeliveryNote,
+          autoPrint: input.autoPrint,
           rules: input.rules,
         } as unknown as Prisma.InputJsonValue,
       };

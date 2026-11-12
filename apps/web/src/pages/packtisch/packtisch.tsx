@@ -47,6 +47,7 @@ import {
   orderStatusLabel,
   type AddressSnapshot,
 } from '../../lib/sales';
+import { printPdf } from '../../lib/print-pdf';
 import {
   resolveActiveCompany,
   sessionQuery,
@@ -66,7 +67,7 @@ interface Station {
   name: string;
   warehouseId: string | null;
   defaultCarrier: Carrier;
-  settings: { autoInvoice?: boolean; autoDeliveryNote?: boolean };
+  settings: { autoInvoice?: boolean; autoDeliveryNote?: boolean; autoPrint?: boolean };
   archivedAt: string | null;
 }
 
@@ -928,6 +929,19 @@ function Workbench({
 
   const complete = !!prep && isComplete(prep.items, packed);
 
+  /** Etikett und festgeschriebene Belege nacheinander drucken (Einstellung des Packplatzes). */
+  const autoPrint = async (r: Omit<Done, 'orderNumber'>) => {
+    const jobs = [
+      ...(r.shipment.hasLabel ? [`/packing/shipments/${r.shipment.id}/label`] : []),
+      ...r.documents.filter((d) => d.number).map((d) => `/documents/${d.id}/pdf`),
+    ];
+    try {
+      for (const j of jobs) await printPdf(j);
+    } catch (e) {
+      say('warning', `Drucken nicht möglich: ${errorMessage(e)}`, false);
+    }
+  };
+
   const finish = async () => {
     if (!prep || !station) return;
     setBusy(true);
@@ -945,6 +959,7 @@ function Workbench({
       setDone({ ...r, orderNumber: prep.order.number });
       reset();
       say('success', `Auftrag ${prep.order.number} versendet`);
+      if (station.settings.autoPrint) void autoPrint(r);
       await qc.invalidateQueries({ queryKey: ['packing-queue'] });
       await qc.invalidateQueries({ queryKey: ['orders'] });
       await qc.invalidateQueries({ queryKey: ['shipments'] });
