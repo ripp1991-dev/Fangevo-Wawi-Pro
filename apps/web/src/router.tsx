@@ -41,6 +41,7 @@ import { InventoryPage } from './pages/wawi/inventory';
 import { OrdersPage } from './pages/wawi/orders';
 import { PurchasingPage } from './pages/wawi/purchasing';
 import { PackingPage } from './pages/wawi/packing';
+import { PacktischPage } from './pages/packtisch/packtisch';
 import { PickingPage } from './pages/wawi/picking';
 import { ReturnsPage } from './pages/wawi/returns';
 import { ScanPage } from './pages/wawi/scan';
@@ -85,6 +86,20 @@ const app = createRoute({
     const s = await context.queryClient.fetchQuery(sessionQuery);
     if (!s) throw redirect({ to: '/login' });
     if (s.mfaPending) throw redirect({ to: '/mfa' });
+    // PIN-Sitzungen gelten nur für den Packtisch
+    if (s.scope) throw redirect({ to: '/packtisch' });
+  },
+});
+
+// Touch-Packtisch: Vollbild ohne Menü. Ohne Anmeldung zeigt die Seite die PIN-Anmeldung
+// (nur an freigegebenen Geräten, sonst Hinweis mit Link zur Anmeldung). Rechte prüft die API.
+const packtischRoute = createRoute({
+  getParentRoute: () => root,
+  path: '/packtisch',
+  component: PacktischPage,
+  beforeLoad: async ({ context }) => {
+    const s = await context.queryClient.fetchQuery(sessionQuery);
+    if (s?.mfaPending) throw redirect({ to: '/mfa' });
   },
 });
 
@@ -137,6 +152,7 @@ const routeTree = root.addChildren([
   publicRoute('/verify-email', VerifyEmailPage),
   publicRoute('/accept-invitation', AcceptInvitationPage),
   mfaRoute,
+  packtischRoute,
   app.addChildren([
     page('/', DashboardPage),
     page('/orders', OrdersPage, 'orders.read'),

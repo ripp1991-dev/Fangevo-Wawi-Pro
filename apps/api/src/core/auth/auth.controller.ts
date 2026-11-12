@@ -35,6 +35,7 @@ import { Database } from '../database/database.service';
 import { AppError } from '../http/errors';
 import {
   AllowMfaPending,
+  AllowPackingScope,
   AllowReadOnly,
   Auth,
   NoAccount,
@@ -156,6 +157,7 @@ export class AuthController {
   }
 
   @Post('logout')
+  @AllowPackingScope()
   @AllowMfaPending()
   @NoAccount()
   @AllowReadOnly()
@@ -166,6 +168,7 @@ export class AuthController {
   }
 
   @Get('session')
+  @AllowPackingScope()
   @AllowMfaPending()
   @NoAccount()
   @ApiOperation({ summary: 'Aktuelle Sitzung: Benutzer, Accounts, Rechte, Lizenz, Firmen' })
@@ -177,7 +180,11 @@ export class AuthController {
     if (acc) {
       companies = await this.db.tenant({ accountId: acc.id, userId: a.user.id }, (tx) =>
         tx.company.findMany({
-          where: acc.allCompanies ? { archivedAt: null } : { id: { in: acc.companyIds } },
+          where: a.scope
+            ? { id: a.scope.companyId }
+            : acc.allCompanies
+              ? { archivedAt: null }
+              : { id: { in: acc.companyIds } },
           select: { id: true, name: true },
           orderBy: { name: 'asc' },
           take: 500,
@@ -187,6 +194,8 @@ export class AuthController {
     return {
       user: a.user,
       mfaPending: false,
+      /** PIN-Sitzung am Packtisch: nur diese Firma, nur Packtisch */
+      scope: a.scope ? { kind: a.scope.kind, companyId: a.scope.companyId } : null,
       /** Zugang zur Plattform-Verwaltung (FangEvo-Mitarbeiter); 2FA wird dort zusätzlich geprüft */
       platformAdmin: this.config.isPlatformAdmin(a.user.email),
       accounts,

@@ -24,23 +24,23 @@ Abgesichert durch die Testsuite `apps/api/test/tenant-isolation.test.ts` (API- u
 
 ## Tabellen (Phase 1)
 
-| Tabelle                                      | Inhalt                                                                             | RLS    |
-| -------------------------------------------- | ---------------------------------------------------------------------------------- | ------ |
-| `users`                                      | Personen (E-Mail, Argon2id-Passworthash, MFA-Secret AES-GCM-verschlüsselt)         | global |
-| `sessions`                                   | Sitzungen (nur SHA-256-Hash des Tokens)                                            | global |
-| `auth_tokens`                                | Einmal-Tokens: E-Mail-Bestätigung, Passwort-Reset, MFA-Einrichtung (Hash)          | global |
-| `mfa_recovery_codes`                         | Wiederherstellungscodes (Hash, einmal nutzbar)                                     | global |
-| `security_events`                            | Sicherheitsereignisse je Benutzer (unveränderlich)                                 | global |
-| `accounts`                                   | Mandanten                                                                          | ✅     |
-| `companies`                                  | Firmen inkl. Adresse, USt-IdNr., `version` für optimistische Sperre, `archived_at` | ✅     |
-| `memberships`                                | Benutzer ↔ Account, Inhaber-Flag, Status, „alle Firmen“                            | ✅     |
-| `company_access`                             | Firmenzugriff je Mitgliedschaft                                                    | ✅     |
-| `roles`, `role_permissions`                  | Rollen und ihre Rechte; Systemrollen über `system_key`                             | ✅     |
-| `membership_roles`, `membership_permissions` | Rollen und Einzelrechte je Mitgliedschaft                                          | ✅     |
-| `invitations`                                | Einladungen (Token-Hash, Rollen, Firmen, Ablauf)                                   | ✅     |
-| `entitlements`                               | Lizenz-Kern je Account                                                             | ✅     |
-| `entitlement_events`                         | Lizenzhistorie (unveränderlich)                                                    | ✅     |
-| `audit_logs`                                 | Audit-Log (unveränderlich)                                                         | ✅     |
+| Tabelle                                      | Inhalt                                                                                                         | RLS    |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------ |
+| `users`                                      | Personen (E-Mail, Argon2id-Passworthash, MFA-Secret AES-GCM-verschlüsselt)                                     | global |
+| `sessions`                                   | Sitzungen (nur SHA-256-Hash des Tokens); `scope`/`scope_company_id`/`device_id` für PIN-Sitzungen am Packtisch | global |
+| `auth_tokens`                                | Einmal-Tokens: E-Mail-Bestätigung, Passwort-Reset, MFA-Einrichtung (Hash)                                      | global |
+| `mfa_recovery_codes`                         | Wiederherstellungscodes (Hash, einmal nutzbar)                                                                 | global |
+| `security_events`                            | Sicherheitsereignisse je Benutzer (unveränderlich)                                                             | global |
+| `accounts`                                   | Mandanten                                                                                                      | ✅     |
+| `companies`                                  | Firmen inkl. Adresse, USt-IdNr., `version` für optimistische Sperre, `archived_at`                             | ✅     |
+| `memberships`                                | Benutzer ↔ Account, Inhaber-Flag, Status, „alle Firmen“                                                        | ✅     |
+| `company_access`                             | Firmenzugriff je Mitgliedschaft                                                                                | ✅     |
+| `roles`, `role_permissions`                  | Rollen und ihre Rechte; Systemrollen über `system_key`                                                         | ✅     |
+| `membership_roles`, `membership_permissions` | Rollen und Einzelrechte je Mitgliedschaft                                                                      | ✅     |
+| `invitations`                                | Einladungen (Token-Hash, Rollen, Firmen, Ablauf)                                                               | ✅     |
+| `entitlements`                               | Lizenz-Kern je Account                                                                                         | ✅     |
+| `entitlement_events`                         | Lizenzhistorie (unveränderlich)                                                                                | ✅     |
+| `audit_logs`                                 | Audit-Log (unveränderlich)                                                                                     | ✅     |
 
 **Unveränderlich** heißt: Trigger `app_reject_modification` verhindert `UPDATE`/`DELETE`, zusätzlich hat `fangevo_app` nur `SELECT, INSERT`.
 
@@ -130,7 +130,9 @@ Migration `20261109151957_phase4_logistics`. Alle mit `company_isolation`.
 | `stock_levels` (erweitert)      | `batch`, `serial_number`, `best_before`; Index `stock_levels_slot` jetzt inkl. Charge und Seriennummer |
 | `article_barcodes`              | Zusätzliche Barcodes je Artikel (eindeutig je Firma)                                                   |
 | `pick_lists`, `pick_list_lines` | Picklisten mit Platz-/Chargenvorschlag und gepickter Menge                                             |
-| `packing_stations`              | Packplätze mit Einstellungen                                                                           |
+| `packing_devices`               | Für die PIN-Anmeldung freigegebene Lagerrechner (nur Token-Hash, widerrufbar; RLS Account + Firma)     |
+| `packer_pins`                   | PIN je Person und Account (Argon2id, Fehlversuche, Sperre; RLS Account)                                |
+| `packing_stations`              | Packplätze mit Einstellungen und optionalem Lager (`warehouse_id`, leer = alle Lager)                  |
 | `shipments`                     | Sendungen mit Paketen, gepackten Positionen (inkl. Charge/SN), Etikett-PDF; **nicht löschbar**         |
 | `returns`, `return_lines`       | Retouren mit Zustand je Position und Verweis auf die Gutschrift                                        |
 

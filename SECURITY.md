@@ -109,6 +109,12 @@ Bitte nicht öffentlich als Issue melden, sondern direkt an das FangEvo-Team.
 - Neue Rechte `billing.manage` und `support.manage` gehören zum Core und können **nicht** an API-Schlüssel vergeben werden. Abo und Support bleiben im Lesemodus erreichbar.
 - Keine Zahlungsdaten im System: Zahlart ist Überweisung. Support-Formular weist darauf hin, keine Passwörter oder Zahlungsdaten zu senden.
 
+## Ergänzungen Touch-Packtisch (ADR-014)
+
+- PIN-Anmeldung nur an freigegebenen Lagerrechnern: Geräte-Cookie httpOnly, `SameSite=Strict`, Token nur als SHA-256-Hash in `packing_devices` (RLS Account + Firma), widerrufbar (beendet alle PIN-Sitzungen des Geräts).
+- PIN (4–6 Ziffern, keine trivialen Folgen) als Argon2id-Hash in `packer_pins` (RLS Account); nach 5 Fehlversuchen 15 Minuten gesperrt; Rate-Limits je IP und Person; gleiche Antwortzeit für unbekannte Personen. Eigene PIN nur mit Passwort, fremde nur mit `users.manage`.
+- PIN-Sitzungen (`sessions.scope = 'packing'`) erreichen nur Endpunkte mit `@AllowPackingScope()` und nur die Firma des Geräts (AccessGuard); höchstens 12 Stunden, Abmeldung nach 15 Minuten ohne Eingabe in der Oberfläche. Tests: `packtisch-pin.test.ts`.
+
 ## Ergänzungen Phase 8
 
 - **Automatische Sicherheitsprüfungen** (`test/phase8-security.test.ts`). Neue Tabellen und Endpunkte werden automatisch mitgeprüft:

@@ -561,6 +561,88 @@ describe('Packregeln nach Kanal und Kategorie', () => {
     expect(plain.settings.rules).toMatchObject({ channelIds: [], mismatch: 'warn' });
   });
 
+  it('Packplatz im Lager: Warteschlange nur aus diesem Lager, fremde Lager sind gesperrt', async () => {
+    const w = await world();
+    const { client, hl, schoko, A, B, C, D, ids } = w;
+    const wh2 = await client.post('/company/warehouses', { code: 'NORD', name: 'Lager Nord' });
+    expect(wh2.status).toBe(201);
+    await book(client, { articleId: schoko.id, warehouseId: wh2.body.id, quantity: '5' });
+    const k = await customer(client);
+    const n = await client.post('/orders', {
+      customerId: k.id,
+      warehouseId: wh2.body.id,
+      lines: [{ articleId: schoko.id, quantity: '1' }],
+    });
+    expect(n.status).toBe(201);
+
+    const make = async (name: string, warehouseId: string | null) => {
+      const r = await client.post('/packing/stations', { name, warehouseId });
+      expect(r.status).toBe(201);
+      expect(r.body.warehouseId).toBe(warehouseId);
+      return r.body.id as string;
+    };
+    const main = await make('Haupt', hl);
+    const nord = await make('Nord', wh2.body.id);
+    const any = await make('Überall', null);
+    const q = (st: string) => client.get(`/packing/queue?stage=all&stationId=${st}`);
+    expect(ids(await q(main))).toEqual([A, B, C, D].map((o) => o.number).sort());
+    expect(ids(await q(nord))).toEqual([n.body.number]);
+    expect(ids(await q(any))).toHaveLength(5);
+
+    // Auftrag aus dem anderen Lager: immer gesperrt (auch wenn die Regeln nur warnen)
+    const prep = await client.get(`/packing/orders?code=${A.number}&stationId=${nord}`);
+    expect(prep.status).toBe(200);
+    expect(prep.body.rule).toMatchObject({ ok: false, mismatch: 'block' });
+    expect(prep.body.rule.message).toContain('Lager');
+    const body = {
+      carrier: 'manual',
+      parcels: [{ weightKg: '1' }],
+      items: [{ orderLineId: A.lines[0]!.id, articleId: schoko.id, quantity: '1' }],
+    };
+    const wrong = await client.post(`/packing/orders/${A.id}/complete`, {
+      ...body,
+      stationId: nord,
+    });
+    expect(wrong.status).toBe(409);
+    expect((await client.get(`/orders/${A.id}`)).body.status).not.toBe('shipped');
+    const right = await client.post(`/packing/orders/${A.id}/complete`, {
+      ...body,
+      stationId: main,
+    });
+    expect(right.status).toBe(201);
+
+    // Lager bleibt beim Ändern erhalten; archivierte oder unbekannte Lager sind nicht wählbar
+    const upd = await client.put(`/packing/stations/${nord}`, {
+      name: 'Nord 1',
+      warehouseId: wh2.body.id,
+    });
+    expect(upd.body.warehouseId).toBe(wh2.body.id);
+    expect(
+      (await client.post('/packing/stations', { name: 'X', warehouseId: crypto.randomUUID() }))
+        .status,
+    ).toBe(422);
+    const old = await client.post('/company/warehouses', { code: 'ALT', name: 'Altlager' });
+    expect((await client.post(`/company/warehouses/${old.body.id}/archive`)).status).toBeLessThan(
+      300,
+    );
+    expect(
+      (await client.post('/packing/stations', { name: 'Y', warehouseId: old.body.id })).status,
+    ).toBe(422);
+  });
+
+  it('Lager anderer Firmen und Accounts sind für Packplätze nicht nutzbar', async () => {
+    const w = await world();
+    const other = await setup({ plan: 'professional' });
+    expect(
+      (await other.client.post('/packing/stations', { name: 'Fremd', warehouseId: w.hl })).status,
+    ).toBe(422);
+    const two = (await w.client.post('/admin/companies', { name: 'Filiale', country: 'DE' })).body;
+    w.client.companyId = two.id;
+    expect(
+      (await w.client.post('/packing/stations', { name: 'Fremd', warehouseId: w.hl })).status,
+    ).toBe(422);
+  });
+
   it('Kanäle und Kategorien anderer Firmen sind nicht nutzbar, Aufträge nicht sichtbar', async () => {
     const w = await world();
     const other = await setup({ plan: 'professional' });

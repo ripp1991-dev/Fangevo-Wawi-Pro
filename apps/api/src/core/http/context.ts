@@ -28,6 +28,8 @@ export interface AuthContext {
   mfaPending: boolean;
   account: AccountContext | null;
   companyId: string | null;
+  /** Eingeschränkte PIN-Sitzung am Packtisch (nur diese Firma und dieses Gerät) */
+  scope?: { kind: 'packing'; companyId: string; deviceId: string } | null;
 }
 
 /** Kontext einer Anfrage, der für Mandantenzugriffe benötigt wird (Account garantiert). */
@@ -37,6 +39,8 @@ export interface TenantContext {
   account: AccountContext;
   companyId: string | null;
   ip: string | null;
+  /** Gesetzt bei PIN-Sitzungen am Packtisch */
+  scope?: AuthContext['scope'];
 }
 
 declare module 'fastify' {
@@ -54,7 +58,11 @@ export const META = {
   module: 'fangevo:module',
   company: 'fangevo:company',
   rateLimit: 'fangevo:rateLimit',
+  packingScope: 'fangevo:packingScope',
 } as const;
+
+/** Endpunkt ist auch mit einer PIN-Sitzung am Packtisch erlaubt (sonst 403). */
+export const AllowPackingScope = () => SetMetadata(META.packingScope, true);
 
 /** Kein Login nötig. */
 export const Public = () => SetMetadata(META.public, true);
@@ -101,6 +109,7 @@ export const Tenant = createParamDecorator((_: unknown, ctx: ExecutionContext): 
     account: a.account,
     companyId: a.companyId,
     ip: clientIp(req),
+    scope: a.scope ?? null,
   };
 });
 

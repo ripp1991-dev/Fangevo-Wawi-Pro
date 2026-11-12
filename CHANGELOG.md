@@ -4,12 +4,17 @@
 
 ### Hinzugefügt
 
+- **Touch-Packtisch** (`/packtisch`): Vollbild-Arbeitsplatz für Packer an einem Lagerrechner mit Touchscreen (ab 1280 × 720, „HD ready“) und USB-Handscanner. Einmalige Einrichtung je Gerät: Firma → Lager → Packplatz (Auswahl erscheint nur, wenn es mehr als eins gibt). Danach ein Schritt pro Bildschirm: Auftrag scannen oder als Kachel antippen, Artikel scannen (große Kacheln mit Zähler, Rückmeldung in Grün/Rot mit Ton), Gewicht über ein Zahlenfeld, „Fertig“ = Versand mit Etikett und Belegen. Die Prüfung bleibt serverseitig (unverändert). Aus der Seite „Packtisch“ über „Touch-Packtisch öffnen“ erreichbar.
+- **PIN-Anmeldung am Touch-Packtisch** (ADR-014): Ein Lagerleiter gibt den Lagerrechner einmal frei („Gerät für PIN freigeben“). Danach melden sich Packer dort mit Namen und 4–6-stelliger PIN an. Die PIN-Sitzung erreicht nur den Packtisch der Firma des Geräts, läuft nach 12 Stunden ab und meldet nach 15 Minuten ohne Eingabe ab. Sperre nach 5 Fehlversuchen für 15 Minuten. PIN selbst festlegen (Profil & Sicherheit, mit Passwort) oder durch den Administrator (Benutzer › PIN). Freigegebene Geräte sind unter Packtisch › Packplätze widerrufbar.
+- **Problem melden am Packtisch:** „Artikel fehlt“, „beschädigt“, „falscher Artikel im Lager“ oder „Sonstiges“ mit Notiz. Der Auftrag wird zurückgestellt („In Bearbeitung“), verschwindet aus der Packliste und der Grund steht im Statusverlauf.
+- **Packplatz gehört zu einem Lager:** neues Feld `warehouseId` (optional, leer = alle Lager). Die Warteschlange zeigt nur Aufträge aus diesem Lager; Aufträge aus einem anderen Lager sind an diesem Platz immer gesperrt (auch bei „Nur warnen“). Lager anderer Firmen/Accounts und archivierte Lager sind nicht wählbar.
 - **Packregeln je Packplatz:** Ein Packplatz kann auf Verkaufskanäle (z. B. nur Shopify, nur Amazon, auch „ohne Kanal“) und auf Kategorien festgelegt werden („nur Kategorien“: alle Artikel des Auftrags aus diesen Kategorien inkl. Unterkategorien; „ohne Kategorien“: reine Aufträge dieser Kategorien ausblenden, gemischte bleiben). Bei Aufträgen, die nicht passen: warnen oder Packen sperren (serverseitig geprüft). Optional festgelegt, sonst können Packer „auch andere Kanäle“ einblenden.
 - **Warteschlange am Packtisch** (GET /packing/queue): packbereite Aufträge nach den Regeln des Platzes, älteste zuerst, mit Kanal-Reitern und Zählern; Klick lädt den Auftrag zum Packen.
 - **Picklisten nach Packregeln:** Beim Anlegen einer Pickliste lassen sich die Aufträge mit den Regeln eines Packplatzes vorfiltern.
 
 ### Behoben
 
+- **Tests unter Windows:** Die Testvorbereitung fand den Projektordner nicht, wenn der Pfad Leerzeichen enthält (`fileURLToPath` statt `URL.pathname`).
 - **Entwicklungsumgebung startet wieder:** MinIO veröffentlicht keine Container-Abbilder mehr, `docker compose up` brach deshalb ab. Der Objektspeicher ist aus `infrastructure/docker/docker-compose.yml` entfernt, weil FangEvo derzeit keinen S3-Speicher nutzt (Belege in der Datenbank, ADR-008).
 
 ## [0.9.0] – 2026-11-09 – Phase 8: Produktionsreife

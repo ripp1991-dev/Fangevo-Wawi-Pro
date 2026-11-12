@@ -1,5 +1,14 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, FileText, Minus, PackageCheck, Plus, ScanLine, Trash2 } from 'lucide-react';
+import {
+  CheckCircle2,
+  FileText,
+  Minus,
+  MonitorSmartphone,
+  PackageCheck,
+  Plus,
+  ScanLine,
+  Trash2,
+} from 'lucide-react';
 import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CARRIERS,
@@ -62,6 +71,7 @@ interface Station {
   id: string;
   name: string;
   defaultCarrier: Carrier;
+  warehouseId: string | null;
   settings: { autoInvoice?: boolean; autoDeliveryNote?: boolean; rules?: Partial<Rules> };
   archivedAt: string | null;
 }
@@ -158,6 +168,13 @@ export function PackingPage() {
       <PageHeader
         title="Packtisch"
         description="Auftrag scannen, Artikel scannen, Pakete wiegen, abschließen. FangEvo prüft dabei Artikel, Varianten, Mengen und Seriennummern."
+        actions={
+          <a href="/packtisch">
+            <Button variant="secondary">
+              <MonitorSmartphone /> Touch-Packtisch öffnen
+            </Button>
+          </a>
+        }
       />
       <Tabs
         tabs={[
@@ -1072,6 +1089,78 @@ function RulesEditor({
   );
 }
 
+interface DeviceRow {
+  id: string;
+  name: string;
+  stationName: string | null;
+  createdAt: string;
+  lastSeenAt: string | null;
+  revokedAt: string | null;
+}
+
+/** Für die PIN-Anmeldung freigegebene Lagerrechner (Freigabe am Gerät über den Touch-Packtisch). */
+function DevicesCard() {
+  const qc = useQueryClient();
+  const [error, setError] = useState<string | null>(null);
+  const q = useQuery({
+    queryKey: ['packing-devices'],
+    queryFn: () => http.get<DeviceRow[]>('/packing/devices'),
+  });
+  const active = (q.data ?? []).filter((d) => !d.revokedAt);
+  return (
+    <Card>
+      <CardBody>
+        <p className="font-semibold">Freigegebene Geräte (PIN-Anmeldung)</p>
+        <p className="mb-3 text-sm text-muted">
+          Freigeben: am Lagerrechner mit E-Mail anmelden, den Touch-Packtisch öffnen und „Gerät für
+          PIN freigeben“ tippen. Widerrufen meldet alle Packer an diesem Gerät sofort ab.
+        </p>
+        {error && <Alert tone="danger">{error}</Alert>}
+        {active.length ? (
+          <Table>
+            <THead>
+              <TR>
+                <TH>Gerät</TH>
+                <TH>Packplatz</TH>
+                <TH>Zuletzt aktiv</TH>
+                <TH />
+              </TR>
+            </THead>
+            <TBody>
+              {active.map((d) => (
+                <TR key={d.id}>
+                  <TD>{d.name}</TD>
+                  <TD>{d.stationName ?? '–'}</TD>
+                  <TD>{d.lastSeenAt ? formatDateTime(d.lastSeenAt) : 'noch nie'}</TD>
+                  <TD className="text-right">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={async () => {
+                        setError(null);
+                        try {
+                          await http.post(`/packing/devices/${d.id}/revoke`);
+                          await qc.invalidateQueries({ queryKey: ['packing-devices'] });
+                        } catch (e) {
+                          setError(errorMessage(e));
+                        }
+                      }}
+                    >
+                      Widerrufen
+                    </Button>
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+        ) : (
+          <p className="text-sm text-muted">Noch kein Gerät freigegeben.</p>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+
 function Stations() {
   const qc = useQueryClient();
   const q = useQuery({
@@ -1083,6 +1172,7 @@ function Stations() {
   const [v, setV] = useState({
     name: '',
     defaultCarrier: 'manual' as Carrier,
+    warehouseId: null as string | null,
     autoInvoice: false,
     autoDeliveryNote: true,
     rules: EMPTY_RULES,
@@ -1105,6 +1195,7 @@ function Stations() {
   const channelName = (id: string) =>
     id === NO_CHANNEL ? 'Ohne Kanal' : (channels.data?.find((c) => c.id === id)?.name ?? '?');
   const paths = categoryPaths(md.data?.categories ?? []);
+  const warehouses = (md.data?.warehouses ?? []).filter((w) => !w.archivedAt);
   const summary = (r: Rules) =>
     [
       r.channelIds.length ? r.channelIds.map(channelName).join(', ') : 'alle Kanäle',
@@ -1124,6 +1215,7 @@ function Stations() {
         <THead>
           <TR>
             <TH>Packplatz</TH>
+            <TH>Lager</TH>
             <TH>Versandart</TH>
             <TH>Lieferschein</TH>
             <TH>Rechnung</TH>
@@ -1137,6 +1229,7 @@ function Stations() {
               const body = {
                 name: s.name,
                 defaultCarrier: s.defaultCarrier,
+                warehouseId: s.warehouseId,
                 autoInvoice: !!s.settings.autoInvoice,
                 autoDeliveryNote: !!s.settings.autoDeliveryNote,
                 rules: rulesOf(s),
@@ -1144,6 +1237,21 @@ function Stations() {
               return (
                 <TR key={s.id}>
                   <TD>{s.name}</TD>
+                  <TD>
+                    <Select
+                      aria-label={`Lager von ${s.name}`}
+                      className="h-8 w-40"
+                      value={s.warehouseId ?? ''}
+                      onChange={(e) => save(s.id, { ...body, warehouseId: e.target.value || null })}
+                    >
+                      <option value="">Alle Lager</option>
+                      {warehouses.map((w) => (
+                        <option key={w.id} value={w.id}>
+                          {w.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </TD>
                   <TD>{CARRIERS[s.defaultCarrier]}</TD>
                   <TD>
                     <Checkbox
@@ -1188,6 +1296,7 @@ function Stations() {
                 const ok = await save(s.id, {
                   name: s.name,
                   defaultCarrier: s.defaultCarrier,
+                  warehouseId: s.warehouseId,
                   autoInvoice: !!s.settings.autoInvoice,
                   autoDeliveryNote: !!s.settings.autoDeliveryNote,
                   rules,
@@ -1197,6 +1306,7 @@ function Stations() {
             />
           );
         })()}
+      <DevicesCard />
       <Card>
         <CardBody>
           <p className="mb-3 font-semibold">Neuer Packplatz</p>
@@ -1220,6 +1330,22 @@ function Stations() {
                   {Object.entries(CARRIERS).map(([k, l]) => (
                     <option key={k} value={k}>
                       {l}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </Field>
+            <Field label="Lager">
+              {(p) => (
+                <Select
+                  {...p}
+                  value={v.warehouseId ?? ''}
+                  onChange={(e) => setV({ ...v, warehouseId: e.target.value || null })}
+                >
+                  <option value="">Alle Lager</option>
+                  {warehouses.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name}
                     </option>
                   ))}
                 </Select>

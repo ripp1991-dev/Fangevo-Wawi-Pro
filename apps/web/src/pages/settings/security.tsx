@@ -17,16 +17,18 @@ import {
 import { formData, useSubmit } from '../../components/use-form';
 import { http } from '../../lib/api';
 import { formatDateTime } from '../../lib/format';
-import { useRefreshSession, useSession } from '../../lib/session';
+import { useCan, useRefreshSession, useSession } from '../../lib/session';
 
 export function SecurityPage() {
   const s = useSession();
+  const can = useCan();
   return (
     <>
       <PageHeader title="Profil & Sicherheit" description={s.user.email} />
       <div className="grid gap-6 lg:grid-cols-2">
         <ProfileCard />
         <PasswordCard />
+        {can('packing.execute') && <PackingPinCard />}
         <MfaCard />
         <SessionsCard />
         <NotificationSettingsCard />
@@ -119,6 +121,85 @@ function PasswordCard() {
           </Field>
           <Button type="submit" loading={f.pending}>
             Passwort ändern
+          </Button>
+        </form>
+      </CardBody>
+    </Card>
+  );
+}
+
+/** PIN für die schnelle Anmeldung am Touch-Packtisch (nur an freigegebenen Lagerrechnern). */
+function PackingPinCard() {
+  const qc = useQueryClient();
+  const [done, setDone] = useState(false);
+  const status = useQuery({
+    queryKey: ['packing-pin', 'me'],
+    queryFn: () => http.get<{ hasPin: boolean }>('/packing/pins/me'),
+  });
+  const f = useSubmit(
+    (v: Record<string, string>) => http.put('/packing/pins/me', v),
+    async () => {
+      setDone(true);
+      await qc.invalidateQueries({ queryKey: ['packing-pin', 'me'] });
+    },
+  );
+  return (
+    <Card>
+      <CardHeader
+        title="PIN für den Packtisch"
+        description="Damit melden Sie sich am Lagerrechner mit Namen und PIN an – nur für den Packtisch."
+      />
+      <CardBody>
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            setDone(false);
+            f.submit(formData(e));
+            e.currentTarget.reset();
+          }}
+        >
+          {status.data && (
+            <p className="text-sm">
+              {status.data.hasPin ? (
+                <Badge tone="success">PIN ist festgelegt</Badge>
+              ) : (
+                <Badge>Noch keine PIN</Badge>
+              )}
+            </p>
+          )}
+          {f.error && <Alert tone="danger">{f.error}</Alert>}
+          {done && <Alert tone="success">PIN gespeichert.</Alert>}
+          <Field
+            label={status.data?.hasPin ? 'Neue PIN' : 'PIN'}
+            hint="4 bis 6 Ziffern, nicht 1111 oder 1234."
+            error={f.fieldErrors.pin}
+          >
+            {(p) => (
+              <Input
+                {...p}
+                name="pin"
+                type="password"
+                inputMode="numeric"
+                autoComplete="off"
+                pattern="d{4,6}"
+                maxLength={6}
+                required
+              />
+            )}
+          </Field>
+          <Field label="Ihr Passwort zur Bestätigung" error={f.fieldErrors.password}>
+            {(p) => (
+              <Input
+                {...p}
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+              />
+            )}
+          </Field>
+          <Button type="submit" loading={f.pending}>
+            PIN speichern
           </Button>
         </form>
       </CardBody>

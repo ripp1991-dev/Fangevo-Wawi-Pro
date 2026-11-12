@@ -5,7 +5,9 @@ import {
   NO_CHANNEL,
   ORDER_SHIPPABLE,
   ORDER_STATUSES,
+  PACKING_PROBLEMS,
   type ListQuery,
+  type PackingProblem,
   type OrderStatus,
   type PackComplete,
   type PackingQueueStage,
@@ -81,9 +83,18 @@ export class PackingService {
   saveStation(t: TenantContext, id: string | null, input: StationInput) {
     return this.cdb.run(t, async (tx, c) => {
       await this.validateRules(tx, input.rules);
+      if (input.warehouseId) {
+        // RLS blendet Lager anderer Firmen aus; archivierte Lager sind nicht wählbar.
+        const wh = await tx.warehouse.findUnique({ where: { id: input.warehouseId } });
+        if (!wh || wh.archivedAt)
+          throw new AppError(422, 'VALIDATION_FAILED', 'Lager nicht gefunden', [
+            { path: 'warehouseId', message: 'Lager nicht gefunden' },
+          ]);
+      }
       const data = {
         name: input.name,
         defaultCarrier: input.defaultCarrier,
+        warehouseId: input.warehouseId,
         settings: {
           autoInvoice: input.autoInvoice,
           autoDeliveryNote: input.autoDeliveryNote,
@@ -184,7 +195,7 @@ export class PackingService {
    */
   queue(t: TenantContext, q: PackingQueueQuery) {
     return this.cdb.run(t, async (tx) => {
-      const { rules } = await this.stationRules(tx, q.stationId);
+      const { station, rules } = await this.stationRules(tx, q.stationId);
       if (q.allChannels && rules.locked)
         throw new AppError(409, 'CONFLICT', 'Dieser Packplatz ist auf seine Kanäle festgelegt');
       const channelIds = q.allChannels ? [] : rules.channelIds;
@@ -197,6 +208,8 @@ export class PackingService {
       const candidates = await tx.salesOrder.findMany({
         where: {
           status: { in: QUEUE_STATUSES[q.stage] },
+          // Ein Packplatz sieht nur Aufträge aus seinem Lager (dort liegt die Ware).
+          ...(station?.warehouseId ? { warehouseId: station.warehouseId } : {}),
           ...this.channelWhere(channelIds),
         },
         orderBy: [{ orderDate: 'asc' }, { id: 'asc' }],
@@ -267,6 +280,23 @@ export class PackingService {
     return { OR: or };
   }
 
+  /**
+   * Wird der Auftrag aus einem anderen Lager versendet als dem des Packplatzes?
+   * Dann kann er hier nicht gepackt werden (immer gesperrt, unabhängig von „Nur warnen“).
+   */
+  private async warehouseMismatch(
+    tx: Tx,
+    order: { warehouseId: string },
+    station: { warehouseId: string | null } | null,
+  ): Promise<string | null> {
+    if (!station?.warehouseId || station.warehouseId === order.warehouseId) return null;
+    const wh = await tx.warehouse.findUnique({
+      where: { id: order.warehouseId },
+      select: { name: true },
+    });
+    return `Der Auftrag wird aus dem Lager „${wh?.name ?? 'unbekannt'}“ versendet, nicht von diesem Packplatz`;
+  }
+
   /** Prüft einen Auftrag gegen die Regeln eines Packplatzes. */
   private async checkOrder(
     tx: Tx,
@@ -294,8 +324,11 @@ export class PackingService {
         where: isId ? { id: ref } : { number: { equals: ref.trim(), mode: 'insensitive' } },
       });
       if (!order) throw Errors.notFound('Auftrag nicht gefunden');
-      const { rules } = await this.stationRules(tx, stationId);
-      const rule = { ...(await this.checkOrder(tx, order, rules)), mismatch: rules.mismatch };
+      const { station, rules } = await this.stationRules(tx, stationId);
+      const wrongWarehouse = await this.warehouseMismatch(tx, order, station);
+      const rule = wrongWarehouse
+        ? { ok: false, message: wrongWarehouse, mismatch: 'block' as const }
+        : { ...(await this.checkOrder(tx, order, rules)), mismatch: rules.mismatch };
       const channelName = order.channelId
         ? ((await this.channelNames(tx, [order.channelId])).get(order.channelId) ?? null)
         : null;
@@ -377,6 +410,8 @@ export class PackingService {
       if (input.stationId && (!station || station.archivedAt))
         throw new AppError(422, 'VALIDATION_FAILED', 'Packplatz nicht gefunden');
       if (station) {
+        const wrongWarehouse = await this.warehouseMismatch(tx, order, station);
+        if (wrongWarehouse) throw new AppError(409, 'CONFLICT', wrongWarehouse);
         const rules = readRules(station.settings);
         if (rules.mismatch === 'block') {
           const r = await this.checkOrder(tx, order, rules);
@@ -481,6 +516,56 @@ export class PackingService {
         }
       }
       return { shipment: this.public(shipment), documents, warnings };
+    });
+  }
+
+  /**
+   * Problem am Packtisch: Der Auftrag wird zurückgestellt („In Bearbeitung“), damit er aus der
+   * Packliste verschwindet und im Büro geklärt wird. Der Grund steht im Statusverlauf.
+   * Nur erlaubte Statuswechsel (Verpackung/Versandbereit → Kommissionierung → In Bearbeitung).
+   */
+  reportProblem(
+    t: TenantContext,
+    orderId: string,
+    input: { reason: PackingProblem; note: string | null; stationId?: string | null },
+  ) {
+    return this.cdb.run(t, async (tx, c) => {
+      const order = await tx.salesOrder.findUnique({ where: { id: orderId } });
+      if (!order) throw Errors.notFound();
+      const status = order.status as OrderStatus;
+      if (!(ORDER_SHIPPABLE as string[]).includes(status))
+        throw new AppError(
+          409,
+          'CONFLICT',
+          `Im Status „${ORDER_STATUSES[status]}“ kann kein Problem gemeldet werden`,
+        );
+      const station = input.stationId
+        ? await tx.packingStation.findUnique({ where: { id: input.stationId } })
+        : null;
+      const text = [
+        `Problem am Packtisch${station ? ` (${station.name})` : ''}: ${PACKING_PROBLEMS[input.reason]}`,
+        input.note,
+      ]
+        .filter(Boolean)
+        .join(' – ');
+      const path: OrderStatus[] =
+        status === 'packing' || status === 'ready_to_ship'
+          ? ['picking', 'in_progress']
+          : status === 'in_progress'
+            ? []
+            : ['in_progress'];
+      for (const to of path) await this.orders.transitionInTx(tx, c, orderId, to, text);
+      await this.audit.record(tx, {
+        accountId: c.account.id,
+        userId: c.user.id,
+        companyId: c.companyId,
+        action: 'order.packing_problem',
+        entityType: 'order',
+        entityId: orderId,
+        data: { number: order.number, reason: input.reason, note: input.note },
+        ip: c.ip,
+      });
+      return { status: 'in_progress' as const, message: text };
     });
   }
 

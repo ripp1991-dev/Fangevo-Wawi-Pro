@@ -78,6 +78,8 @@ export type PackingRules = z.infer<typeof packingRulesSchema>;
 export const packingStationInputSchema = z.object({
   name: z.string().trim().min(1, 'Name fehlt').max(80),
   defaultCarrier: z.enum(Object.keys(CARRIERS) as [Carrier, ...Carrier[]]).default('manual'),
+  /** Lager, in dem der Packplatz steht. Leer = alle Lager (nur sinnvoll bei einem Lager). */
+  warehouseId: uuid.nullable().default(null),
   autoInvoice: z.boolean().default(false),
   autoDeliveryNote: z.boolean().default(true),
   rules: packingRulesSchema.prefault({}),
@@ -174,4 +176,51 @@ export const returnReceiveSchema = z.object({
     .min(1)
     .max(500),
   createCreditNote: z.boolean().default(false),
+});
+
+// ───── Touch-Packtisch: Geräte, PIN, Probleme ─────
+
+/** Gilt die PIN als zu einfach? (gleiche Ziffern, auf- oder absteigende Folge) */
+export function isTrivialPin(pin: string): boolean {
+  if (/^(\d)\1+$/.test(pin)) return true;
+  const d = [...pin].map(Number);
+  const step = d[1]! - d[0]!;
+  return (step === 1 || step === -1) && d.every((x, i) => i === 0 || x - d[i - 1]! === step);
+}
+
+export const pinSchema = z
+  .string()
+  .regex(/^\d{4,6}$/, 'Die PIN besteht aus 4 bis 6 Ziffern')
+  .refine((p) => !isTrivialPin(p), 'Diese PIN ist zu einfach (z. B. 1111 oder 1234)');
+
+export const setOwnPinSchema = z.object({
+  pin: pinSchema,
+  /** Zur Bestätigung das Passwort des eigenen Kontos */
+  password: z.string().min(1, 'Passwort fehlt').max(200),
+});
+
+export const setMemberPinSchema = z.object({ pin: pinSchema });
+
+export const pinLoginSchema = z.object({
+  userId: uuid,
+  pin: z.string().regex(/^\d{4,6}$/, 'Die PIN besteht aus 4 bis 6 Ziffern'),
+});
+
+export const packingDeviceInputSchema = z.object({
+  stationId: uuid,
+  name: z.string().trim().min(1, 'Name fehlt').max(80),
+});
+
+export const PACKING_PROBLEMS = {
+  missing: 'Artikel fehlt',
+  damaged: 'Artikel beschädigt',
+  wrong_stock: 'Falscher Artikel im Lager',
+  other: 'Sonstiges',
+} as const;
+export type PackingProblem = keyof typeof PACKING_PROBLEMS;
+
+export const packingProblemSchema = z.object({
+  reason: z.enum(Object.keys(PACKING_PROBLEMS) as [PackingProblem, ...PackingProblem[]]),
+  note: optText(500),
+  stationId: uuid.optional().nullable(),
 });
