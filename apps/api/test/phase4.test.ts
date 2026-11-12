@@ -523,6 +523,29 @@ describe('Packregeln nach Kanal und Kategorie', () => {
     ).toBe(409);
   });
 
+  it('Auftragsübersicht: Statusbaum zählt je Status und Kanal, Liste filtert nach Kanal', async () => {
+    const w = await world();
+    const { client, A, B, C, D } = w;
+    const tree = (await client.get('/orders/tree')).body;
+    expect(tree.statuses).toEqual([{ status: 'new', count: 4 }]);
+    const open = Object.fromEntries(
+      tree.channels.map((c: { name: string; open: number }) => [c.name, c.open]),
+    );
+    expect(open).toEqual({ Amazon: 2, Shopify: 1, 'Ohne Kanal': 1 });
+    const list = async (filters: unknown[]) =>
+      (
+        await client.get(`/orders?filters=${encodeURIComponent(JSON.stringify(filters))}`)
+      ).body.items
+        .map((o: { number: string }) => o.number)
+        .sort();
+    expect(await list([{ field: 'channelId', op: 'eq', value: w.amazon }])).toEqual(
+      [B, C].map((o) => o.number).sort(),
+    );
+    expect(await list([{ field: 'channelId', op: 'empty' }])).toEqual([D.number]);
+    const row = (await client.get('/orders')).body.items.find((o: { id: string }) => o.id === A.id);
+    expect(row.channelName).toBe('Shopify');
+  });
+
   it('prüft Regeln beim Laden und sperrt fremde Aufträge, wenn eingestellt', async () => {
     const w = await world();
     const { client, A } = w;

@@ -1,0 +1,6 @@
+# Dateien, die in Linux-Containern laufen, immer mit LF auschecken – auch unter Windows
+# (sonst bricht z. B. init-roles.sh mit "cannot execute: required file not found" ab).
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.conf text eol=lf
+*.inc text eol=lf

@@ -107,17 +107,17 @@ Beträge und Mengen werden als Text übertragen (`"49.90"`, auch `"49,90"` wird 
 
 Ebenfalls mit Header **`X-Company-Id`** und gebuchtem Modul (`orders`, `documents`, `purchasing`).
 
-| Endpunkt                                                                                                                             | Recht               |
-| ------------------------------------------------------------------------------------------------------------------------------------ | ------------------- |
-| `GET /orders`, `GET /orders/:id` (mit Positionen, Statusverlauf, Fehlmengen), `GET /orders/stats`                                    | `orders.read`       |
-| `POST /orders`, `PUT /orders/:id` (nur in bearbeitbaren Status, mit `version`)                                                       | `orders.manage`     |
-| `POST /orders/:id/status` `{to, note}`, `POST /orders/:id/ship`, `POST /orders/:id/cancel` `{reason}`                                | `orders.manage`     |
-| `GET /documents`, `GET /documents/:id`, `GET /documents/:id/pdf`, `GET /documents/stats`                                             | `documents.read`    |
-| `POST /documents/from-order/:orderId` `{type}` (offer, order_confirmation, delivery_note, invoice)                                   | `documents.manage`  |
-| `POST /documents/:id/finalize`, `DELETE /documents/:id` (nur Entwurf), `POST /documents/:id/send` `{to}`                             | `documents.manage`  |
-| `POST /documents/:id/payments` `{amount, paidOn}`, `POST /documents/:id/credit-note`, `POST /documents/:id/cancel`                   | `documents.manage`  |
-| `GET /purchase-orders`, `GET /purchase-orders/:id`, `GET /purchase-orders/:id/pdf`, `GET /purchase-orders/suggestions`               | `purchasing.read`   |
-| `POST /purchase-orders`, `PUT /purchase-orders/:id` (nur Entwurf), `POST …/order`, `POST …/send`, `POST …/cancel`, `POST …/receipts` | `purchasing.manage` |
+| Endpunkt                                                                                                                                                                                                | Recht               |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| `GET /orders`, `GET /orders/:id` (mit Positionen, Statusverlauf, Fehlmengen), `GET /orders/stats`, `GET /orders/tree` (Zähler je Status und offene Aufträge je Kanal); Liste filterbar nach `channelId` | `orders.read`       |
+| `POST /orders`, `PUT /orders/:id` (nur in bearbeitbaren Status, mit `version`)                                                                                                                          | `orders.manage`     |
+| `POST /orders/:id/status` `{to, note}`, `POST /orders/:id/ship`, `POST /orders/:id/cancel` `{reason}`                                                                                                   | `orders.manage`     |
+| `GET /documents`, `GET /documents/:id`, `GET /documents/:id/pdf`, `GET /documents/stats`                                                                                                                | `documents.read`    |
+| `POST /documents/from-order/:orderId` `{type}` (offer, order_confirmation, delivery_note, invoice)                                                                                                      | `documents.manage`  |
+| `POST /documents/:id/finalize`, `DELETE /documents/:id` (nur Entwurf), `POST /documents/:id/send` `{to}`                                                                                                | `documents.manage`  |
+| `POST /documents/:id/payments` `{amount, paidOn}`, `POST /documents/:id/credit-note`, `POST /documents/:id/cancel`                                                                                      | `documents.manage`  |
+| `GET /purchase-orders`, `GET /purchase-orders/:id`, `GET /purchase-orders/:id/pdf`, `GET /purchase-orders/suggestions`                                                                                  | `purchasing.read`   |
+| `POST /purchase-orders`, `PUT /purchase-orders/:id` (nur Entwurf), `POST …/order`, `POST …/send`, `POST …/cancel`, `POST …/receipts`                                                                    | `purchasing.manage` |
 
 **Preise:** Bleibt `unitPriceNet` einer Artikelposition leer, ermittelt der Server den Preis (Kundengruppenpreis → Staffelpreis → Verkaufspreis; ohne eigenen Preis erbt eine Variante vom Vaterartikel) und setzt den Rabatt der Kundengruppe. Alle Summen rechnet der Server.
 
