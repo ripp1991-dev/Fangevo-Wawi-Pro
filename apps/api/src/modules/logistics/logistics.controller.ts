@@ -12,28 +12,41 @@ import {
   Res,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { type FastifyReply } from 'fastify';
+import { type FastifyReply, type FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import {
   barcodeInputSchema,
   listQuerySchema,
   packCompleteSchema,
+  packingDeviceInputSchema,
+  packingProblemSchema,
   packingQueueQuerySchema,
+  pinLoginSchema,
+  setMemberPinSchema,
+  setOwnPinSchema,
   packingStationInputSchema,
   pickConfirmSchema,
   pickListCreateSchema,
   returnCreateSchema,
   returnReceiveSchema,
 } from '@fangevo/shared';
+import { APP_CONFIG, type AppConfig } from '../../config';
+import { SESSION_COOKIE } from '../../core/auth/session.service';
 import {
+  AllowPackingScope,
+  Public,
+  RateLimit,
+  Req,
   RequirePermission,
   RequiresCompany,
   RequiresModule,
   Tenant,
   type TenantContext,
+  clientIp,
 } from '../../core/http/context';
 import { AppError } from '../../core/http/errors';
 import { ApiZodBody, uuidParam, zodPipe } from '../../core/http/zod';
+import { DEVICE_COOKIE, DEVICE_COOKIE_MAX_AGE_SEC, PackingPinService } from './packing-pin.service';
 import { PackingService } from './packing.service';
 import { PickingService } from './picking.service';
 import { ReturnsService } from './returns.service';
@@ -155,6 +168,7 @@ export class PackingController {
   constructor(@Inject(PackingService) private readonly packing: PackingService) {}
 
   @Get('stations')
+  @AllowPackingScope()
   @RequirePermission('packing.execute')
   stations(@Tenant() t: TenantContext) {
     return this.packing.stations(t);
@@ -188,6 +202,7 @@ export class PackingController {
   }
 
   @Get('queue')
+  @AllowPackingScope()
   @RequirePermission('packing.execute')
   queue(
     @Tenant() t: TenantContext,
@@ -197,6 +212,7 @@ export class PackingController {
   }
 
   @Get('orders')
+  @AllowPackingScope()
   @RequirePermission('packing.execute')
   prepare(
     @Tenant() t: TenantContext,
@@ -206,6 +222,7 @@ export class PackingController {
   }
 
   @Post('orders/:id/complete')
+  @AllowPackingScope()
   @RequirePermission('packing.execute')
   @ApiZodBody(packCompleteSchema)
   complete(
@@ -216,7 +233,21 @@ export class PackingController {
     return this.packing.complete(t, id, b);
   }
 
+  /** Problem am Packtisch melden: Auftrag zurückstellen („In Bearbeitung“) mit Grund im Verlauf. */
+  @Post('orders/:id/problem')
+  @AllowPackingScope()
+  @RequirePermission('packing.execute')
+  @ApiZodBody(packingProblemSchema)
+  problem(
+    @Tenant() t: TenantContext,
+    @Param('id', uuidParam) id: string,
+    @Body(zodPipe(packingProblemSchema)) b: z.infer<typeof packingProblemSchema>,
+  ) {
+    return this.packing.reportProblem(t, id, b);
+  }
+
   @Get('shipments')
+  @AllowPackingScope()
   @RequirePermission('packing.execute')
   shipments(@Tenant() t: TenantContext, @Query(zodPipe(listQuerySchema)) q: ListQuery) {
     return this.packing.listShipments(t, q);
@@ -234,6 +265,7 @@ export class PackingController {
   }
 
   @Get('shipments/:id/label')
+  @AllowPackingScope()
   @RequirePermission('packing.execute')
   async label(
     @Tenant() t: TenantContext,
@@ -246,6 +278,138 @@ export class PackingController {
       .header('Content-Disposition', `inline; filename="${filename.replace(/[^\w.-]/g, '_')}"`)
       .header('Cache-Control', 'private, no-store');
     return content;
+  }
+}
+
+/**
+ * Touch-Packtisch: Lagerrechner freigeben und Packer per PIN anmelden.
+ * Die PIN-Sitzung erreicht nur Endpunkte mit @AllowPackingScope (AccessGuard).
+ */
+@ApiTags('Pack: Geräte und PIN')
+@Controller('packing')
+export class PackingAccessController {
+  constructor(
+    @Inject(PackingPinService) private readonly pins: PackingPinService,
+    @Inject(APP_CONFIG) private readonly config: AppConfig,
+  ) {}
+
+  @Post('devices')
+  @RequiresModule('packing')
+  @RequiresCompany()
+  @RequirePermission('shipping.manage')
+  @ApiZodBody(packingDeviceInputSchema)
+  async registerDevice(
+    @Tenant() t: TenantContext,
+    @Body(zodPipe(packingDeviceInputSchema)) b: z.infer<typeof packingDeviceInputSchema>,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
+    const r = await this.pins.registerDevice(t, b);
+    void reply.setCookie(DEVICE_COOKIE, r.cookie, {
+      httpOnly: true,
+      secure: this.config.isProd,
+      sameSite: 'strict',
+      path: '/',
+      maxAge: DEVICE_COOKIE_MAX_AGE_SEC,
+    });
+    return r.device;
+  }
+
+  @Get('devices')
+  @RequiresModule('packing')
+  @RequiresCompany()
+  @RequirePermission('shipping.manage')
+  devices(@Tenant() t: TenantContext) {
+    return this.pins.listDevices(t);
+  }
+
+  @Get('devices/current')
+  @AllowPackingScope()
+  @RequiresModule('packing')
+  @RequiresCompany()
+  @RequirePermission('packing.execute')
+  current(@Tenant() t: TenantContext) {
+    return this.pins.currentDevice(t);
+  }
+
+  @Post('devices/:id/revoke')
+  @HttpCode(204)
+  @RequiresModule('packing')
+  @RequiresCompany()
+  @RequirePermission('shipping.manage')
+  async revokeDevice(@Tenant() t: TenantContext, @Param('id', uuidParam) id: string) {
+    await this.pins.revokeDevice(t, id);
+  }
+
+  /** Startbildschirm am freigegebenen Gerät (ohne Anmeldung, nur mit Geräte-Cookie). */
+  @Get('pin/device')
+  @Public()
+  @RateLimit({ key: 'pin-device', limit: 120, windowSec: 900 })
+  device(@Req() req: FastifyRequest) {
+    return this.pins.deviceInfo(req.cookies?.[DEVICE_COOKIE]);
+  }
+
+  @Post('pin/login')
+  @Public()
+  @HttpCode(200)
+  @RateLimit(
+    { key: 'pin-login-ip', limit: 60, windowSec: 900 },
+    { key: 'pin-login', limit: 20, windowSec: 900, byBodyField: 'userId' },
+  )
+  @ApiZodBody(pinLoginSchema)
+  async login(
+    @Req() req: FastifyRequest,
+    @Body(zodPipe(pinLoginSchema)) b: z.infer<typeof pinLoginSchema>,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
+    const r = await this.pins.login(req.cookies?.[DEVICE_COOKIE], b, {
+      ip: clientIp(req),
+      userAgent: (req.headers['user-agent'] as string | undefined) ?? null,
+    });
+    void reply.setCookie(SESSION_COOKIE, r.token, {
+      httpOnly: true,
+      secure: this.config.isProd,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: r.maxAgeSec,
+    });
+    return { status: 'ok', companyId: r.companyId };
+  }
+
+  @Get('pins/me')
+  @RequirePermission('packing.execute')
+  async myPin(@Tenant() t: TenantContext) {
+    return { hasPin: await this.pins.hasPin(t, t.user.id) };
+  }
+
+  @Put('pins/me')
+  @HttpCode(204)
+  @RequirePermission('packing.execute')
+  @RateLimit({ key: 'pin-set', limit: 10, windowSec: 900 })
+  @ApiZodBody(setOwnPinSchema)
+  async setMyPin(
+    @Tenant() t: TenantContext,
+    @Body(zodPipe(setOwnPinSchema)) b: z.infer<typeof setOwnPinSchema>,
+  ) {
+    await this.pins.setOwnPin(t, b.pin, b.password);
+  }
+
+  @Put('pins/:membershipId')
+  @HttpCode(204)
+  @RequirePermission('users.manage')
+  @ApiZodBody(setMemberPinSchema)
+  async setMemberPin(
+    @Tenant() t: TenantContext,
+    @Param('membershipId', uuidParam) id: string,
+    @Body(zodPipe(setMemberPinSchema)) b: z.infer<typeof setMemberPinSchema>,
+  ) {
+    await this.pins.setMemberPin(t, id, b.pin);
+  }
+
+  @Delete('pins/:membershipId')
+  @HttpCode(204)
+  @RequirePermission('users.manage')
+  async removeMemberPin(@Tenant() t: TenantContext, @Param('membershipId', uuidParam) id: string) {
+    await this.pins.removeMemberPin(t, id);
   }
 }
 

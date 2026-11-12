@@ -5,7 +5,9 @@ import {
   NO_CHANNEL,
   ORDER_SHIPPABLE,
   ORDER_STATUSES,
+  PACKING_PROBLEMS,
   type ListQuery,
+  type PackingProblem,
   type OrderStatus,
   type PackComplete,
   type PackingQueueStage,
@@ -514,6 +516,56 @@ export class PackingService {
         }
       }
       return { shipment: this.public(shipment), documents, warnings };
+    });
+  }
+
+  /**
+   * Problem am Packtisch: Der Auftrag wird zurückgestellt („In Bearbeitung“), damit er aus der
+   * Packliste verschwindet und im Büro geklärt wird. Der Grund steht im Statusverlauf.
+   * Nur erlaubte Statuswechsel (Verpackung/Versandbereit → Kommissionierung → In Bearbeitung).
+   */
+  reportProblem(
+    t: TenantContext,
+    orderId: string,
+    input: { reason: PackingProblem; note: string | null; stationId?: string | null },
+  ) {
+    return this.cdb.run(t, async (tx, c) => {
+      const order = await tx.salesOrder.findUnique({ where: { id: orderId } });
+      if (!order) throw Errors.notFound();
+      const status = order.status as OrderStatus;
+      if (!(ORDER_SHIPPABLE as string[]).includes(status))
+        throw new AppError(
+          409,
+          'CONFLICT',
+          `Im Status „${ORDER_STATUSES[status]}“ kann kein Problem gemeldet werden`,
+        );
+      const station = input.stationId
+        ? await tx.packingStation.findUnique({ where: { id: input.stationId } })
+        : null;
+      const text = [
+        `Problem am Packtisch${station ? ` (${station.name})` : ''}: ${PACKING_PROBLEMS[input.reason]}`,
+        input.note,
+      ]
+        .filter(Boolean)
+        .join(' – ');
+      const path: OrderStatus[] =
+        status === 'packing' || status === 'ready_to_ship'
+          ? ['picking', 'in_progress']
+          : status === 'in_progress'
+            ? []
+            : ['in_progress'];
+      for (const to of path) await this.orders.transitionInTx(tx, c, orderId, to, text);
+      await this.audit.record(tx, {
+        accountId: c.account.id,
+        userId: c.user.id,
+        companyId: c.companyId,
+        action: 'order.packing_problem',
+        entityType: 'order',
+        entityId: orderId,
+        data: { number: order.number, reason: input.reason, note: input.note },
+        ip: c.ip,
+      });
+      return { status: 'in_progress' as const, message: text };
     });
   }
 

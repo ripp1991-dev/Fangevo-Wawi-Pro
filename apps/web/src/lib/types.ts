@@ -10,6 +10,8 @@ export interface SessionUser {
 export interface SessionData {
   user: SessionUser;
   mfaPending: boolean;
+  /** PIN-Sitzung am Packtisch: nur diese Firma, nur der Packtisch */
+  scope?: { kind: 'packing'; companyId: string } | null;
   platformAdmin?: boolean;
   accounts?: { id: string; name: string; isOwner: boolean }[];
   account?: {

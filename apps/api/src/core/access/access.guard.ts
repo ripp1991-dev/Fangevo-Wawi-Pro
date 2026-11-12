@@ -77,9 +77,26 @@ export class AccessGuard implements CanActivate {
       mfaPending: session.mfaPending,
       account: null,
       companyId: null,
+      scope:
+        session.scope === 'packing' && session.scopeCompanyId && session.deviceId
+          ? { kind: 'packing', companyId: session.scopeCompanyId, deviceId: session.deviceId }
+          : null,
     };
     req.fangevo = auth;
     if (isPublic) return true;
+
+    // PIN-Sitzung am Packtisch: nur freigegebene Endpunkte und nur die Firma des Geräts
+    if (session.scope) {
+      if (!auth.scope || !this.meta<boolean>(META.packingScope, ctx))
+        throw Errors.forbidden(
+          'PERMISSION_DENIED',
+          'Mit der PIN-Anmeldung ist nur der Packtisch erreichbar',
+        );
+      const h = req.headers['x-company-id'];
+      if (typeof h === 'string' && h && h !== auth.scope.companyId)
+        throw new AppError(403, 'COMPANY_ACCESS_DENIED', 'Kein Zugriff auf diese Firma');
+      req.headers['x-company-id'] = auth.scope.companyId;
+    }
 
     if (session.mfaPending) {
       if (this.meta<boolean>(META.allowMfaPending, ctx)) return true;

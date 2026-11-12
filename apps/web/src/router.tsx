@@ -86,18 +86,20 @@ const app = createRoute({
     const s = await context.queryClient.fetchQuery(sessionQuery);
     if (!s) throw redirect({ to: '/login' });
     if (s.mfaPending) throw redirect({ to: '/mfa' });
+    // PIN-Sitzungen gelten nur für den Packtisch
+    if (s.scope) throw redirect({ to: '/packtisch' });
   },
 });
 
-// Touch-Packtisch: Vollbild ohne Menü, aber nur angemeldet (Rechte prüfen Seite und API)
+// Touch-Packtisch: Vollbild ohne Menü. Ohne Anmeldung zeigt die Seite die PIN-Anmeldung
+// (nur an freigegebenen Geräten, sonst Hinweis mit Link zur Anmeldung). Rechte prüft die API.
 const packtischRoute = createRoute({
   getParentRoute: () => root,
   path: '/packtisch',
   component: PacktischPage,
   beforeLoad: async ({ context }) => {
     const s = await context.queryClient.fetchQuery(sessionQuery);
-    if (!s) throw redirect({ to: '/login' });
-    if (s.mfaPending) throw redirect({ to: '/mfa' });
+    if (s?.mfaPending) throw redirect({ to: '/mfa' });
   },
 });
 

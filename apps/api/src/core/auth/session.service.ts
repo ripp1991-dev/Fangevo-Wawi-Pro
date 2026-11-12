@@ -29,8 +29,13 @@ export class SessionService {
     mfaPending: boolean;
     ip: string | null;
     userAgent: string | null;
+    /** Eingeschränkte Sitzung (PIN am Packtisch): nur diese Firma, nur Packtisch-Endpunkte */
+    scope?: { kind: 'packing'; companyId: string; deviceId: string };
+    /** Abweichende Höchstdauer in Sekunden (nur kürzer als die Standarddauer) */
+    maxAgeSec?: number;
   }): Promise<{ token: string; session: Session }> {
     const token = randomToken();
+    const maxAge = Math.min(input.maxAgeSec ?? this.maxAgeSec, this.maxAgeSec);
     const session = await this.db.global.session.create({
       data: {
         id: uuidv7(),
@@ -40,7 +45,10 @@ export class SessionService {
         mfaPending: input.mfaPending,
         ip: input.ip,
         userAgent: input.userAgent?.slice(0, 300) ?? null,
-        expiresAt: new Date(Date.now() + this.maxAgeSec * 1000),
+        scope: input.scope?.kind ?? null,
+        scopeCompanyId: input.scope?.companyId ?? null,
+        deviceId: input.scope?.deviceId ?? null,
+        expiresAt: new Date(Date.now() + maxAge * 1000),
       },
     });
     return { token, session };
@@ -95,6 +103,14 @@ export class SessionService {
   async revokeForAccount(userId: string, accountId: string): Promise<void> {
     await this.db.global.session.updateMany({
       where: { userId, accountId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
+
+  /** Gerät widerrufen: alle PIN-Sitzungen dieses Geräts beenden. */
+  async revokeForDevice(deviceId: string): Promise<void> {
+    await this.db.global.session.updateMany({
+      where: { deviceId, revokedAt: null },
       data: { revokedAt: new Date() },
     });
   }

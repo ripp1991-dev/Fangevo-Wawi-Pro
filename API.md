@@ -134,6 +134,21 @@ Ebenfalls mit Header **`X-Company-Id`** und gebuchtem Modul (`orders`, `document
 | `GET /pick-lists`, `GET /pick-lists/:id`, `POST /pick-lists` `{orderIds}`, `POST …/confirm`, `…/complete`, `…/cancel`                                                | `picking.execute` / Lager           |
 | `GET /packing/stations`, `GET /packing/queue?stationId=&channelId=&stage=&allChannels=`, `GET /packing/orders?code=&stationId=`, `POST /packing/orders/:id/complete` | `packing.execute` / Pack            |
 
+**Touch-Packtisch, Geräte und PIN (ADR-014):**
+
+| Endpunkt                                                           | Recht / Hinweis                                                                                          |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| `POST /packing/devices` (`stationId`, `name`)                      | `shipping.manage`; setzt das Geräte-Cookie `fe_packing_device`                                           |
+| `GET /packing/devices`, `POST /packing/devices/:id/revoke`         | `shipping.manage`; Widerruf beendet die PIN-Sitzungen des Geräts                                         |
+| `GET /packing/devices/current`                                     | PIN-Sitzung: Gerät und Packplatz                                                                         |
+| `GET /packing/pin/device`                                          | öffentlich, nur mit Geräte-Cookie: Packplatz und Personen mit PIN                                        |
+| `POST /packing/pin/login` (`userId`, `pin`)                        | öffentlich, nur mit Geräte-Cookie; `401` falsche PIN, `429` gesperrt, `403` ohne Recht `packing.execute` |
+| `GET/PUT /packing/pins/me` (`pin`, `password`)                     | eigene PIN (`packing.execute`)                                                                           |
+| `PUT/DELETE /packing/pins/:membershipId`                           | `users.manage`                                                                                           |
+| `POST /packing/orders/:id/problem` (`reason`, `note`, `stationId`) | `packing.execute`; Auftrag → „In Bearbeitung“, Grund im Verlauf                                          |
+
+Mit einer PIN-Sitzung sind nur Endpunkte mit `@AllowPackingScope()` erreichbar (sonst `403`), immer in der Firma des Geräts. `GET /auth/session` liefert dann `scope: { kind: 'packing', companyId }`.
+
 Packplätze haben ein optionales Lager (`warehouseId`, leer = alle Lager). Mit Lager liefert die Warteschlange nur Aufträge aus diesem Lager; `GET /packing/orders` meldet Aufträge aus einem anderen Lager mit `rule: { ok: false, mismatch: 'block' }`, `POST …/complete` antwortet dann mit `409`. Unbekannte, fremde oder archivierte Lager: `422`.
 | `POST/PUT /packing/stations…`, `POST …/archive` | `shipping.manage` / Pack |
 | `GET /packing/shipments`, `PUT /packing/shipments/:id/tracking`, `GET /packing/shipments/:id/label` | `packing.execute` / Pack |

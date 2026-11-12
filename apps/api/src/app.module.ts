@@ -71,12 +71,14 @@ import { PurchasingController } from './modules/purchasing/purchasing.controller
 import { PurchasingService } from './modules/purchasing/purchasing.service';
 import {
   BarcodesController,
+  PackingAccessController,
   PackingController,
   PickListsController,
   ReturnsController,
   ScanController,
 } from './modules/logistics/logistics.controller';
 import { PackingService } from './modules/logistics/packing.service';
+import { PackingPinService } from './modules/logistics/packing-pin.service';
 import { PickingService } from './modules/logistics/picking.service';
 import { ReturnsService } from './modules/logistics/returns.service';
 import { ScanService } from './modules/logistics/scan.service';
@@ -157,6 +159,7 @@ export class AppModule {
         BarcodesController,
         PickListsController,
         PackingController,
+        PackingAccessController,
         ReturnsController,
         // Phase 5: Import, API, Multichannel
         ImportController,
@@ -211,6 +214,7 @@ export class AppModule {
         ScanService,
         PickingService,
         PackingService,
+        PackingPinService,
         ReturnsService,
         MasterDataService,
         ImportService,

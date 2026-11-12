@@ -5,18 +5,24 @@ import {
   CheckCircle2,
   Delete,
   FileText,
+  KeyRound,
+  LogIn,
+  LogOut,
   Maximize,
   Minus,
   PackageCheck,
   Plus,
   ScanLine,
   Settings2,
+  ShieldCheck,
   Trash2,
+  TriangleAlert,
+  UserRound,
   Warehouse as WarehouseIcon,
   XCircle,
 } from 'lucide-react';
 import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
-import { CARRIERS, type Carrier } from '@fangevo/shared';
+import { CARRIERS, PACKING_PROBLEMS, type Carrier, type PackingProblem } from '@fangevo/shared';
 import { Button, Select, Spinner, cn } from '@fangevo/ui';
 import { Logo } from '../../components/logo';
 import { ApiError, errorMessage, http } from '../../lib/api';
@@ -41,7 +47,13 @@ import {
   orderStatusLabel,
   type AddressSnapshot,
 } from '../../lib/sales';
-import { resolveActiveCompany, storeActiveCompany, useCan, useSession } from '../../lib/session';
+import {
+  resolveActiveCompany,
+  sessionQuery,
+  storeActiveCompany,
+  useCan,
+  useSession,
+} from '../../lib/session';
 
 /*
  * Touch-Packtisch: Vollbild-Arbeitsplatz für Packer an einem Lagerrechner mit Touchscreen
@@ -215,10 +227,45 @@ const big = 'h-14 px-6 text-lg [&_svg]:size-6';
 
 // ───── Seite ─────
 
+/**
+ * Einstieg: ohne Anmeldung PIN-Bildschirm (nur an freigegebenen Geräten), mit PIN-Sitzung fester
+ * Packplatz des Geräts, mit voller Anmeldung freie Wahl von Firma, Lager und Packplatz.
+ */
 export function PacktischPage() {
+  const session = useQuery(sessionQuery);
+  if (session.isPending)
+    return (
+      <Shell>
+        <Center>
+          <Spinner />
+        </Center>
+      </Shell>
+    );
+  if (!session.data) return <PinLoginScreen />;
+  if (session.data.scope) return <ScopedPacktisch />;
+  return <FullPacktisch />;
+}
+
+/** Abmelden und zurück zum PIN-Bildschirm (bzw. zur Anmeldung). */
+function useLogout() {
+  const qc = useQueryClient();
+  return useCallback(async () => {
+    try {
+      await http.post('/auth/logout');
+    } finally {
+      // Erst die Sitzung auf „abgemeldet“ setzen (die Seite wechselt zur PIN-Anmeldung),
+      // dann alle übrigen Daten der Person verwerfen.
+      qc.setQueryData(sessionQuery.queryKey, null);
+      qc.removeQueries({ predicate: (q) => q.queryKey[0] !== sessionQuery.queryKey[0] });
+    }
+  }, [qc]);
+}
+
+function FullPacktisch() {
   const s = useSession();
   const can = useCan();
   const qc = useQueryClient();
+  const logout = useLogout();
   const [companyId, setCompanyId] = useState(() => resolveActiveCompany(s));
   const accountId = s.account?.id ?? '';
   const [setup, setSetup] = useState<DeviceSetup | null>(() => readSetup(accountId, companyId));
@@ -266,13 +313,325 @@ export function PacktischPage() {
   return (
     <Workbench
       key={`${companyId}:${setup.stationId}`}
-      setup={setup}
-      onChange={() => setChanging(true)}
+      stationId={setup.stationId}
+      actions={(busy, station) => (
+        <>
+          {can('shipping.manage') && <DeviceRelease station={station} />}
+          <Button
+            variant="secondary"
+            className="h-12 [&_svg]:size-5"
+            onClick={() => setChanging(true)}
+            disabled={busy}
+          >
+            <Settings2 /> Platz wechseln
+          </Button>
+          <Button
+            variant="ghost"
+            className="h-12 [&_svg]:size-5"
+            onClick={() => void logout()}
+            disabled={busy}
+          >
+            <LogOut /> Abmelden
+          </Button>
+        </>
+      )}
       onInvalid={() => {
         writeSetup(accountId, companyId, null);
         setSetup(null);
       }}
     />
+  );
+}
+
+/** Nach so vielen Minuten ohne Eingabe wird eine PIN-Sitzung am Gerät abgemeldet. */
+const IDLE_LOGOUT_MIN = 15;
+
+/** Mit PIN angemeldet: Packplatz kommt vom Gerät, Abmelden statt Platz wechseln. */
+function ScopedPacktisch() {
+  const s = useSession();
+  const logout = useLogout();
+  useState(() => resolveActiveCompany(s));
+  const current = useQuery({
+    queryKey: ['packtisch', 'device'],
+    queryFn: () =>
+      http.get<{ station: { id: string; name: string } | null; device: { name: string } }>(
+        '/packing/devices/current',
+      ),
+    retry: false,
+  });
+
+  // Automatisch abmelden, wenn niemand mehr am Gerät arbeitet
+  useEffect(() => {
+    let timer = window.setTimeout(() => void logout(), IDLE_LOGOUT_MIN * 60_000);
+    const reset = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => void logout(), IDLE_LOGOUT_MIN * 60_000);
+    };
+    const events = ['pointerdown', 'keydown'] as const;
+    for (const e of events) window.addEventListener(e, reset);
+    return () => {
+      window.clearTimeout(timer);
+      for (const e of events) window.removeEventListener(e, reset);
+    };
+  }, [logout]);
+
+  if (current.isPending)
+    return (
+      <Shell>
+        <Center>
+          <Spinner />
+        </Center>
+      </Shell>
+    );
+  if (current.isError || !current.data.station)
+    return (
+      <Shell>
+        <Center>
+          <p className="text-2xl font-semibold">Packplatz nicht verfügbar</p>
+          <p className="mt-2 text-lg text-muted">
+            {current.isError
+              ? errorMessage(current.error)
+              : 'Der Packplatz dieses Geräts wurde entfernt. Bitte beim Lagerleiter melden.'}
+          </p>
+          <Button className={cn(big, 'mt-6')} onClick={() => void logout()}>
+            <LogOut /> Abmelden
+          </Button>
+        </Center>
+      </Shell>
+    );
+  return (
+    <Workbench
+      stationId={current.data.station.id}
+      actions={(busy) => (
+        <Button
+          variant="secondary"
+          className="h-12 [&_svg]:size-5"
+          onClick={() => void logout()}
+          disabled={busy}
+        >
+          <LogOut /> Abmelden
+        </Button>
+      )}
+      onInvalid={() => void logout()}
+    />
+  );
+}
+
+// ───── Gerät für die PIN-Anmeldung freigeben (Lagerleiter) ─────
+
+function DeviceRelease({ station }: { station: Station }) {
+  const qc = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const device = useQuery({
+    queryKey: ['packtisch', 'pin-device'],
+    queryFn: () => http.get<PinDeviceInfo>('/packing/pin/device'),
+    retry: false,
+  });
+  if (device.isPending) return null;
+  if (device.data?.station.id === station.id)
+    return (
+      <span className="flex items-center gap-1 text-base text-success">
+        <ShieldCheck className="size-5" aria-hidden /> PIN-Anmeldung aktiv
+      </span>
+    );
+  return (
+    <>
+      {error && <span className="max-w-64 truncate text-sm text-danger">{error}</span>}
+      <Button
+        variant="secondary"
+        className="h-12 [&_svg]:size-5"
+        loading={busy}
+        title="Danach können sich Packer an diesem Rechner mit Namen und PIN anmelden"
+        onClick={async () => {
+          setBusy(true);
+          setError(null);
+          try {
+            await http.post('/packing/devices', {
+              stationId: station.id,
+              name: `${station.name} · ${new Date().toLocaleDateString('de-DE')}`,
+            });
+            await qc.invalidateQueries({ queryKey: ['packtisch', 'pin-device'] });
+          } catch (e) {
+            setError(errorMessage(e));
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <ShieldCheck /> Gerät für PIN freigeben
+      </Button>
+    </>
+  );
+}
+
+// ───── PIN-Anmeldung am freigegebenen Gerät ─────
+
+interface PinDeviceInfo {
+  device: { id: string; name: string };
+  station: { id: string; name: string };
+  companyName: string;
+  packers: { userId: string; name: string }[];
+}
+
+function PinLoginScreen() {
+  const qc = useQueryClient();
+  const info = useQuery({
+    queryKey: ['packtisch', 'pin-device'],
+    queryFn: () => http.get<PinDeviceInfo>('/packing/pin/device'),
+    retry: false,
+    refetchInterval: 60_000,
+  });
+  const [who, setWho] = useState<{ userId: string; name: string } | null>(null);
+  const [pin, setPin] = useState('');
+  const [msg, setMsg] = useState<Msg | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (value: string) => {
+    if (!who || value.length < 4) return;
+    setBusy(true);
+    try {
+      await http.post('/packing/pin/login', { userId: who.userId, pin: value });
+      await qc.invalidateQueries({ queryKey: sessionQuery.queryKey });
+    } catch (e) {
+      setPin('');
+      setMsg((m) => ({ tone: 'danger', text: errorMessage(e), n: (m?.n ?? 0) + 1 }));
+      beep(false);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // PIN auch über die Tastatur (Ziffern, Rücktaste, Enter)
+  useEffect(() => {
+    if (!who) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (/^\d$/.test(e.key)) setPin((p) => (p.length < 6 ? p + e.key : p));
+      else if (e.key === 'Backspace') setPin((p) => p.slice(0, -1));
+      else if (e.key === 'Enter') void submit(pin);
+      else if (e.key === 'Escape') setWho(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+
+  if (info.isPending)
+    return (
+      <Shell>
+        <Center>
+          <Spinner />
+        </Center>
+      </Shell>
+    );
+  if (info.isError)
+    return (
+      <Shell>
+        <Center>
+          <KeyRound className="mx-auto size-16 text-muted" aria-hidden />
+          <p className="mt-3 text-2xl font-semibold">Dieses Gerät ist nicht freigegeben</p>
+          <p className="mt-2 text-lg text-muted">
+            Der Lagerleiter meldet sich einmal mit E-Mail und Passwort an, öffnet den Packtisch und
+            tippt auf „Gerät für PIN freigeben“. Danach können sich Packer hier mit Namen und PIN
+            anmelden.
+          </p>
+          <a href="/login" className="mt-6 inline-block">
+            <Button className={big}>Mit E-Mail anmelden</Button>
+          </a>
+        </Center>
+      </Shell>
+    );
+  const d = info.data;
+  return (
+    <Shell
+      header={
+        <span className="text-lg text-muted">
+          {d.station.name} · {d.companyName}
+        </span>
+      }
+    >
+      <div className="mx-auto flex h-full max-w-5xl flex-col gap-4 p-6">
+        {!who ? (
+          <>
+            <h1 className="text-3xl font-semibold">Wer packt?</h1>
+            {d.packers.length ? (
+              <div className="grid min-h-0 grid-cols-3 gap-3 overflow-y-auto">
+                {d.packers.map((p) => (
+                  <Tile
+                    key={p.userId}
+                    onClick={() => {
+                      setWho(p);
+                      setPin('');
+                      setMsg(null);
+                    }}
+                  >
+                    <span className="flex items-center gap-3 text-xl font-semibold">
+                      <UserRound className="size-7 text-muted" aria-hidden />
+                      {p.name}
+                    </span>
+                  </Tile>
+                ))}
+              </div>
+            ) : (
+              <p className="text-lg text-muted">
+                Noch niemand hat eine PIN. Die PIN legt man unter Einstellungen › Sicherheit fest,
+                oder der Administrator vergibt sie unter Benutzer.
+              </p>
+            )}
+            <a href="/login" className="mt-auto self-start text-base text-muted underline">
+              Mit E-Mail anmelden (Lagerleiter)
+            </a>
+          </>
+        ) : (
+          <div className="mx-auto flex w-full max-w-md flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="secondary"
+                className="h-12 w-12 p-0 [&_svg]:size-6"
+                aria-label="Zurück zur Auswahl"
+                onClick={() => setWho(null)}
+              >
+                <ArrowLeft />
+              </Button>
+              <h1 className="text-2xl font-semibold">PIN für {who.name}</h1>
+            </div>
+            <Banner msg={msg} />
+            <div
+              className="flex h-16 items-center justify-center gap-4 rounded-xl border-2 border-border bg-surface"
+              aria-label={`${pin.length} Ziffern eingegeben`}
+            >
+              {Array.from({ length: Math.max(4, pin.length) }, (_, i) => (
+                <span
+                  key={i}
+                  className={cn(
+                    'size-5 rounded-full border-2 border-fg',
+                    i < pin.length ? 'bg-fg' : 'bg-transparent',
+                  )}
+                />
+              ))}
+            </div>
+            <div className="grid grid-cols-3 gap-3" role="group" aria-label="PIN eingeben">
+              {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'back', '0', 'ok'].map((k) => (
+                <Button
+                  key={k}
+                  variant={k === 'ok' ? 'primary' : 'secondary'}
+                  className="h-16 text-2xl [&_svg]:size-7"
+                  aria-label={k === 'back' ? 'Löschen' : k === 'ok' ? 'Anmelden' : k}
+                  disabled={busy || (k === 'ok' && pin.length < 4)}
+                  loading={busy && k === 'ok'}
+                  onClick={() => {
+                    if (k === 'back') setPin((p) => p.slice(0, -1));
+                    else if (k === 'ok') void submit(pin);
+                    else setPin((p) => (p.length < 6 ? p + k : p));
+                  }}
+                >
+                  {k === 'back' ? <Delete /> : k === 'ok' ? <LogIn /> : k}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </Shell>
   );
 }
 
@@ -439,12 +798,13 @@ function Step({ icon, title, children }: { icon: ReactNode; title: string; child
 // ───── Arbeitsplatz ─────
 
 function Workbench({
-  setup,
-  onChange,
+  stationId,
+  actions,
   onInvalid,
 }: {
-  setup: DeviceSetup;
-  onChange: () => void;
+  stationId: string;
+  /** Schaltflächen oben rechts; busy = gerade wird ein Auftrag gepackt */
+  actions: (busy: boolean, station: Station) => ReactNode;
   onInvalid: () => void;
 }) {
   const qc = useQueryClient();
@@ -453,7 +813,7 @@ function Workbench({
     queryKey: ['packing-stations'],
     queryFn: () => http.get<Station[]>('/packing/stations'),
   });
-  const station = stations.data?.find((x) => x.id === setup.stationId && !x.archivedAt) ?? null;
+  const station = stations.data?.find((x) => x.id === stationId && !x.archivedAt) ?? null;
 
   const [prep, setPrep] = useState<Prepared | null>(null);
   const [packed, setPacked] = useState<Packed[]>([]);
@@ -465,6 +825,7 @@ function Workbench({
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<Done | null>(null);
   const [code, setCode] = useState('');
+  const [problemOpen, setProblemOpen] = useState(false);
   const scanRef = useRef<HTMLInputElement>(null);
   const readOnly = s.account?.accessMode !== 'full';
 
@@ -614,14 +975,7 @@ function Workbench({
           <span className="text-lg text-muted">
             {station.name} · {s.user.name}
           </span>
-          <Button
-            variant="secondary"
-            className="h-12 [&_svg]:size-5"
-            onClick={onChange}
-            disabled={!!prep}
-          >
-            <Settings2 /> Platz wechseln
-          </Button>
+          {actions(!!prep, station)}
         </>
       }
     >
@@ -650,6 +1004,22 @@ function Workbench({
           </Button>
         </form>
         <Banner msg={msg} />
+        {problemOpen && prep && station && (
+          <ProblemDialog
+            orderId={prep.order.id}
+            orderNumber={prep.order.number}
+            stationId={station.id}
+            onClose={() => setProblemOpen(false)}
+            onDone={async (text) => {
+              setProblemOpen(false);
+              reset();
+              say('warning', `Auftrag ${prep.order.number} zurückgestellt – ${text}`, false);
+              beep(false);
+              await qc.invalidateQueries({ queryKey: ['packing-queue'] });
+              await qc.invalidateQueries({ queryKey: ['orders'] });
+            }}
+          />
+        )}
 
         <div className="min-h-0 flex-1">
           {readOnly && (
@@ -681,6 +1051,7 @@ function Workbench({
                 reset();
                 setMsgState(null);
               }}
+              onProblem={() => setProblemOpen(true)}
               onFinish={finish}
             />
           ) : done ? (
@@ -788,6 +1159,7 @@ function PackingView(props: {
   onAdd: (it: PackItem) => void;
   onRemove: (it: PackItem) => void;
   onCancel: () => void;
+  onProblem: () => void;
   onFinish: () => void;
 }) {
   const { prep, packed, parcels, activeParcel } = props;
@@ -962,12 +1334,106 @@ function PackingView(props: {
             <ArrowLeft /> Zurück
           </Button>
           <Button
+            variant="secondary"
+            className={cn(big, 'px-4 text-warning')}
+            disabled={props.readOnly}
+            onClick={props.onProblem}
+          >
+            <TriangleAlert /> Problem
+          </Button>
+          <Button
             className={cn(big, 'flex-1 bg-success text-white hover:bg-success/90')}
             disabled={!props.complete || props.readOnly}
             loading={props.busy}
             onClick={props.onFinish}
           >
             <PackageCheck /> Fertig
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ───── Problem melden ─────
+
+function ProblemDialog({
+  orderId,
+  orderNumber,
+  stationId,
+  onClose,
+  onDone,
+}: {
+  orderId: string;
+  orderNumber: string;
+  stationId: string;
+  onClose: () => void;
+  onDone: (text: string) => void | Promise<void>;
+}) {
+  const [reason, setReason] = useState<PackingProblem | null>(null);
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="pt-problem-title"
+    >
+      <div className="w-full max-w-3xl rounded-2xl bg-surface p-6 shadow-xl">
+        <h2 id="pt-problem-title" className="text-2xl font-semibold">
+          Problem mit Auftrag {orderNumber}
+        </h2>
+        <p className="mt-1 text-lg text-muted">
+          Der Auftrag wird zurückgestellt und erscheint im Büro unter „In Bearbeitung“.
+        </p>
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          {(Object.entries(PACKING_PROBLEMS) as [PackingProblem, string][]).map(([k, label]) => (
+            <Tile key={k} active={reason === k} onClick={() => setReason(k)}>
+              <span className="text-xl font-semibold">{label}</span>
+            </Tile>
+          ))}
+        </div>
+        <label htmlFor="pt-problem-note" className="mt-4 block text-base font-medium">
+          Notiz (optional)
+        </label>
+        <input
+          id="pt-problem-note"
+          value={note}
+          maxLength={500}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="z. B. Fach leer, Verpackung eingerissen"
+          className="mt-1 h-14 w-full rounded-xl border-2 border-border bg-surface px-4 text-lg focus:border-primary focus:outline-none"
+        />
+        {error && <p className="mt-3 text-lg text-danger">{error}</p>}
+        <div className="mt-5 flex justify-end gap-3">
+          <Button variant="secondary" className={big} onClick={onClose} disabled={busy}>
+            Abbrechen
+          </Button>
+          <Button
+            className={cn(big, 'bg-warning text-white hover:bg-warning/90')}
+            disabled={!reason}
+            loading={busy}
+            onClick={async () => {
+              if (!reason) return;
+              setBusy(true);
+              setError(null);
+              try {
+                await http.post(`/packing/orders/${orderId}/problem`, {
+                  reason,
+                  note: note.trim() || null,
+                  stationId,
+                });
+                await onDone(PACKING_PROBLEMS[reason]);
+              } catch (e) {
+                setError(errorMessage(e));
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            <TriangleAlert /> Zurückstellen
           </Button>
         </div>
       </div>

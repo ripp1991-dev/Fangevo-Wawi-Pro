@@ -11,6 +11,7 @@ import {
   sendDocumentSchema,
 } from '@fangevo/shared';
 import {
+  AllowPackingScope,
   RequirePermission,
   RequiresCompany,
   RequiresModule,
@@ -49,6 +50,7 @@ export class DocumentsController {
   }
 
   @Get(':id/pdf')
+  @AllowPackingScope()
   @RequirePermission('documents.read')
   async pdf(
     @Tenant() t: TenantContext,

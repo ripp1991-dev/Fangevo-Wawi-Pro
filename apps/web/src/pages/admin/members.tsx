@@ -56,6 +56,7 @@ export function MembersPage() {
   };
   const [inviteOpen, setInviteOpen] = useState(false);
   const [editing, setEditing] = useState<Member | null>(null);
+  const [pinFor, setPinFor] = useState<Member | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const roleName = (id: string) => roles.data?.find((r) => r.id === id)?.name ?? '…';
 
@@ -155,13 +156,23 @@ export function MembersPage() {
             header: 'Aktionen',
             kind: 'string' as const,
             filterable: false,
-            width: 180,
+            width: 220,
             value: () => '',
             cell: (m: Member) => (
               <div className="flex justify-end gap-1">
                 {!m.isOwner && (
                   <Button variant="ghost" size="sm" onClick={() => setEditing(m)}>
                     Rechte
+                  </Button>
+                )}
+                {m.status === 'ACTIVE' && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    title="PIN für die Anmeldung am Touch-Packtisch"
+                    onClick={() => setPinFor(m)}
+                  >
+                    PIN
                   </Button>
                 )}
                 {m.user.id !== s.user.id &&
@@ -283,6 +294,7 @@ export function MembersPage() {
           onClose={() => setInviteOpen(false)}
         />
       )}
+      {pinFor && <PinDialog member={pinFor} onClose={() => setPinFor(null)} />}
       {editing && roles.data && companies.data && (
         <EditAccessDialog
           member={editing}
@@ -292,6 +304,68 @@ export function MembersPage() {
         />
       )}
     </>
+  );
+}
+
+/** PIN für den Touch-Packtisch vergeben oder entfernen (die PIN wird nie angezeigt). */
+function PinDialog({ member, onClose }: { member: Member; onClose: () => void }) {
+  const [pin, setPin] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const run = async (fn: () => Promise<unknown>) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await fn();
+      onClose();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      title={`PIN für ${member.user.name}`}
+      description="Für die Anmeldung am Touch-Packtisch (nur an freigegebenen Lagerrechnern). Die Person braucht das Recht „Packen“."
+      footer={
+        <>
+          <Button
+            variant="ghost"
+            disabled={busy}
+            onClick={() => run(() => http.del(`/packing/pins/${member.id}`))}
+          >
+            PIN entfernen
+          </Button>
+          <Button
+            loading={busy}
+            disabled={!/^d{4,6}$/.test(pin)}
+            onClick={() => run(() => http.put(`/packing/pins/${member.id}`, { pin }))}
+          >
+            PIN speichern
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        {error && <Alert tone="danger">{error}</Alert>}
+        <Field label="Neue PIN" hint="4 bis 6 Ziffern, nicht 1111 oder 1234.">
+          {(p) => (
+            <Input
+              {...p}
+              type="password"
+              inputMode="numeric"
+              autoComplete="off"
+              maxLength={6}
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/D/g, ''))}
+            />
+          )}
+        </Field>
+      </div>
+    </Dialog>
   );
 }
 

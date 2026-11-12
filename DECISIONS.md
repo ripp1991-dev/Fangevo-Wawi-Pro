@@ -16,4 +16,6 @@
 
 | [ADR-012](docs/decisions/ADR-012_KOMMERZIALISIERUNG.md) | Abo als Quelle der Lizenz, Rechnungen von FangEvo (Überweisung), Marketplace, Support, Plattform-Verwaltung mit 2FA | angenommen (Preise/Steuer vorläufig) |
 
+| [ADR-014](docs/decisions/ADR-014_PACKTISCH_PIN.md) | PIN-Anmeldung am Touch-Packtisch: nur freigegebene Geräte, Argon2id-PIN mit Sperre, eingeschränkte Sitzung (nur Packtisch, eine Firma) | angenommen |
+
 | [ADR-013](docs/decisions/ADR-013_BETRIEB_BACKUP.md) | Betrieb: Container-Images (distroless), Sicherungsrolle mit BYPASSRLS, automatische Migrations-, Wiederherstellungs- und Rauchtests | angenommen |

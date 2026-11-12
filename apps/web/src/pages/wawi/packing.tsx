@@ -1089,6 +1089,78 @@ function RulesEditor({
   );
 }
 
+interface DeviceRow {
+  id: string;
+  name: string;
+  stationName: string | null;
+  createdAt: string;
+  lastSeenAt: string | null;
+  revokedAt: string | null;
+}
+
+/** Für die PIN-Anmeldung freigegebene Lagerrechner (Freigabe am Gerät über den Touch-Packtisch). */
+function DevicesCard() {
+  const qc = useQueryClient();
+  const [error, setError] = useState<string | null>(null);
+  const q = useQuery({
+    queryKey: ['packing-devices'],
+    queryFn: () => http.get<DeviceRow[]>('/packing/devices'),
+  });
+  const active = (q.data ?? []).filter((d) => !d.revokedAt);
+  return (
+    <Card>
+      <CardBody>
+        <p className="font-semibold">Freigegebene Geräte (PIN-Anmeldung)</p>
+        <p className="mb-3 text-sm text-muted">
+          Freigeben: am Lagerrechner mit E-Mail anmelden, den Touch-Packtisch öffnen und „Gerät für
+          PIN freigeben“ tippen. Widerrufen meldet alle Packer an diesem Gerät sofort ab.
+        </p>
+        {error && <Alert tone="danger">{error}</Alert>}
+        {active.length ? (
+          <Table>
+            <THead>
+              <TR>
+                <TH>Gerät</TH>
+                <TH>Packplatz</TH>
+                <TH>Zuletzt aktiv</TH>
+                <TH />
+              </TR>
+            </THead>
+            <TBody>
+              {active.map((d) => (
+                <TR key={d.id}>
+                  <TD>{d.name}</TD>
+                  <TD>{d.stationName ?? '–'}</TD>
+                  <TD>{d.lastSeenAt ? formatDateTime(d.lastSeenAt) : 'noch nie'}</TD>
+                  <TD className="text-right">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={async () => {
+                        setError(null);
+                        try {
+                          await http.post(`/packing/devices/${d.id}/revoke`);
+                          await qc.invalidateQueries({ queryKey: ['packing-devices'] });
+                        } catch (e) {
+                          setError(errorMessage(e));
+                        }
+                      }}
+                    >
+                      Widerrufen
+                    </Button>
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+        ) : (
+          <p className="text-sm text-muted">Noch kein Gerät freigegeben.</p>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+
 function Stations() {
   const qc = useQueryClient();
   const q = useQuery({
@@ -1234,6 +1306,7 @@ function Stations() {
             />
           );
         })()}
+      <DevicesCard />
       <Card>
         <CardBody>
           <p className="mb-3 font-semibold">Neuer Packplatz</p>
