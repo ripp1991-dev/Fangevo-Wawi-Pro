@@ -24,6 +24,10 @@ export const ERROR_CODES = [
   'BILLING_DETAILS_MISSING',
   'BILLING_NOT_CONFIGURED',
   'PLAN_NOT_SELF_SERVICE',
+  /** Anbindung (z. B. Shopify) auf dem Server nicht eingerichtet */
+  'INTEGRATION_NOT_CONFIGURED',
+  /** Fehler bei einem externen Dienst (z. B. Shopify) */
+  'UPSTREAM_ERROR',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

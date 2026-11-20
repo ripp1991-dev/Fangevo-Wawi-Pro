@@ -12,6 +12,7 @@ import { JobQueue } from './core/jobs/job-queue.service';
 import { WorkflowsService } from './modules/automation/workflows.service';
 import { Logger as PinoLogger } from 'nestjs-pino';
 import { BillingService } from './modules/billing/billing.service';
+import { ShopifyService } from './modules/channels/shopify/shopify.service';
 import { installProcessGuards } from './process-guards';
 
 const app = await NestFactory.createApplicationContext(AppModule.forRoot(loadConfig()), {
@@ -25,6 +26,7 @@ app.get(EventDispatcher).start();
 app.get(JobQueue).start();
 app.get(WorkflowsService).startScheduler();
 app.get(BillingService).startScheduler();
+app.get(ShopifyService).startScheduler();
 
 // Lebenszeichen für die Gesundheitsprüfung des Containers: Bleibt die Datei länger als 2 Minuten
 // unverändert, hängt der Prozess (z. B. blockierte Ereignisschleife) und wird neu gestartet.

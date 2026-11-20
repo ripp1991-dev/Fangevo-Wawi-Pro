@@ -324,6 +324,7 @@ export const apiKeyInputSchema = z.object({
 // ───── Verkaufskanäle ─────
 export const CHANNEL_TYPES = {
   api: 'Eigener Shop über API',
+  shopify: 'Shopify',
 } as const;
 export type ChannelType = keyof typeof CHANNEL_TYPES;
 
@@ -333,21 +334,75 @@ export const PLANNED_CHANNELS = [
   'eBay',
   'Kaufland',
   'OTTO',
-  'Shopify',
   'WooCommerce',
   'Shopware',
   'Etsy',
   'TikTok Shop',
 ] as const;
 
-export const channelInputSchema = z.object({
-  type: z.enum(Object.keys(CHANNEL_TYPES) as [ChannelType, ...ChannelType[]]).default('api'),
-  name: z.string().trim().min(1, 'Name fehlt').max(80),
-  warehouseId: z.uuid().optional().nullable(),
-  active: z.boolean().default(true),
-  /** Nur gelistete Artikel an den Kanal geben (sonst alle aktiven Artikel) */
-  listedOnly: z.boolean().default(false),
+/** Shop-Adresse bei Shopify: immer die dauerhafte myshopify.com-Adresse (klein geschrieben). */
+export const SHOPIFY_DOMAIN_RE = /^[a-z0-9][a-z0-9-]{0,60}\.myshopify\.com$/;
+
+export function normalizeShopDomain(v: string): string {
+  let d = v.trim().toLowerCase();
+  // Auch eingefügte Admin-Links akzeptieren: admin.shopify.com/store/<name>
+  const admin = /admin\.shopify\.com\/store\/([a-z0-9][a-z0-9-]*)/.exec(d);
+  if (admin) return `${admin[1]}.myshopify.com`;
+  d = d.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+  if (!d.includes('.')) d = `${d}.myshopify.com`;
+  return d;
+}
+
+/** Einstellungen eines Shopify-Kanals */
+export const shopifySettingsSchema = z.object({
+  shopDomain: z
+    .string()
+    .max(200)
+    .transform(normalizeShopDomain)
+    .refine(
+      (v) => SHOPIFY_DOMAIN_RE.test(v),
+      'Bitte die Adresse im Format name.myshopify.com angeben',
+    ),
+  /** Shopify-Standort, dessen Bestand die Wawi setzt (gid://shopify/Location/…) */
+  locationId: z
+    .string()
+    .max(100)
+    .regex(/^gid:\/\/shopify\/Location\/\d+$/, 'Standort ungültig')
+    .optional()
+    .nullable(),
+  /** Bestellungen übernehmen (alle paar Minuten) */
+  importOrders: z.boolean().default(true),
+  /** Auch noch nicht bezahlte Bestellungen übernehmen (z. B. Vorkasse, Rechnung) */
+  importUnpaid: z.boolean().default(false),
+  /** Nur Bestellungen ab diesem Tag übernehmen (JJJJ-MM-TT) */
+  importSince: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Datum JJJJ-MM-TT')
+    .optional()
+    .nullable(),
+  /** Bestand der verknüpften Artikel an Shopify übertragen */
+  syncStock: z.boolean().default(true),
+  /** Versand (mit Sendungsnummer) an Shopify melden */
+  pushFulfillment: z.boolean().default(true),
+  /** Shopify schickt dem Kunden die Versandbestätigung */
+  notifyCustomer: z.boolean().default(true),
 });
+export type ShopifySettings = z.infer<typeof shopifySettingsSchema>;
+
+export const channelInputSchema = z
+  .object({
+    type: z.enum(Object.keys(CHANNEL_TYPES) as [ChannelType, ...ChannelType[]]).default('api'),
+    name: z.string().trim().min(1, 'Name fehlt').max(80),
+    warehouseId: z.uuid().optional().nullable(),
+    active: z.boolean().default(true),
+    /** Nur gelistete Artikel an den Kanal geben (sonst alle aktiven Artikel) */
+    listedOnly: z.boolean().default(false),
+    shopify: shopifySettingsSchema.optional().nullable(),
+  })
+  .refine((v) => v.type !== 'shopify' || !!v.shopify, {
+    path: ['shopify', 'shopDomain'],
+    message: 'Shop-Adresse fehlt',
+  });
 
 export const channelListingSchema = z.object({
   active: z.boolean().default(true),
@@ -364,6 +419,8 @@ const optT = (max: number) => z.string().trim().max(max).optional().nullable();
 /** Bestellung, die ein Shop über die API übergibt. */
 export const channelOrderSchema = z.object({
   externalId: z.string().trim().min(1).max(80),
+  /** Bestellnummer, wie sie der Shop anzeigt (z. B. #1001); sonst die externe ID */
+  externalNumber: optT(80),
   customer: z.object({
     externalId: optT(80),
     email: z.string().trim().toLowerCase().pipe(z.email('Ungültige E-Mail-Adresse')),

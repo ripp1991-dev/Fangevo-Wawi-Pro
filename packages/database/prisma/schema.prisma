@@ -1344,7 +1344,7 @@ model SalesChannel {
   id          String    @id @db.Uuid
   accountId   String    @map("account_id") @db.Uuid
   companyId   String    @map("company_id") @db.Uuid
-  /// api (eigener Shop über API); weitere Typen erst nach Sandbox-Test
+  /// api (eigener Shop über API) | shopify; weitere Typen erst nach Sandbox-Test
   type        String
   name        String
   active      Boolean   @default(true)
@@ -1406,6 +1406,42 @@ model ExternalRef {
   @@unique([channelId, entityType, externalId])
   @@index([internalId])
   @@map("external_refs")
+}
+
+/// Verknüpfung Artikel ↔ Variante im Shop (z. B. Shopify) mit zuletzt übertragenem Bestand
+model ChannelArticleLink {
+  accountId               String    @map("account_id") @db.Uuid
+  companyId               String    @map("company_id") @db.Uuid
+  channelId               String    @map("channel_id") @db.Uuid
+  articleId               String    @map("article_id") @db.Uuid
+  externalProductId       String    @map("external_product_id")
+  externalVariantId       String    @map("external_variant_id")
+  externalInventoryItemId String?   @map("external_inventory_item_id")
+  externalSku             String?   @map("external_sku")
+  externalTitle           String?   @map("external_title")
+  /// sku | barcode
+  matchedBy               String    @map("matched_by")
+  stockTracked            Boolean   @default(true) @map("stock_tracked")
+  lastStockSent           Decimal?  @map("last_stock_sent") @db.Decimal(19, 4)
+  lastStockSentAt         DateTime? @map("last_stock_sent_at")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  @@id([channelId, articleId])
+  @@unique([channelId, externalVariantId])
+  @@index([articleId])
+  @@map("channel_article_links")
+}
+
+/// Fälligkeit des automatischen Kanal-Abgleichs (global, nur IDs)
+model ChannelSyncSchedule {
+  channelId String   @id @map("channel_id") @db.Uuid
+  accountId String   @map("account_id") @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  nextRunAt DateTime @map("next_run_at")
+
+  @@index([nextRunAt])
+  @@map("channel_sync_schedule")
 }
 
 // ───────────── Phase 6: Automatisierung ─────────────
