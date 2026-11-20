@@ -1,0 +1,22 @@
+# Konfiguration der Shopify-App „FangEvo Wawi“ (ADR-015, Anleitung: docs/SHOPIFY.md).
+# Für jede Umgebung (Entwicklung, Produktion) eine eigene App im Dev Dashboard anlegen und
+# deren Client-ID hier eintragen. Der Client-Schlüssel gehört NIE in diese Datei.
+# Veröffentlichen mit der Shopify CLI:  shopify app deploy
+
+client_id = ""
+name = "FangEvo Wawi"
+# Adresse der Wawi-Seite „Verkaufskanäle“ (Shopify ruft sie nach der Installation signiert auf)
+application_url = "http://localhost:5173/channels"
+embedded = false
+
+[access_scopes]
+scopes = "read_orders,read_products,read_inventory,write_inventory,read_locations,read_merchant_managed_fulfillment_orders,write_merchant_managed_fulfillment_orders"
+
+[access.admin]
+direct_api_mode = "offline"
+
+[auth]
+redirect_urls = []
+
+[webhooks]
+api_version = "2026-10"

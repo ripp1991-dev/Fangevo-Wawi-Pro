@@ -169,6 +169,18 @@ Umlagerung und Inventur nehmen jetzt `batch` und `serialNumber` an. Bei Artikeln
 | `GET /channels/:id/stock?cursor=&limit=`                                                                                            | `channels.read` + `inventory.read`                 |
 | `GET /channels/:id/orders/:externalId`                                                                                              | `channels.read` + `orders.read`                    |
 
+**Shopify (ADR-015, docs/SHOPIFY.md):**
+
+| Endpunkt                                                                                                 | Recht / Modul                    |
+| -------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| `GET /channels/shopify/info` (eingerichtet? Anmeldeart)                                                  | `channels.read` / Multichannel   |
+| `POST /channels/shopify/connect` `{params, name?, warehouseId?}` – nur mit signiertem Aufruf aus Shopify | `channels.manage` / Multichannel |
+| `POST /channels/:id/shopify/check` (Shop, Standorte, fehlende Berechtigungen)                            | `channels.manage` / Multichannel |
+| `POST /channels/:id/shopify/sync` `{relink?}` (Abgleich sofort einplanen)                                | `channels.manage` / Multichannel |
+| `GET /channels/:id/shopify/links` (verknüpfte Artikel, zuletzt gesendeter Bestand)                       | `channels.read` / Multichannel   |
+
+Shopify-Kanäle lassen sich nicht über `POST /channels` anlegen (422); in `PUT /channels/:id` steht unter `shopify` die Einstellung (Shop-Adresse unveränderlich). Neue Fehlercodes: `INTEGRATION_NOT_CONFIGURED` (503), `UPSTREAM_ERROR` (Shopify nicht erreichbar oder abgelehnt).
+
 **Anmeldung mit API-Schlüssel:** `Authorization: Bearer fe_live_…`. Kein Cookie, kein CSRF-Header nötig; `X-Company-Id` kann entfallen (Firma des Schlüssels). `401` bei ungültigem/gesperrtem/abgelaufenem Schlüssel, `429` bei mehr als 600 Anfragen pro Minute.
 
 ## Endpunkte (Phase 6)
