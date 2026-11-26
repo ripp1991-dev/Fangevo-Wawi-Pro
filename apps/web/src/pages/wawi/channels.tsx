@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Copy, KeyRound, Plus, Store } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Badge,
@@ -32,17 +32,31 @@ import { errorMessage, http } from '../../lib/api';
 import { formatDate, formatDateTime } from '../../lib/format';
 import { formatMoney, toInput, useMasterData } from '../../lib/master-data';
 import { useCan, useSession } from '../../lib/session';
+import {
+  ShopifyConnectDialog,
+  clearLaunchParams,
+  ShopifyForm,
+  ShopifyHowTo,
+  ShopifyPanel,
+  shopifyLaunchParams,
+  type ShopifyChannelConfig,
+} from './shopify-channel';
+
+const TYPE_LABEL: Record<string, string> = {
+  api: 'Eigener Shop über API',
+  shopify: 'Shopify',
+};
 
 interface Channel {
   id: string;
   name: string;
-  type: 'api';
+  type: 'api' | 'shopify';
   active: boolean;
   status: string;
   lastSyncAt: string | null;
   lastError: string | null;
   warehouseId: string;
-  config: { listedOnly?: boolean };
+  config: ShopifyChannelConfig;
   orderCount?: number;
 }
 
@@ -55,6 +69,11 @@ export function ChannelsPage() {
   const s = useSession();
   const manage = can('channels.manage') && s.account?.accessMode === 'full';
   const [open, setOpen] = useState<string | 'new' | null>(null);
+  const [launch, setLaunch] = useState(shopifyLaunchParams);
+  // Ohne Recht zum Verbinden: Hinweis zeigen, gemerkten Aufruf aber verwerfen
+  useEffect(() => {
+    if (launch && !manage) clearLaunchParams();
+  }, [launch, manage]);
   const list = useQuery({
     queryKey: ['channels'],
     queryFn: () => http.get<{ items: Channel[] }>('/channels?pageSize=100'),
@@ -101,7 +120,7 @@ export function ChannelsPage() {
                 <TD>
                   <Store className="mr-1 inline size-4" /> {c.name}
                 </TD>
-                <TD>Eigener Shop über API</TD>
+                <TD>{TYPE_LABEL[c.type] ?? c.type}</TD>
                 <TD>
                   {!c.active ? (
                     <Badge>Deaktiviert</Badge>
@@ -118,6 +137,7 @@ export function ChannelsPage() {
           </TBody>
         </Table>
       )}
+      <ShopifyHowTo />
       {types.data && (
         <Card>
           <CardBody>
@@ -126,6 +146,20 @@ export function ChannelsPage() {
             <p className="mt-1 text-xs text-muted">{types.data.note}</p>
           </CardBody>
         </Card>
+      )}
+      {launch && manage && (
+        <ShopifyConnectDialog
+          params={launch}
+          onDone={(id) => {
+            setLaunch(null);
+            if (id) setOpen(id);
+          }}
+        />
+      )}
+      {launch && !manage && (
+        <Alert tone="warning">
+          Zum Verbinden eines Shopify-Shops fehlt Ihnen das Recht „Verkaufskanäle verwalten“.
+        </Alert>
       )}
       {open === 'new' && <ChannelForm channel={null} onClose={() => setOpen(null)} />}
       {open && open !== 'new' && (
@@ -241,7 +275,12 @@ function ChannelDialog({
   });
   const [price, setPrice] = useState('');
   const [error, setError] = useState<string | null>(null);
-  if (edit && q.data) return <ChannelForm channel={q.data} onClose={() => setEdit(false)} />;
+  if (edit && q.data)
+    return q.data.type === 'shopify' ? (
+      <ShopifyForm channel={q.data} onClose={() => setEdit(false)} />
+    ) : (
+      <ChannelForm channel={q.data} onClose={() => setEdit(false)} />
+    );
   const c = q.data;
   const base = `${window.location.origin}/api/v1/channels/${id}`;
   const setListing = async (
@@ -262,7 +301,7 @@ function ChannelDialog({
       wide
       onClose={onClose}
       title={c?.name ?? 'Kanal'}
-      description="Eigener Shop über API"
+      description={c ? TYPE_LABEL[c.type] : undefined}
     >
       {!c ? (
         <Spinner />
@@ -275,107 +314,112 @@ function ChannelDialog({
           )}
           {c.lastError && <Alert tone="danger">Letzter Fehler: {c.lastError}</Alert>}
           {error && <Alert tone="danger">{error}</Alert>}
-          <Card>
-            <CardBody>
-              <p className="mb-2 font-semibold">So bindet Ihr Shop den Kanal an</p>
-              <p className="text-sm text-muted">
-                Legen Sie unter „API-Schlüssel“ einen Schlüssel mit den Rechten Verkaufskanäle
-                ansehen, Aufträge ansehen/anlegen und Lager ansehen an. Der Shop sendet ihn als
-                <code className="mx-1">Authorization: Bearer fe_live_…</code>.
-              </p>
-              <ul className="mt-2 space-y-1 font-mono text-xs">
-                <li>
-                  POST {base}/orders – Bestellung übergeben (doppelte Übergabe liefert den
-                  vorhandenen Auftrag)
-                </li>
-                <li>GET {base}/stock – verfügbare Bestände und Preise</li>
-                <li>
-                  GET {base}/orders/&#123;Bestellnummer&#125; – Status, Versand, Trackingnummern
-                </li>
-              </ul>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="mt-2"
-                onClick={() => void navigator.clipboard?.writeText(base)}
-              >
-                <Copy /> Adresse kopieren
-              </Button>
-              <p className="mt-2 text-xs text-muted">
-                Die vollständige Beschreibung steht in der API-Dokumentation unter /api/docs.
-              </p>
-            </CardBody>
-          </Card>
-          <div>
-            <p className="mb-2 font-semibold">
-              Artikel im Kanal
-              {c.config.listedOnly
-                ? ' (nur diese werden angeboten)'
-                : ' (abweichende Preise oder deaktiviert)'}
-            </p>
-            <Table>
-              <THead>
-                <TR>
-                  <TH>Artikel</TH>
-                  <TH className="text-right">Standardpreis</TH>
-                  <TH className="text-right">Preis im Kanal</TH>
-                  <TH>Aktiv</TH>
-                </TR>
-              </THead>
-              <TBody>
-                {listings.data?.map((l) => (
-                  <TR key={l.articleId}>
-                    <TD>
-                      {l.article?.number} · {l.article?.name}
-                    </TD>
-                    <TD className="text-right tabular-nums">
-                      {formatMoney(l.article?.salePriceNet)}
-                    </TD>
-                    <TD className="text-right tabular-nums">
-                      {l.priceNet ? formatMoney(l.priceNet) : '–'}
-                    </TD>
-                    <TD>
-                      <Checkbox
-                        label={<span className="sr-only">aktiv</span>}
-                        disabled={!manage}
-                        checked={l.active}
-                        onChange={(e) =>
-                          void setListing(l.articleId, {
-                            active: e.target.checked,
-                            priceNet: l.priceNet,
-                          })
-                        }
-                      />
-                    </TD>
-                  </TR>
-                ))}
-              </TBody>
-            </Table>
-            {manage && (
-              <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_160px] sm:items-end">
-                <SearchPicker<ArticlePick>
-                  label="Artikel hinzufügen"
-                  queryKey="channel-articles"
-                  value={null}
-                  onChange={(a) =>
-                    a && void setListing(a.id, { active: true, priceNet: price || null })
-                  }
-                  search={searchArticles}
-                  toItem={articleItem}
-                />
-                <Field label="Preis netto (optional)">
-                  {(p) => (
-                    <Input
-                      {...p}
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value)}
-                      placeholder={toInput('0.00')}
+          {c.type === 'shopify' && <ShopifyPanel channel={c} manage={manage} />}
+          {c.type === 'api' && (
+            <>
+              <Card>
+                <CardBody>
+                  <p className="mb-2 font-semibold">So bindet Ihr Shop den Kanal an</p>
+                  <p className="text-sm text-muted">
+                    Legen Sie unter „API-Schlüssel“ einen Schlüssel mit den Rechten Verkaufskanäle
+                    ansehen, Aufträge ansehen/anlegen und Lager ansehen an. Der Shop sendet ihn als
+                    <code className="mx-1">Authorization: Bearer fe_live_…</code>.
+                  </p>
+                  <ul className="mt-2 space-y-1 font-mono text-xs">
+                    <li>
+                      POST {base}/orders – Bestellung übergeben (doppelte Übergabe liefert den
+                      vorhandenen Auftrag)
+                    </li>
+                    <li>GET {base}/stock – verfügbare Bestände und Preise</li>
+                    <li>
+                      GET {base}/orders/&#123;Bestellnummer&#125; – Status, Versand, Trackingnummern
+                    </li>
+                  </ul>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="mt-2"
+                    onClick={() => void navigator.clipboard?.writeText(base)}
+                  >
+                    <Copy /> Adresse kopieren
+                  </Button>
+                  <p className="mt-2 text-xs text-muted">
+                    Die vollständige Beschreibung steht in der API-Dokumentation unter /api/docs.
+                  </p>
+                </CardBody>
+              </Card>
+              <div>
+                <p className="mb-2 font-semibold">
+                  Artikel im Kanal
+                  {c.config.listedOnly
+                    ? ' (nur diese werden angeboten)'
+                    : ' (abweichende Preise oder deaktiviert)'}
+                </p>
+                <Table>
+                  <THead>
+                    <TR>
+                      <TH>Artikel</TH>
+                      <TH className="text-right">Standardpreis</TH>
+                      <TH className="text-right">Preis im Kanal</TH>
+                      <TH>Aktiv</TH>
+                    </TR>
+                  </THead>
+                  <TBody>
+                    {listings.data?.map((l) => (
+                      <TR key={l.articleId}>
+                        <TD>
+                          {l.article?.number} · {l.article?.name}
+                        </TD>
+                        <TD className="text-right tabular-nums">
+                          {formatMoney(l.article?.salePriceNet)}
+                        </TD>
+                        <TD className="text-right tabular-nums">
+                          {l.priceNet ? formatMoney(l.priceNet) : '–'}
+                        </TD>
+                        <TD>
+                          <Checkbox
+                            label={<span className="sr-only">aktiv</span>}
+                            disabled={!manage}
+                            checked={l.active}
+                            onChange={(e) =>
+                              void setListing(l.articleId, {
+                                active: e.target.checked,
+                                priceNet: l.priceNet,
+                              })
+                            }
+                          />
+                        </TD>
+                      </TR>
+                    ))}
+                  </TBody>
+                </Table>
+                {manage && (
+                  <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_160px] sm:items-end">
+                    <SearchPicker<ArticlePick>
+                      label="Artikel hinzufügen"
+                      queryKey="channel-articles"
+                      value={null}
+                      onChange={(a) =>
+                        a && void setListing(a.id, { active: true, priceNet: price || null })
+                      }
+                      search={searchArticles}
+                      toItem={articleItem}
                     />
-                  )}
-                </Field>
+                    <Field label="Preis netto (optional)">
+                      {(p) => (
+                        <Input
+                          {...p}
+                          value={price}
+                          onChange={(e) => setPrice(e.target.value)}
+                          placeholder={toInput('0.00')}
+                        />
+                      )}
+                    </Field>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </>
+          )}
           <div>
             <p className="mb-2 font-semibold">Protokoll</p>
             <ul className="max-h-64 space-y-1 overflow-y-auto text-sm">

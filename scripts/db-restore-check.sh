@@ -66,7 +66,7 @@ MISSING="$(psql "$TARGET_URL" -Atc "
   WHERE c.relkind = 'r'
     AND EXISTS (SELECT 1 FROM information_schema.columns k
                 WHERE k.table_schema = 'public' AND k.table_name = c.relname AND k.column_name = 'account_id')
-    AND c.relname NOT IN ('sessions','outbox_pending','job_queue','api_key_index','workflow_schedule',
+    AND c.relname NOT IN ('sessions','outbox_pending','job_queue','api_key_index','workflow_schedule','channel_sync_schedule',
                           'platform_accounts','support_ticket_index')
     AND NOT (c.relrowsecurity AND c.relforcerowsecurity)")"
 [[ -z "$MISSING" ]] || fail "RLS fehlt nach Wiederherstellung: $MISSING"

@@ -41,8 +41,47 @@ export const pickConfirmSchema = z.object({
 export const CARRIERS = {
   manual: 'Manuell (eigene Trackingnummer)',
   own_label: 'Eigenes Adressetikett (PDF)',
+  dhl: 'DHL Paket (Etikett von DHL)',
 } as const;
 export type Carrier = keyof typeof CARRIERS;
+
+/** Druckformate für DHL-Etiketten (Auswahl der gängigen Formate) */
+export const DHL_PRINT_FORMATS = {
+  '910-300-410': 'Thermodruck Rolle 103 × 150 mm',
+  '910-300-400': 'Thermodruck Faltband 103 × 150 mm',
+  '910-300-610': 'Thermodruck Rolle 103 × 199 mm',
+  '910-300-700': 'Laserdruck A5 105 × 208 mm',
+  A4: 'Laserdruck A4',
+} as const;
+export type DhlPrintFormat = keyof typeof DHL_PRINT_FORMATS;
+
+/**
+ * DHL-Zugang einer Firma (Post & DHL Geschäftskundenportal). Das Passwort wird nur beim Speichern
+ * übergeben (leer = unverändert) und nie zurückgegeben.
+ */
+export const dhlAccountSchema = z.object({
+  active: z.boolean().default(true),
+  /** Benutzer des Geschäftskundenportals (am besten ein Systembenutzer) */
+  gkpUser: z.string().trim().min(1, 'Benutzer fehlt').max(80),
+  gkpPassword: z.string().max(200).optional().nullable(),
+  /** 14-stellige Abrechnungsnummer für DHL Paket national (EKP + Verfahren 01 + Teilnahme) */
+  billingNumber: z
+    .string()
+    .trim()
+    .regex(/^[0-9A-Za-z]{14}$/, 'Die Abrechnungsnummer hat 14 Zeichen'),
+  /** Abrechnungsnummer für DHL Paket International (Verfahren 53), nur für EU-Versand */
+  billingNumberInternational: z
+    .string()
+    .trim()
+    .regex(/^[0-9A-Za-z]{14}$/, 'Die Abrechnungsnummer hat 14 Zeichen')
+    .optional()
+    .nullable()
+    .or(z.literal('').transform(() => null)),
+  printFormat: z
+    .enum(Object.keys(DHL_PRINT_FORMATS) as [DhlPrintFormat, ...DhlPrintFormat[]])
+    .default('910-300-410'),
+});
+export type DhlAccountInput = z.infer<typeof dhlAccountSchema>;
 
 /** Kanalfilter-Wert für Aufträge ohne Verkaufskanal (manuell erfasst). */
 export const NO_CHANNEL = 'none';

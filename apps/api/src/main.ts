@@ -5,6 +5,7 @@ import { JobQueue } from './core/jobs/job-queue.service';
 import { WorkflowsService } from './modules/automation/workflows.service';
 import { Logger as PinoLogger } from 'nestjs-pino';
 import { BillingService } from './modules/billing/billing.service';
+import { ShopifyService } from './modules/channels/shopify/shopify.service';
 import { installProcessGuards } from './process-guards';
 
 const config = loadConfig();
@@ -16,4 +17,5 @@ if (config.dispatchInline) {
   app.get(JobQueue).start();
   app.get(WorkflowsService).startScheduler();
   app.get(BillingService).startScheduler();
+  app.get(ShopifyService).startScheduler();
 }

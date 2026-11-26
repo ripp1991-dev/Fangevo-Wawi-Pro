@@ -52,6 +52,30 @@ const schema = z.object({
   PLATFORM_ISSUER_BANK_NAME: z.string().optional(),
   PLATFORM_ISSUER_IBAN: z.string().optional(),
   PLATFORM_ISSUER_BIC: z.string().optional(),
+  /**
+   * Shopify-App „FangEvo Wawi“ (Dev Dashboard, ADR-015). Die Client-ID ist nicht geheim.
+   * Anmeldung je Shop entweder mit dem Client-Schlüssel (nur Shops der eigenen Shopify-Organisation)
+   * oder mit einem Schlüsselpaar (alle Shops, die die App installiert haben). Geheimnisse nur hier,
+   * nie im Code oder in der Datenbank.
+   */
+  SHOPIFY_CLIENT_ID: z.string().optional(),
+  SHOPIFY_CLIENT_SECRET: z.string().optional(),
+  /** Pfad zur privaten Schlüsseldatei (PEM, RSA oder P-256) und deren Schlüssel-ID im Dev Dashboard */
+  SHOPIFY_PRIVATE_KEY_FILE: z.string().optional(),
+  SHOPIFY_KEY_ID: z.string().optional(),
+  SHOPIFY_API_VERSION: z
+    .string()
+    .regex(/^\d{4}-\d{2}$/)
+    .default('2026-10'),
+  /**
+   * DHL Paket DE Versenden (ADR-016): API-Schlüssel der App aus developer.dhl.com.
+   * DHL_ENV=sandbox nutzt die Testumgebung (keine echten Sendungen), production die echte.
+   */
+  DHL_API_KEY: z.string().optional(),
+  DHL_API_SECRET: z.string().optional(),
+  DHL_ENV: z.enum(['sandbox', 'production']).default('sandbox'),
+  /** Abstand des automatischen Abgleichs mit Shops in Minuten */
+  CHANNEL_SYNC_MINUTES: z.coerce.number().int().min(1).max(1440).default(5),
 });
 
 export type AppConfig = z.infer<typeof schema> & {

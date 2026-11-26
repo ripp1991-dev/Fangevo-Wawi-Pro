@@ -27,6 +27,7 @@ import { type CustomerSnapshot, OrdersService } from '../orders/orders.service';
 import { renderLabelPdf } from './label-pdf';
 import { categorySets, checkRules, loadSubjects, readRules, ruleMessage } from './packing-rules';
 import { PickingService } from './picking.service';
+import { DhlService, type DhlLabel } from './dhl/dhl.service';
 
 type StationInput = z.infer<typeof packingStationInputSchema>;
 type PackingQueueQuery = z.infer<typeof packingQueueQuerySchema>;
@@ -70,6 +71,7 @@ export class PackingService {
     @Inject(OrdersService) private readonly orders: OrdersService,
     @Inject(DocumentsService) private readonly documents: DocumentsService,
     @Inject(PickingService) private readonly picking: PickingService,
+    @Inject(DhlService) private readonly dhl: DhlService,
   ) {}
 
   // ───── Packplätze ─────
@@ -394,7 +396,43 @@ export class PackingService {
   }
 
   /** Packen abschließen: prüft Vollständigkeit, versendet, erstellt Sendung und ggf. Belege. */
-  complete(t: TenantContext, orderId: string, input: PackComplete) {
+  async complete(t: TenantContext, orderId: string, input: PackComplete) {
+    if (input.carrier !== 'dhl') return this.completeInTx(t, orderId, input, null);
+    // DHL: erst prüfen, dann das Etikett bei DHL holen (außerhalb der Transaktion), dann buchen.
+    // Scheitert die Buchung, wird die DHL-Sendung wieder storniert.
+    if (input.parcels.length !== 1)
+      throw new AppError(
+        422,
+        'VALIDATION_FAILED',
+        'Mit DHL ist derzeit ein Paket je Auftrag möglich. Für mehrere Pakete bitte „Manuell“ wählen',
+      );
+    await this.cdb.run(t, async (tx) => {
+      const order = await tx.salesOrder.findUnique({ where: { id: orderId } });
+      if (!order) throw Errors.notFound();
+      if (!(ORDER_SHIPPABLE as string[]).includes(order.status))
+        throw new AppError(
+          409,
+          'CONFLICT',
+          `Im Status „${ORDER_STATUSES[order.status as OrderStatus]}“ kann nicht gepackt werden`,
+        );
+      await this.verify(tx, orderId, input);
+    });
+    const label = await this.dhl.createLabel(t, orderId, input.parcels[0]!);
+    try {
+      const r = await this.completeInTx(t, orderId, input, label);
+      return { ...r, warnings: [...r.warnings, ...label.warnings.map((w) => `DHL: ${w}`)] };
+    } catch (e) {
+      await label.cancel();
+      throw e;
+    }
+  }
+
+  private completeInTx(
+    t: TenantContext,
+    orderId: string,
+    input: PackComplete,
+    dhl: DhlLabel | null,
+  ) {
     return this.cdb.run(t, async (tx, c) => {
       const order = await tx.salesOrder.findUnique({ where: { id: orderId } });
       if (!order) throw Errors.notFound();
@@ -431,6 +469,13 @@ export class PackingService {
       const number = await this.cdb.nextNumber(tx, c.companyId, 'shipment');
       const snap = order.customerSnapshot as unknown as CustomerSnapshot;
       let labelPdf: Uint8Array<ArrayBuffer> | null = null;
+      const trackingNumber = dhl?.trackingNumber ?? input.trackingNumber;
+      if (dhl) {
+        const b = dhl.labelPdf;
+        labelPdf = new Uint8Array(
+          b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer,
+        );
+      }
       if (input.carrier === 'own_label') {
         const sender = await this.documents.sender(tx, c);
         const to = snap.shipping ?? snap.billing;
@@ -470,7 +515,7 @@ export class PackingService {
           orderId,
           stationId: station?.id ?? null,
           carrier: input.carrier,
-          trackingNumber: input.trackingNumber,
+          trackingNumber,
           parcels: input.parcels as unknown as Prisma.InputJsonValue,
           items: input.items as unknown as Prisma.InputJsonValue,
           labelPdf,
@@ -487,7 +532,7 @@ export class PackingService {
         data: {
           number,
           carrier: input.carrier,
-          trackingNumber: input.trackingNumber,
+          trackingNumber,
           parcels: input.parcels.length,
         },
         ip: c.ip,

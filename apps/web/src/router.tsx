@@ -46,6 +46,7 @@ import { PickingPage } from './pages/wawi/picking';
 import { ReturnsPage } from './pages/wawi/returns';
 import { ScanPage } from './pages/wawi/scan';
 import { ApiKeysPage, ChannelsPage } from './pages/wawi/channels';
+import { hasShopifyLaunch, keepShopifyLaunch } from './pages/wawi/shopify-channel';
 import { ImportPage } from './pages/wawi/import';
 import { AutomationPage } from './pages/wawi/automation';
 import { SuppliersPage } from './pages/wawi/suppliers';
@@ -82,12 +83,16 @@ const app = createRoute({
   getParentRoute: () => root,
   id: 'app',
   component: AppShell,
-  beforeLoad: async ({ context }) => {
+  beforeLoad: async ({ context, location }) => {
     const s = await context.queryClient.fetchQuery(sessionQuery);
+    // Aufruf aus dem Shopify-Admin (Shop verbinden): Parameter über die Anmeldung hinweg merken
+    if (!s || s.mfaPending) keepShopifyLaunch(window.location.search);
     if (!s) throw redirect({ to: '/login' });
     if (s.mfaPending) throw redirect({ to: '/mfa' });
     // PIN-Sitzungen gelten nur für den Packtisch
     if (s.scope) throw redirect({ to: '/packtisch' });
+    if (location.pathname !== '/channels' && hasShopifyLaunch())
+      throw redirect({ to: '/channels' });
   },
 });
 

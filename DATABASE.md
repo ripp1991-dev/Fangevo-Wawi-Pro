@@ -151,6 +151,17 @@ Migrationen `…_phase5_import_api_channels` und `…_phase5_api_key_company`.
 | `sales_channels`, `channel_logs`, `channel_listings`, `external_refs` | Verkaufskanäle, Protokoll, Artikel je Kanal, Zuordnung externer IDs                                         |
 | `sales_orders.channel_id`                                             | Herkunftskanal eines Auftrags                                                                               |
 
+Migration `20261120100000_shopify_channel` (ADR-015, nicht-destruktiv):
+
+| Tabelle                          | Inhalt                                                                                                               |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `channel_article_links`          | Artikel ↔ Shopify-Variante je Kanal (über SKU/Barcode), Inventar-ID, zuletzt gesendeter Bestand; RLS Account + Firma |
+| `channel_sync_schedule` (global) | Fälligkeit des automatischen Abgleichs je Kanal (nur IDs, wie `workflow_schedule`)                                   |
+
+Shopify-Einstellungen und Abgleichstand stehen in `sales_channels.config` (`shopify`, `shopifyState`, `runAs`), nie Zugangsdaten. Übernommene Bestellungen, Kunden und gemeldete Sendungen stehen in `external_refs` (`order`, `customer`, `fulfillment`).
+
+Migration `20261126100000_dhl_carrier` (ADR-016, nicht-destruktiv): Tabelle `carrier_accounts` (Zugang einer Firma zu einem Versanddienstleister: Einstellungen in `config`, Zugangsdaten verschlüsselt in `secrets_enc`; RLS Account + Firma); `shipments.carrier` erlaubt zusätzlich `dhl`.
+
 ## Tabellen (Phase 6)
 
 Migration `…_phase6_automation`.
