@@ -6,7 +6,7 @@ Stand: Deutschland und EU, ein Paket je Auftrag. Drittländer (Zoll) und mehrere
 
 ## 1. Einmal je Server (macht FangEvo)
 
-1. Auf https://developer.dhl.com ein Konto anlegen, eine **App** erstellen und die Schnittstelle **„DHL Paket DE Versenden (Post & Paket Deutschland)“** hinzufügen. Die Testumgebung (Sandbox) ist sofort nutzbar.
+1. Auf https://developer.dhl.com ein Konto anlegen, eine **App** erstellen und die Schnittstelle **„DHL Paket DE Versenden (Post & Paket Deutschland)“** hinzufügen. Umgebung „Customer (Integration) Testing“ wählen; die Testumgebung (Sandbox) braucht keine Freigabe. Neue Schlüssel können laut DHL bis zu 24 Stunden brauchen, bis sie aktiv sind.
 2. API Key und API Secret der App **selbst** in die Serverkonfiguration eintragen (nie in Chat, Tickets, Code oder Screenshots):
 
 ```
@@ -25,8 +25,8 @@ Für den Echtbetrieb bei DHL die Freigabe der App für „Production“ beantrag
 | ------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------- |
 | Benutzer                        | `user-valid` (von DHL veröffentlichter Testbenutzer)   | Benutzer des Post & DHL Geschäftskundenportals, am besten ein Systembenutzer |
 | Passwort                        | das in der DHL-Dokumentation genannte Sandbox-Passwort | Passwort dieses Benutzers (läuft bei Systembenutzern nach 365 Tagen ab)      |
-| Abrechnungsnummer national      | Sandbox-Nummer für DHL Paket laut DHL-Dokumentation    | EKP (10 Stellen) + `01` + Teilnahme (2 Stellen)                              |
-| Abrechnungsnummer International | optional                                               | EKP + `53` + Teilnahme                                                       |
+| Abrechnungsnummer national      | `33333333330102` (DHL Paket, Stand DHL-Dokumentation 11/2026)    | EKP (10 Stellen) + `01` + Teilnahme (2 Stellen)                              |
+| Abrechnungsnummer International | `33333333335301` (optional)                                               | EKP + `53` + Teilnahme                                                       |
 | Etikettenformat                 | nach Drucker                                           | nach Drucker (Etiketten dürfen nicht skaliert werden)                        |
 
 Danach **Verbindung prüfen**: Die Wawi meldet sich an und schickt eine Probe-Sendung im Prüfmodus (es entsteht nichts).
