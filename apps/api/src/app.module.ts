@@ -36,6 +36,8 @@ import { ApiKeysController } from './core/apikeys/api-keys.controller';
 import { ApiKeysService } from './core/apikeys/api-keys.service';
 import { ChannelsController } from './modules/channels/channels.controller';
 import { ChannelsService } from './modules/channels/channels.service';
+import { DhlController } from './modules/logistics/dhl/dhl.controller';
+import { DhlService } from './modules/logistics/dhl/dhl.service';
 import { ShopifyController } from './modules/channels/shopify/shopify.controller';
 import {
   ShopifyFulfillmentHandler,
@@ -164,6 +166,7 @@ export class AppModule {
         BarcodesController,
         PickListsController,
         PackingController,
+        DhlController,
         PackingAccessController,
         ReturnsController,
         // Phase 5: Import, API, Multichannel
@@ -221,6 +224,7 @@ export class AppModule {
         ScanService,
         PickingService,
         PackingService,
+        DhlService,
         PackingPinService,
         ReturnsService,
         MasterDataService,

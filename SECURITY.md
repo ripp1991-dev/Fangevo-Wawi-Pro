@@ -109,6 +109,11 @@ Bitte nicht öffentlich als Issue melden, sondern direkt an das FangEvo-Team.
 - Neue Rechte `billing.manage` und `support.manage` gehören zum Core und können **nicht** an API-Schlüssel vergeben werden. Abo und Support bleiben im Lesemodus erreichbar.
 - Keine Zahlungsdaten im System: Zahlart ist Überweisung. Support-Formular weist darauf hin, keine Passwörter oder Zahlungsdaten zu senden.
 
+## Ergänzungen DHL (ADR-016)
+
+- API-Schlüssel der DHL-App nur in der Serverkonfiguration. Das Passwort des DHL-Geschäftskundenportals je Firma liegt AES-256-GCM-verschlüsselt in `carrier_accounts` (RLS Account + Firma), wird nie zurückgegeben und nicht protokolliert (im Audit-Log nur „Passwort geändert“). Ändern nur mit `shipping.manage`.
+- Anfragen nur an die festen DHL-Adressen, ohne Weiterleitungen, mit Zeitlimit. Tests: `dhl.test.ts` (Passwort nie in Antworten, Rechte, Mandantentrennung).
+
 ## Ergänzungen Shopify (ADR-015)
 
 - Zugangsdaten der Shopify-App (`SHOPIFY_CLIENT_SECRET`, privater Schlüssel) nur in der Serverkonfiguration, nie in der Datenbank, im Code oder im Log. Shop-Tokens nur im Speicher, vor Ablauf erneuert.

@@ -67,6 +67,13 @@ const schema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}$/)
     .default('2026-10'),
+  /**
+   * DHL Paket DE Versenden (ADR-016): API-Schlüssel der App aus developer.dhl.com.
+   * DHL_ENV=sandbox nutzt die Testumgebung (keine echten Sendungen), production die echte.
+   */
+  DHL_API_KEY: z.string().optional(),
+  DHL_API_SECRET: z.string().optional(),
+  DHL_ENV: z.enum(['sandbox', 'production']).default('sandbox'),
   /** Abstand des automatischen Abgleichs mit Shops in Minuten */
   CHANNEL_SYNC_MINUTES: z.coerce.number().int().min(1).max(1440).default(5),
 });

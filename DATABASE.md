@@ -160,6 +160,8 @@ Migration `20261120100000_shopify_channel` (ADR-015, nicht-destruktiv):
 
 Shopify-Einstellungen und Abgleichstand stehen in `sales_channels.config` (`shopify`, `shopifyState`, `runAs`), nie Zugangsdaten. Übernommene Bestellungen, Kunden und gemeldete Sendungen stehen in `external_refs` (`order`, `customer`, `fulfillment`).
 
+Migration `20261126100000_dhl_carrier` (ADR-016, nicht-destruktiv): Tabelle `carrier_accounts` (Zugang einer Firma zu einem Versanddienstleister: Einstellungen in `config`, Zugangsdaten verschlüsselt in `secrets_enc`; RLS Account + Firma); `shipments.carrier` erlaubt zusätzlich `dhl`.
+
 ## Tabellen (Phase 6)
 
 Migration `…_phase6_automation`.

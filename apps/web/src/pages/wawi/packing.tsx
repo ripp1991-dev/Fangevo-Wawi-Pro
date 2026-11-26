@@ -41,6 +41,7 @@ import { DataTable } from '../../components/table/data-table';
 import { type Column } from '../../components/table/types';
 import { Tabs } from '../../components/tabs';
 import { ApiError, errorMessage, http } from '../../lib/api';
+import { DhlCard } from './dhl-settings';
 import { formatDateTime } from '../../lib/format';
 import { categoryPaths, formatQty, useMasterData } from '../../lib/master-data';
 import {
@@ -1322,6 +1323,7 @@ function Stations() {
             />
           );
         })()}
+      <DhlCard />
       <DevicesCard />
       <Card>
         <CardBody>

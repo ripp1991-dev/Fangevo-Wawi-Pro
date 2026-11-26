@@ -169,6 +169,8 @@ Umlagerung und Inventur nehmen jetzt `batch` und `serialNumber` an. Bei Artikeln
 | `GET /channels/:id/stock?cursor=&limit=`                                                                                            | `channels.read` + `inventory.read`                 |
 | `GET /channels/:id/orders/:externalId`                                                                                              | `channels.read` + `orders.read`                    |
 
+**DHL (ADR-016, docs/DHL.md):** `GET/PUT /packing/carriers/dhl` (Zugang der Firma; Passwort nur schreibend), `POST /packing/carriers/dhl/test` (Verbindung prüfen) – jeweils `shipping.manage` / Pack. `POST /packing/orders/:id/complete` akzeptiert `carrier: "dhl"` (genau ein Paket mit Gewicht); Etikett und Sendungsnummer kommen von DHL, Fehler von DHL als 422 `UPSTREAM_ERROR`.
+
 **Shopify (ADR-015, docs/SHOPIFY.md):**
 
 | Endpunkt                                                                                                 | Recht / Modul                    |
