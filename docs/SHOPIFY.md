@@ -68,7 +68,7 @@ Knöpfe im Kanal: **Jetzt abgleichen**, **Artikel neu verknüpfen**, **Verbindun
 | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | „Bestellung #1003 nicht übernommen: Artikel „X“ ist unbekannt“ | Artikel mit Artikelnummer bzw. EAN = SKU/Barcode in Shopify anlegen. Beim nächsten Abgleich klappt es. |
 | „… ohne E-Mail-Adresse“                                        | Bei fremden Shops: geschützte Kundendaten im Dev Dashboard freigeben lassen.                           |
-| „x am Standort nicht geführt“                                  | In Shopify beim Produkt den Bestand am gewählten Standort aktivieren.                                  |
+| „x am Standort nicht aktivierbar“ | Die Wawi aktiviert Artikel am gewählten Standort selbst. Klappt das nicht, in Shopify beim Produkt die Bestandsführung prüfen. |
 | „Die App … ist in diesem Shop nicht installiert“               | App im Shop (erneut) installieren.                                                                     |
 | „Bestellung #… wurde in Shopify storniert“                     | Auftrag in der Wawi prüfen und ggf. stornieren.                                                        |
 

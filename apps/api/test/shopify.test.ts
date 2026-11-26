@@ -66,10 +66,7 @@ class FakeShop {
       item: 'gid://shopify/InventoryItem/13',
     },
   ];
-  levels = new Map<string, number>([
-    ['gid://shopify/InventoryItem/11', 3],
-    ['gid://shopify/InventoryItem/12', 0],
-  ]);
+  levels = new Map<string, number>([['gid://shopify/InventoryItem/11', 3]]);
   setCalls: { inventoryItemId: string; quantity: number; changeFromQuantity: number }[][] = [];
   fulfillments: { fulfillmentOrderIds: string[]; numbers?: string[]; notify: boolean }[] = [];
   tokenRequests = 0;
@@ -90,7 +87,6 @@ class FakeShop {
       displayFulfillmentStatus: 'UNFULFILLED',
       note: null,
       paymentGatewayNames: ['bogus'],
-      customer: { id: 'gid://shopify/Customer/9', firstName: 'Erika', lastName: 'Muster' },
       billingAddress: {
         firstName: 'Erika',
         lastName: 'Muster',
@@ -211,6 +207,16 @@ class FakeShop {
           });
       for (const x of q) this.levels.set(x.inventoryItemId, x.quantity);
       return ok({ inventorySetQuantities: { userErrors: [] } });
+    }
+    if (query.includes('mutation Activate')) {
+      // Artikel wird am Standort noch nicht geführt: aktivieren mit Anfangsbestand
+      this.levels.set(variables.item, variables.available);
+      return ok({
+        inventoryActivate: {
+          inventoryLevel: { id: 'gid://shopify/InventoryLevel/1' },
+          userErrors: [],
+        },
+      });
     }
     if (query.includes('query FO')) {
       const done = this.fulfillments.length > 0;
@@ -407,7 +413,7 @@ describe('Shopify-Anbindung', () => {
     ).toBe(true);
     expect(d.config.shopifyState.links).toMatchObject({ linked: 2, variants: 3, unmatched: 1 });
 
-    // Bestand: W-1 hat 10, davon 2 reserviert → 8; K-7 → 10. Shopify vorher 3 bzw. 0.
+    // Bestand: W-1 hat 10, davon 2 reserviert → 8; K-7 → 10. Shopify vorher 3 bzw. am Standort nicht geführt (wird aktiviert).
     expect(shop.levels.get('gid://shopify/InventoryItem/11')).toBe(8);
     expect(shop.levels.get('gid://shopify/InventoryItem/12')).toBe(10);
     expect(shop.setCalls.at(-1)).toEqual(

@@ -39,7 +39,6 @@ export interface ShopifyOrderNode {
   displayFulfillmentStatus?: string | null;
   note?: string | null;
   paymentGatewayNames?: string[];
-  customer?: { id: string; firstName?: string | null; lastName?: string | null } | null;
   billingAddress?: ShopifyAddress | null;
   shippingAddress?: ShopifyAddress | null;
   shippingLine?: {
@@ -62,7 +61,6 @@ export interface ShopifyOrderNode {
 export const ORDER_FIELDS = `
   id name email phone createdAt updatedAt cancelledAt test taxesIncluded currencyCode
   displayFinancialStatus displayFulfillmentStatus note paymentGatewayNames
-  customer { id firstName lastName }
   billingAddress { firstName lastName name company address1 address2 zip city countryCodeV2 phone }
   shippingAddress { firstName lastName name company address1 address2 zip city countryCodeV2 phone }
   shippingLine { title discountedPriceSet { shopMoney { amount currencyCode } } taxLines { rate } }
@@ -181,11 +179,12 @@ export function mapOrder(
     externalId: legacyId(o.id),
     externalNumber: o.name,
     customer: {
-      externalId: o.customer ? legacyId(o.customer.id) : null,
+      // Ohne Berechtigung read_customers: Kunden erkennt die Wawi über die E-Mail-Adresse wieder
+      externalId: null,
       email,
       companyName: bill.company?.trim() || null,
-      firstName: bill.firstName?.trim() || o.customer?.firstName?.trim() || null,
-      lastName: bill.lastName?.trim() || o.customer?.lastName?.trim() || null,
+      firstName: bill.firstName?.trim() || null,
+      lastName: bill.lastName?.trim() || null,
       phone: (bill.phone ?? o.phone)?.trim() || null,
       vatId: null,
     },

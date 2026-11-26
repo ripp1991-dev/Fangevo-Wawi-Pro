@@ -288,7 +288,10 @@ export class ShopifyService implements JobHandler, EventHandler {
         'read_merchant_managed_fulfillment_orders',
         'write_merchant_managed_fulfillment_orders',
       ];
-      const missing = granted.length ? needed.filter((s) => !granted.includes(s)) : [];
+      // Shopify nennt bei gewährtem Schreibrecht das Leserecht nicht eigens: write_x schließt read_x ein
+      const has = (s: string) =>
+        granted.includes(s) || (s.startsWith('read_') && granted.includes(`write_${s.slice(5)}`));
+      const missing = granted.length ? needed.filter((s) => !has(s)) : [];
       await this.cdb.run(t, async (tx, c) => {
         await this.log(
           tx,
@@ -878,12 +881,40 @@ export class ShopifyService implements JobHandler, EventHandler {
       for (const [j, b] of batch.entries()) {
         const node = levels.nodes[j];
         const level = node?.inventoryLevel;
+        const target = Math.max(0, Math.floor(Number(dec(b.available).toString())));
         if (!level) {
-          notStocked++;
+          // Artikel wird am gewählten Standort noch nicht geführt: dort mit dem Wawi-Bestand aktivieren
+          if (!node) {
+            notStocked++;
+            continue;
+          }
+          const a = await this.api().graphql<{
+            inventoryActivate: {
+              inventoryLevel: { id: string } | null;
+              userErrors: ShopifyUserError[];
+            };
+          }>(
+            shop,
+            `mutation Activate($item: ID!, $loc: ID!, $available: Int, $key: String!) {
+              inventoryActivate(inventoryItemId: $item, locationId: $loc, available: $available) @idempotent(key: $key) {
+                inventoryLevel { id }
+                userErrors { field message }
+              }
+            }`,
+            { item: b.itemId, loc: locationId, available: target, key: randomUUID() },
+          );
+          if (a.inventoryActivate.inventoryLevel) {
+            updated++;
+            sent.push({ articleId: b.articleId, qty: target });
+          } else {
+            notStocked++;
+            this.logger.warn(
+              `Kanal ${id}: Aktivieren am Standort fehlgeschlagen: ${user(a.inventoryActivate.userErrors)}`,
+            );
+          }
           continue;
         }
         const current = level.quantities.find((q) => q.name === 'available')?.quantity ?? 0;
-        const target = Math.max(0, Math.floor(Number(dec(b.available).toString())));
         if (current === target) {
           unchanged++;
           sent.push({ articleId: b.articleId, qty: target });
@@ -942,7 +973,7 @@ export class ShopifyService implements JobHandler, EventHandler {
           notStocked ? 'warning' : 'info',
           `Bestand an Shopify: ${updated} aktualisiert, ${unchanged} unverändert` +
             (stale ? `, ${stale} im nächsten Lauf (gerade geändert)` : '') +
-            (notStocked ? `, ${notStocked} am Standort nicht geführt` : ''),
+            (notStocked ? `, ${notStocked} am Standort nicht aktivierbar` : ''),
         );
     });
     await this.saveState(t, id, {

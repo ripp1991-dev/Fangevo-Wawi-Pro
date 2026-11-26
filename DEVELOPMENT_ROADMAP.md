@@ -297,7 +297,7 @@ Ergebnis Phase 8: produktionsfähige Version für den Pilotbetrieb. Gefundene un
 | P.2 Schnell-Anmeldung (PIN) | Packer melden sich am eingerichteten Gerät mit Name + 4-stelliger PIN an; nur für den Packtisch, Sperre nach Fehlversuchen, nur auf freigegebenen Geräten (ADR-014) | fertig (ADR-014)                                   |
 | P.3 Probleme melden         | „Artikel fehlt“ / „beschädigt“ am Packtisch: Auftrag mit Notiz zurückstellen                                                                                        | fertig (ADR-014)                                   |
 | P.4 Waage und Drucker       | Gewicht von der USB-Waage übernehmen, Etikett/Lieferschein ohne Druckdialog drucken (braucht Gerätedaten)                                                           | Druck fertig, Waage offen                          |
-| P.6 Shopify-Anbindung       | Bestellungen übernehmen, Artikel verknüpfen, Bestand übertragen, Versand melden; eine App für alle Kunden (ADR-015)                                                 | fertig (shopify.test), Live-Test im Dev-Shop offen |
+| P.6 Shopify-Anbindung       | Bestellungen übernehmen, Artikel verknüpfen, Bestand übertragen, Versand melden; eine App für alle Kunden (ADR-015)                                                 | fertig (shopify.test), Live-Test im Dev-Shop bestanden (2026-11-26) |
 | P.5 Import/Export-Zentrale  | Erweiterung von FangEvo Import um weitere Datenarten (z. B. Aufträge), gespeicherte Export-Vorlagen, zeitgesteuerte Exporte                                         | wartet auf Liste von FangEvo                       |
 
 ## 6. Offene Fragen an FangEvo

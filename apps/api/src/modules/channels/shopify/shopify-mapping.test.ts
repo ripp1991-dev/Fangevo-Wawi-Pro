@@ -20,7 +20,6 @@ const base = (o: Partial<ShopifyOrderNode> = {}): ShopifyOrderNode => ({
   displayFinancialStatus: 'PAID',
   displayFulfillmentStatus: 'UNFULFILLED',
   paymentGatewayNames: ['paypal'],
-  customer: { id: 'gid://shopify/Customer/77', firstName: 'Erika', lastName: 'Muster' },
   billingAddress: {
     firstName: 'Erika',
     lastName: 'Muster',
@@ -64,7 +63,7 @@ describe('Shopify-Bestellungen', () => {
     expect(m.externalId).toBe('5001');
     expect(m.externalNumber).toBe('#1001');
     expect(m.customer.email).toBe('kunde@example.test');
-    expect(m.customer.externalId).toBe('77');
+    expect(m.customer.externalId).toBeNull();
     expect(m.billingAddress).toMatchObject({
       name: 'Erika Muster',
       street: 'Deichweg 1, Hinterhaus',
