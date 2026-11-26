@@ -36,7 +36,8 @@
     "overrides": {
       "fastify": "5.12.7",
       "deepmerge-ts": "8.0.2",
-      "js-yaml": "5.5.0"
+      "js-yaml": "5.5.0",
+      "effect": "3.22.4"
     }
   }
 }
