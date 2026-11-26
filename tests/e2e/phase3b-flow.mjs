@@ -133,8 +133,14 @@ await page.getByText('104,70 €').first().waitFor(); // 2 × 49,90 + 4,90 netto
 await shot('03-auftrag');
 
 // 4. Versand bucht Bestand ab
+// Auf die Antwort des Servers warten: Das Wort „Versendet“ steht auch im Statusbaum und in
+// Spaltenköpfen, taugt also nicht als Signal, dass der Versand gebucht ist.
+const shipped = page.waitForResponse(
+  (r) => r.url().endsWith('/ship') && r.request().method() === 'POST',
+);
 await page.getByRole('button', { name: /Versenden/ }).click();
-await page.getByText('Versendet', { exact: true }).first().waitFor();
+if (!(await shipped).ok()) throw new Error('Versand wurde vom Server abgelehnt');
+await page.getByRole('button', { name: /Versenden/ }).waitFor({ state: 'detached' });
 const levels = await api('GET', `/inventory/levels?articleId=${article.id}`);
 if (levels.reduce((s, l) => s + Number(l.quantity), 0) !== 8)
   throw new Error('Bestand nach Versand falsch: ' + JSON.stringify(levels));
