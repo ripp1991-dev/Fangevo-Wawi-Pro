@@ -36,6 +36,11 @@ import { ApiKeysController } from './core/apikeys/api-keys.controller';
 import { ApiKeysService } from './core/apikeys/api-keys.service';
 import { ChannelsController } from './modules/channels/channels.controller';
 import { ChannelsService } from './modules/channels/channels.service';
+import { ShopifyController } from './modules/channels/shopify/shopify.controller';
+import {
+  ShopifyFulfillmentHandler,
+  ShopifyService,
+} from './modules/channels/shopify/shopify.service';
 import {
   WebhooksController,
   WorkflowsController,
@@ -164,6 +169,7 @@ export class AppModule {
         // Phase 5: Import, API, Multichannel
         ImportController,
         ApiKeysController,
+        ShopifyController,
         ChannelsController,
         // Phase 6: Automatisierung
         WebhooksController,
@@ -195,12 +201,13 @@ export class AppModule {
         NotificationHandler,
         {
           provide: EVENT_HANDLERS,
-          useFactory: (n: NotificationHandler, w: WebhooksService, f: WorkflowsService) => [
-            n,
-            w,
-            f,
-          ],
-          inject: [NotificationHandler, WebhooksService, WorkflowsService],
+          useFactory: (
+            n: NotificationHandler,
+            w: WebhooksService,
+            f: WorkflowsService,
+            s: ShopifyService,
+          ) => [n, w, f, s],
+          inject: [NotificationHandler, WebhooksService, WorkflowsService, ShopifyService],
         },
         EventDispatcher,
         CompanyDb,
@@ -220,6 +227,8 @@ export class AppModule {
         ImportService,
         ApiKeysService,
         ChannelsService,
+        ShopifyService,
+        ShopifyFulfillmentHandler,
         WebhooksService,
         WorkflowsService,
         WorkflowRunHandler,
@@ -231,8 +240,17 @@ export class AppModule {
             w: WebhooksService,
             r: WorkflowRunHandler,
             s: WorkflowScheduleHandler,
-          ) => [i, w, r, s],
-          inject: [ImportService, WebhooksService, WorkflowRunHandler, WorkflowScheduleHandler],
+            sh: ShopifyService,
+            sf: ShopifyFulfillmentHandler,
+          ) => [i, w, r, s, sh, sf],
+          inject: [
+            ImportService,
+            WebhooksService,
+            WorkflowRunHandler,
+            WorkflowScheduleHandler,
+            ShopifyService,
+            ShopifyFulfillmentHandler,
+          ],
         },
         JobQueue,
         BillingService,

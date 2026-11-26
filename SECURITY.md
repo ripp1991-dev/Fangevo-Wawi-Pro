@@ -109,6 +109,12 @@ Bitte nicht öffentlich als Issue melden, sondern direkt an das FangEvo-Team.
 - Neue Rechte `billing.manage` und `support.manage` gehören zum Core und können **nicht** an API-Schlüssel vergeben werden. Abo und Support bleiben im Lesemodus erreichbar.
 - Keine Zahlungsdaten im System: Zahlart ist Überweisung. Support-Formular weist darauf hin, keine Passwörter oder Zahlungsdaten zu senden.
 
+## Ergänzungen Shopify (ADR-015)
+
+- Zugangsdaten der Shopify-App (`SHOPIFY_CLIENT_SECRET`, privater Schlüssel) nur in der Serverkonfiguration, nie in der Datenbank, im Code oder im Log. Shop-Tokens nur im Speicher, vor Ablauf erneuert.
+- Ein Shop lässt sich nur mit einem von Shopify signierten Aufruf verbinden (HMAC-SHA256 mit dem Client-Schlüssel, zeitkonstanter Vergleich, höchstens 1 Stunde alt). So kann niemand einen fremden Shop, der die App ebenfalls installiert hat, mit seinem Konto verbinden. Die Shop-Adresse ist danach unveränderlich; nur `*.myshopify.com` ist zulässig (kein Aufruf beliebiger Hosts).
+- Anfragen an Shopify ohne Weiterleitungen und mit Zeitlimit. Der Abgleich läuft im Hintergrund mit Mandanten- und Firmenkontext (RLS) im Namen einer berechtigten Person. Tests: `shopify.test.ts` (Signatur, Ablauf, Rechte, Mandantentrennung).
+
 ## Ergänzungen Touch-Packtisch (ADR-014)
 
 - PIN-Anmeldung nur an freigegebenen Lagerrechnern: Geräte-Cookie httpOnly, `SameSite=Strict`, Token nur als SHA-256-Hash in `packing_devices` (RLS Account + Firma), widerrufbar (beendet alle PIN-Sitzungen des Geräts).

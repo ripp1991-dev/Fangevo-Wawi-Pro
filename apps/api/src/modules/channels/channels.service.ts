@@ -7,6 +7,7 @@ import {
   type channelInputSchema,
   type channelListingSchema,
   type ListQuery,
+  type ShopifySettings,
 } from '@fangevo/shared';
 import { AuditService } from '../../core/audit/audit.service';
 import { AppError, Errors } from '../../core/http/errors';
@@ -23,6 +24,26 @@ export const CHANNEL_FIELDS: FieldSpec = {
   active: { kind: 'boolean', sortable: true },
   createdAt: { kind: 'date', sortable: true },
 };
+
+/**
+ * Automatischen Abgleich eines Shop-Kanals planen bzw. beenden (Tabelle ist global, nur IDs).
+ * Aktive Shopify-Kanäle werden regelmäßig abgeglichen; der passive Typ „api“ braucht das nicht.
+ */
+export async function syncSchedule(
+  tx: Tx,
+  ch: Pick<SalesChannel, 'id' | 'accountId' | 'companyId' | 'type' | 'active' | 'archivedAt'>,
+  nextRunAt = new Date(),
+): Promise<void> {
+  if (ch.type === 'shopify' && ch.active && !ch.archivedAt) {
+    await tx.channelSyncSchedule.upsert({
+      where: { channelId: ch.id },
+      update: { nextRunAt },
+      create: { channelId: ch.id, accountId: ch.accountId, companyId: ch.companyId, nextRunAt },
+    });
+  } else {
+    await tx.channelSyncSchedule.deleteMany({ where: { channelId: ch.id } });
+  }
+}
 
 /**
  * Verkaufskanäle (Connector-Architektur, Playbook 15).
@@ -103,20 +124,51 @@ export class ChannelsService {
         where: { name: input.name, archivedAt: null, ...(id ? { NOT: { id } } : {}) },
       });
       if (dup) throw new AppError(409, 'CONFLICT', 'Ein Kanal mit diesem Namen existiert bereits');
+      const existing = id ? await this.require(tx, id) : null;
+      if (existing && existing.type !== input.type)
+        throw new AppError(
+          422,
+          'VALIDATION_FAILED',
+          'Die Art des Kanals kann nicht geändert werden',
+        );
+      let config: Record<string, unknown> = { listedOnly: input.listedOnly };
+      if (input.type === 'shopify') {
+        // Shopify-Shops entstehen nur über die geprüfte Verbindung aus dem Shopify-Admin (ShopifyService.connect)
+        if (!existing)
+          throw new AppError(
+            422,
+            'VALIDATION_FAILED',
+            'Shopify-Shops bitte über „Mit Shopify verbinden“ anlegen',
+          );
+        const prev = existing.config as { shopify?: ShopifySettings };
+        if (prev.shopify?.shopDomain !== input.shopify!.shopDomain)
+          throw new AppError(
+            422,
+            'VALIDATION_FAILED',
+            'Die Shop-Adresse kann nicht geändert werden',
+          );
+        config = {
+          ...(existing.config as object),
+          listedOnly: input.listedOnly,
+          shopify: input.shopify,
+          // Der Abgleich läuft im Namen der Person, die zuletzt gespeichert hat
+          runAs: c.user.id,
+        };
+      }
       const data = {
         name: input.name,
         type: input.type,
         active: input.active,
         warehouseId: warehouse.id,
-        config: { listedOnly: input.listedOnly } as Prisma.InputJsonValue,
+        config: config as Prisma.InputJsonValue,
       };
       const ch = id
-        ? (await this.require(tx, id),
-          await tx.salesChannel.update({ where: { id }, data, omit: { secretsEnc: true } }))
+        ? await tx.salesChannel.update({ where: { id }, data, omit: { secretsEnc: true } })
         : await tx.salesChannel.create({
             data: { ...data, id: uuidv7(), accountId: c.account.id, companyId: c.companyId },
             omit: { secretsEnc: true },
           });
+      await syncSchedule(tx, ch);
       await this.log(tx, c, ch.id, 'info', id ? 'Einstellungen geändert' : 'Kanal angelegt', {
         name: input.name,
       });
@@ -141,6 +193,7 @@ export class ChannelsService {
         where: { id },
         data: { archivedAt: new Date(), active: false },
       });
+      await tx.channelSyncSchedule.deleteMany({ where: { channelId: id } });
     });
   }
 
@@ -192,6 +245,14 @@ export class ChannelsService {
     return this.cdb.run(t, async (tx, c) => {
       const ch = await this.require(tx, id);
       if (!ch.active) throw new AppError(409, 'CONFLICT', 'Der Verkaufskanal ist deaktiviert');
+      return this.receiveOrderInTx(tx, c, ch, input);
+    });
+  }
+
+  /** Bestellung in einer laufenden Transaktion übernehmen (auch für Shop-Anbindungen wie Shopify). */
+  async receiveOrderInTx(tx: Tx, c: CompanyContext, ch: SalesChannel, input: ChannelOrder) {
+    const id = ch.id;
+    {
       const known = await tx.externalRef.findUnique({
         where: {
           channelId_entityType_externalId: {
@@ -331,7 +392,7 @@ export class ChannelsService {
         orderInputSchema.parse({
           customerId,
           warehouseId: ch.warehouseId,
-          externalNumber: input.externalId,
+          externalNumber: input.externalNumber ?? input.externalId,
           paymentMethod: input.paymentMethod,
           shippingMethod: input.shippingMethod,
           shippingNet: input.shippingNet,
@@ -350,11 +411,14 @@ export class ChannelsService {
         c,
         id,
         'info',
-        `Bestellung ${input.externalId} als ${order.number} übernommen`,
+        `Bestellung ${input.externalNumber ?? input.externalId} als ${order.number} übernommen`,
         { orderId: order.id },
       );
-      return { created: true, order: { id: order.id, number: order.number, status: order.status } };
-    });
+      return {
+        created: true,
+        order: { id: order.id, number: order.number, status: order.status },
+      };
+    }
   }
 
   /** Bestände und Preise für den Shop (verfügbar = Bestand − Reservierungen im Kanallager). */

@@ -20,6 +20,7 @@ const GLOBAL_TABLES = new Set([
   'job_queue',
   'api_key_index',
   'workflow_schedule',
+  'channel_sync_schedule',
   'platform_accounts',
   'support_ticket_index',
 ]);
